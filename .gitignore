@@ -1,0 +1,11 @@
+/build/
+/out/
+/.vs/
+/.vscode/
+CMakeSettings.json
+external.sh
+external
+third-party/runtime-libs
+third-party/build-libs
+third-party/include
+.DS_Store
