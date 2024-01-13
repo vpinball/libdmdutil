@@ -6,7 +6,6 @@
 
 #include "FrameUtil.h"
 
-#include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <cstring>
@@ -31,25 +30,22 @@ inline int FrameUtil::MapAdafruitIndex(int x, int y, int width, int height, int 
 
 void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, int width, int numLogicalRows, uint8_t* dest, ColorMatrix colorMatrix)
 {
-   int pairOffset = 16;
+   constexpr int pairOffset = 16;
    int height = rgb565Size / width;
    int subframeSize = rgb565Size / 2;
-
-   int r0 = 0, r1 = 0, g0 = 0, g1 = 0, b0 = 0, b1 = 0, inputIndex0, inputIndex1;
-   uint16_t color0, color1;
-   uint8_t dotPair;
 
    for (int x = 0; x < width; ++x) {
       for (int y = 0; y < height; ++y) {
          if (y % (pairOffset * 2) >= pairOffset)
             continue;
            
-         inputIndex0 = y * width + x;
-         inputIndex1 = (y + pairOffset) * width + x;
+         int inputIndex0 = y * width + x;
+         int inputIndex1 = (y + pairOffset) * width + x;
 
-         color0 = rgb565[inputIndex0];
-         color1 = rgb565[inputIndex1];
+         uint16_t color0 = rgb565[inputIndex0];
+         uint16_t color1 = rgb565[inputIndex1];
 
+         int r0 = 0, r1 = 0, g0 = 0, g1 = 0, b0 = 0, b1 = 0;
          switch (colorMatrix) {
             case ColorMatrix::Rgb:
                r0 = (color0 >> 13) & 0x7;
@@ -71,7 +67,7 @@ void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, int w
          }
 
          for (int subframe = 0; subframe < 3; ++subframe) {
-            dotPair =
+            uint8_t dotPair =
                (r0 & 1) << 5 |
                (g0 & 1) << 4 |
                (b0 & 1) << 3 |
@@ -102,9 +98,9 @@ inline uint16_t FrameUtil::InterpolateRgb565Color(uint16_t color1, uint16_t colo
    int green2 = (color2 >> 5) & 0x3F;
    int blue2 = color2 & 0x1F;
 
-   int red = red1 + static_cast<int>((red2 - red1) * ratio);
-   int green = green1 + static_cast<int>((green2 - green1) * ratio);
-   int blue = blue1 + static_cast<int>((blue2 - blue1) * ratio);
+   int red = red1 + static_cast<int>((float)(red2 - red1) * ratio);
+   int green = green1 + static_cast<int>((float)(green2 - green1) * ratio);
+   int blue = blue1 + static_cast<int>((float)(blue2 - blue1) * ratio);
 
    red = std::min(std::max(red, 0), 0x1F);
    green = std::min(std::max(green, 0), 0x3F);
@@ -117,8 +113,8 @@ inline uint16_t FrameUtil::InterpolatedRgb565Pixel(const uint16_t* src, float sr
 {
    int x = (int)srcX;
    int y = (int)srcY;
-   float xDiff = srcX - x;
-   float yDiff = srcY - y;
+   float xDiff = srcX - (float)x;
+   float yDiff = srcY - (float)y;
 
    uint16_t a = src[y * srcWidth + x];
    uint16_t b = x < srcWidth - 1 ? src[y * srcWidth + (x + 1)] : a;
@@ -135,17 +131,17 @@ void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth, int srcH
 {
    memset(dest, 0, destWidth * destHeight * sizeof(uint16_t));
 
-   float srcAspect = (float)(srcWidth) / srcHeight;
-   float destAspect = (float)(destWidth) / destHeight;
+   float srcAspect = (float)srcWidth / (float)srcHeight;
+   float destAspect = (float)destWidth / (float)destHeight;
    int scaledWidth, scaledHeight;
 
    if (srcAspect > destAspect) {
       scaledWidth = destWidth;
-      scaledHeight = (int)(destWidth / srcAspect);
+      scaledHeight = (int)((float)destWidth / srcAspect);
    }
    else {
       scaledHeight = destHeight;
-      scaledWidth = (int)(destHeight * srcAspect);
+      scaledWidth = (int)((float)destHeight * srcAspect);
    }
 
    int offsetX = (destWidth - scaledWidth) / 2;
@@ -153,8 +149,8 @@ void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth, int srcH
 
    for (int y = 0; y < scaledHeight; ++y) {
       for (int x = 0; x < scaledWidth; ++x) {
-         float srcX = (x + 0.5f) * srcWidth / scaledWidth - 0.5f;
-         float srcY = (y + 0.5f) * srcHeight / scaledHeight - 0.5f;
+         float srcX = ((float)x + 0.5f) * ((float)srcWidth  / (float)scaledWidth)  - 0.5f;
+         float srcY = ((float)y + 0.5f) * ((float)srcHeight / (float)scaledHeight) - 0.5f;
 
          srcX = std::max(0.0f, std::min(srcX, static_cast<float>(srcWidth - 1)));
          srcY = std::max(0.0f, std::min(srcY, static_cast<float>(srcHeight - 1)));
@@ -172,7 +168,7 @@ float FrameUtil::CalcBrightness(float x)
 
 std::string FrameUtil::HexDump(const uint8_t* data, size_t size)
 {
-   const int bytesPerLine = 32;
+   constexpr int bytesPerLine = 32;
 
    std::stringstream ss;
 

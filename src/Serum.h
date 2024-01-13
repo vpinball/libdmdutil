@@ -1,7 +1,5 @@
 #pragma once
 
-#include "serum-decode.h"
-
 #include <cstdint>
 #include <string>
 

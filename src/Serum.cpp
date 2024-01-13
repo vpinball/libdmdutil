@@ -1,4 +1,5 @@
 #include "Serum.h"
+#include "serum-decode.h"
 #include "DMDUtil/Config.h"
 #include "Logger.h"
 
@@ -19,8 +20,7 @@ Serum::Serum(int width, int height)
 
 Serum::~Serum()
 {
-   if (m_pFrame)
-      free(m_pFrame);
+   free(m_pFrame);
 
    Serum_Dispose();
 
@@ -52,8 +52,6 @@ Serum* Serum::Load(const std::string& romName)
    m_isLoaded = true;
 
    return new Serum(width, height);
-
-   return nullptr;
 }
 
 bool Serum::Convert(uint8_t* pFrame, uint8_t* pDstFrame, uint8_t* pDstPalette)

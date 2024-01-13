@@ -48,7 +48,7 @@ int main(int argc, const char* argv[]) {
 
    printf("Finding displays...\n");
 
-   while (pDmd->IsFinding())
+   while (DMDUtil::DMD::IsFinding())
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
    if (!pDmd->HasDisplay()) {

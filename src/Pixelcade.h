@@ -26,13 +26,13 @@ namespace DMDUtil {
 class Pixelcade
 {
 public:
+   Pixelcade(struct sp_port* pSerialPort, int width, int height);
    ~Pixelcade();
 
    static Pixelcade* Connect(const char* pDevice, int width, int height);
    void Update(uint16_t* pData);
 
 private:
-   Pixelcade(struct sp_port* pSerialPort, int width, int height);
    static Pixelcade* Open(const char* pDevice, int width, int height);
    void Run();
    void Stop();
