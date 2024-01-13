@@ -2,7 +2,7 @@
 
 A cross platform library for performing DMD tasks.
 
-This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/zesinger/libserum), outputing to [ZeDMD](https://github.com/ppuc/zedmd) and [Pixelcade](https://pixelcade.org) devices, and providing intensity and RGB32 buffers that can be used to render in table and external DMDs for [Visual Pinball]((https://github.com/vpinball/vpinball).
+This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/zesinger/libserum), outputing to [ZeDMD](https://github.com/ppuc/zedmd) and [Pixelcade](https://pixelcade.org) devices, and providing intensity and RGB32 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
 
 ## Usage:
 
