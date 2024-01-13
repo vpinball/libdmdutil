@@ -131,7 +131,7 @@ if(BUILD_SHARED)
    install(TARGETS dmdutil_shared
       LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
    )
-   install(FILES src/DMDUtil.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+   install(DIRECTORY include/DMDUtil DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdutil_test
@@ -194,7 +194,7 @@ if(BUILD_STATIC)
    install(TARGETS dmdutil_static
       LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
    )
-   install(FILES src/DMDUtil.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+   install(DIRECTORY include/DMDUtil DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdutil_test_s
