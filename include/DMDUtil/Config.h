@@ -8,9 +8,8 @@
 #define DMDUTILCALLBACK
 #endif
 
-#include <cstdint>
 #include <string>
-#include <stdarg.h>
+#include <cstdarg>
 
 typedef void(DMDUTILCALLBACK *DMDUtil_LogCallback)(const char *format, va_list args);
 
@@ -20,32 +19,32 @@ class DMDUTILAPI Config
 {
 public:
    static Config* GetInstance();
-   bool IsAltColor() { return m_altColor; }
+   bool IsAltColor() const { return m_altColor; }
    void SetAltColor(bool altColor) { m_altColor = altColor; }
-   void SetAltColorPath(const std::string& path) { m_altColorPath = path; }
-   bool IsZeDMD() { return m_zedmd; }
+   void SetAltColorPath(const char* path) { m_altColorPath = path; }
+   bool IsZeDMD() const { return m_zedmd; }
    void SetZeDMD(bool zedmd) { m_zedmd = zedmd; }
-   const std::string& GetZeDMDDevice() { return m_zedmdDevice; }
-   void SetZeDMDDevice(const std::string& port) { m_zedmdDevice = port; }
-   const bool IsZeDMDDebug() { return m_zedmdDebug; }
+   const char* GetZeDMDDevice() const { return m_zedmdDevice.c_str(); }
+   void SetZeDMDDevice(const char* port) { m_zedmdDevice = port; }
+   bool IsZeDMDDebug() const { return m_zedmdDebug; }
    void SetZeDMDDebug(bool debug) { m_zedmdDebug = debug; }
-   const int GetZeDMDRGBOrder() { return m_zedmdRgbOrder; }
+   int GetZeDMDRGBOrder() const { return m_zedmdRgbOrder; }
    void SetZeDMDRGBOrder(int rgbOrder) { m_zedmdRgbOrder = rgbOrder; }
-   const int GetZeDMDBrightness() { return m_zedmdBrightness; }
+   int GetZeDMDBrightness() const { return m_zedmdBrightness; }
    void SetZeDMDBrightness(int brightness) { m_zedmdBrightness = brightness; }
-   const bool IsZeDMDSaveSettings() { return m_zedmdSaveSettings; }
+   bool IsZeDMDSaveSettings() const { return m_zedmdSaveSettings; }
    void SetZeDMDSaveSettings(bool saveSettings) { m_zedmdSaveSettings = saveSettings; }
-   bool IsPixelcade() { return m_pixelcade; }
+   bool IsPixelcade() const { return m_pixelcade; }
    void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
-   void SetPixelcadeDevice(const std::string& port) { m_pixelcadeDevice = port; }
-   const std::string& GetPixelcadeDevice() { return m_pixelcadeDevice; }
-   DMDUtil_LogCallback GetLogCallback() { return m_logCallback; }
+   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
+   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
+   const DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
    void SetLogCallback(DMDUtil_LogCallback callback) { m_logCallback = callback; }
-   const std::string& GetAltColorPath() { return m_altColorPath; }
+   const char* GetAltColorPath() const { return m_altColorPath.c_str(); }
 
 private:
    Config();
-   ~Config();
+   ~Config() {}
 
    static Config* m_pInstance;
    bool m_altColor;

@@ -7,9 +7,11 @@
 
 #include "AlphaNumeric.h"
 
+#include <cstring>
+
 namespace DMDUtil {
 
-uint8_t AlphaNumeric::SegSizes[8][16] = {
+const uint8_t AlphaNumeric::SegSizes[8][16] = {
    {5,5,5,5,5,5,2,2,5,5,5,2,5,5,5,1},
    {5,5,5,5,5,5,5,2,0,0,0,0,0,0,0,0},
    {5,5,5,5,5,5,5,2,5,5,0,0,0,0,0,0},
@@ -20,7 +22,7 @@ uint8_t AlphaNumeric::SegSizes[8][16] = {
    {5,5,5,5,5,5,3,2,5,5,5,3,5,5,5,1}
 };
 
-uint8_t AlphaNumeric::Segs[8][17][5][2] = {
+const uint8_t AlphaNumeric::Segs[8][17][5][2] = {
    /* alphanumeric display characters */
    {
       {{1,0},{2,0},{3,0},{4,0},{5,0}}, // 0 top
@@ -177,12 +179,12 @@ uint8_t AlphaNumeric::Segs[8][17][5][2] = {
 
 AlphaNumeric::AlphaNumeric()
 {
-   memset(m_frameBuffer, 0, 4096);
+   memset(m_frameBuffer, 0, sizeof(m_frameBuffer));
 }
 
-uint8_t* AlphaNumeric::Render(NumericalLayout layout, const uint16_t* const seg_data)
+uint8_t* AlphaNumeric::Render(AlphaNumericLayout layout, const uint16_t* const seg_data)
 {
-   if (layout != __2x7Num_2x7Num_10x1Num)
+   if (layout != AlphaNumericLayout::__2x7Num_2x7Num_10x1Num)
       Render(layout, seg_data, nullptr);
    else
       Render(layout, seg_data, seg_data + 32);
@@ -190,57 +192,57 @@ uint8_t* AlphaNumeric::Render(NumericalLayout layout, const uint16_t* const seg_
    return m_frameBuffer;
 }
 
-uint8_t* AlphaNumeric::Render(NumericalLayout layout, const uint16_t* const seg_data, const uint16_t* const seg_data2)
+uint8_t* AlphaNumeric::Render(AlphaNumericLayout layout, const uint16_t* const seg_data, const uint16_t* const seg_data2)
 {
    Clear();
 
    switch (layout) {
-      case __2x16Alpha:
+      case AlphaNumericLayout::__2x16Alpha:
          Render2x16Alpha(seg_data);
          break;
-      case __2x20Alpha:
+      case AlphaNumericLayout::__2x20Alpha:
          Render2x20Alpha(seg_data);
          break;
-      case __2x7Alpha_2x7Num:
+      case AlphaNumericLayout::__2x7Alpha_2x7Num:
          Render2x7Alpha_2x7Num(seg_data);
          break;
-      case __2x7Alpha_2x7Num_4x1Num:
+      case AlphaNumericLayout::__2x7Alpha_2x7Num_4x1Num:
          Render2x7Alpha_2x7Num_4x1Num(seg_data);
          break;
-      case __2x7Num_2x7Num_4x1Num:
+      case AlphaNumericLayout::__2x7Num_2x7Num_4x1Num:
          Render2x7Num_2x7Num_4x1Num(seg_data);
          break;
-      case __2x7Num_2x7Num_10x1Num:
+      case AlphaNumericLayout::__2x7Num_2x7Num_10x1Num:
          Render2x7Num_2x7Num_10x1Num(seg_data, seg_data2);
          break;
-      case __2x7Num_2x7Num_4x1Num_gen7:
+      case AlphaNumericLayout::__2x7Num_2x7Num_4x1Num_gen7:
          Render2x7Num_2x7Num_4x1Num_gen7(seg_data);
          break;
-      case __2x7Num10_2x7Num10_4x1Num:
+      case AlphaNumericLayout::__2x7Num10_2x7Num10_4x1Num:
          Render2x7Num10_2x7Num10_4x1Num(seg_data);
          break;
-      case __2x6Num_2x6Num_4x1Num:
+      case AlphaNumericLayout::__2x6Num_2x6Num_4x1Num:
          Render2x6Num_2x6Num_4x1Num(seg_data);
          break;
-      case __2x6Num10_2x6Num10_4x1Num:
+      case AlphaNumericLayout::__2x6Num10_2x6Num10_4x1Num:
          Render2x6Num10_2x6Num10_4x1Num(seg_data);
          break;
-      case __4x7Num10:
+      case AlphaNumericLayout::__4x7Num10:
          Render4x7Num10(seg_data);
          break;
-      case __6x4Num_4x1Num:
+      case AlphaNumericLayout::__6x4Num_4x1Num:
          Render6x4Num_4x1Num(seg_data);
          break;
-      case __2x7Num_4x1Num_1x16Alpha:
+      case AlphaNumericLayout::__2x7Num_4x1Num_1x16Alpha:
          Render2x7Num_4x1Num_1x16Alpha(seg_data);
          break;
-      case __1x16Alpha_1x16Num_1x7Num:
+      case AlphaNumericLayout::__1x16Alpha_1x16Num_1x7Num:
          Render1x16Alpha_1x16Num_1x7Num(seg_data);
          break;
-      case __1x7Num_1x16Alpha_1x16Num:
+      case AlphaNumericLayout::__1x7Num_1x16Alpha_1x16Num:
          Render1x7Num_1x16Alpha_1x16Num(seg_data);
          break;
-      case __1x16Alpha_1x16Num_1x7Num_1x4Num:
+      case AlphaNumericLayout::__1x16Alpha_1x16Num_1x7Num_1x4Num:
          Render1x16Alpha_1x16Num_1x7Num_1x4Num(seg_data);
          break;
       default:
@@ -280,7 +282,7 @@ void AlphaNumeric::DrawSegment(const int x, const int y, const uint8_t type, con
       DrawPixel(Segs[type][seg][i][0] + x, Segs[type][seg][i][1] + y, colour);
 }
 
-uint8_t AlphaNumeric::GetPixel(const int x, const int y)
+bool AlphaNumeric::GetPixel(const int x, const int y) const
 {
    return m_frameBuffer[y * 128 + x] > 0;
 }
@@ -292,14 +294,13 @@ void AlphaNumeric::DrawPixel(const int x, const int y, const uint8_t colour)
 
 void AlphaNumeric::Clear()
 {
-   memset(m_frameBuffer, 0, 4096);
+   memset(m_frameBuffer, 0, sizeof(m_frameBuffer));
 }
 
 void AlphaNumeric::Render2x16Alpha(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 16; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 16; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment(i * 8, 2, 0, j, 3);
          if ((seg_data[i + 16] >> j) & 0x1)
@@ -312,9 +313,8 @@ void AlphaNumeric::Render2x16Alpha(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render2x20Alpha(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 20; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 20; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i * 6) + 4, 2, 7, j, 3);
          if ((seg_data[i + 20] >> j) & 0x1)
@@ -327,9 +327,8 @@ void AlphaNumeric::Render2x20Alpha(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render2x7Alpha_2x7Num(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 alphanumeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 2, 0, j, 3);
@@ -344,9 +343,8 @@ void AlphaNumeric::Render2x7Alpha_2x7Num(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render2x7Alpha_2x7Num_4x1Num(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 alphanumeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 0, 0, j, 3);
@@ -358,7 +356,7 @@ void AlphaNumeric::Render2x7Alpha_2x7Num_4x1Num(const uint16_t* const seg_data)
       SmoothDigitCorners((i + ((i < 7) ? 0 : 2)) * 8, 21);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[28] >> j) & 0x1)
          DrawSegment(8, 12, 5, j, 3);
       if ((seg_data[29] >> j) & 0x1)
@@ -372,9 +370,8 @@ void AlphaNumeric::Render2x7Alpha_2x7Num_4x1Num(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render2x6Num_2x6Num_4x1Num(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 12; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 12; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 6) ? 0 : 4)) * 8, 0, 1, j, 3);
@@ -387,7 +384,7 @@ void AlphaNumeric::Render2x6Num_2x6Num_4x1Num(const uint16_t* const seg_data)
       SmoothDigitCorners((i + ((i < 6) ? 0 : 4)) * 8, 12);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[24] >> j) & 0x1)
          DrawSegment(8, 24, 5, j, 3);
       if ((seg_data[25] >> j) & 0x1)
@@ -401,9 +398,8 @@ void AlphaNumeric::Render2x6Num_2x6Num_4x1Num(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render2x6Num10_2x6Num10_4x1Num(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 12; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 12; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 6) ? 0 : 4)) * 8, 0, 2, j, 3);
@@ -415,7 +411,7 @@ void AlphaNumeric::Render2x6Num10_2x6Num10_4x1Num(const uint16_t* const seg_data
       SmoothDigitCorners((i + ((i < 6) ? 0 : 4)) * 8, 20);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[24] >> j) & 0x1)
          DrawSegment(8, 12, 5, j, 3);
       if ((seg_data[25] >> j) & 0x1)
@@ -429,9 +425,8 @@ void AlphaNumeric::Render2x6Num10_2x6Num10_4x1Num(const uint16_t* const seg_data
 
 void AlphaNumeric::Render2x7Num_2x7Num_4x1Num(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 0, 1, j, 3);
@@ -443,7 +438,7 @@ void AlphaNumeric::Render2x7Num_2x7Num_4x1Num(const uint16_t* const seg_data)
       SmoothDigitCorners((i + ((i < 7) ? 0 : 2)) * 8, 12);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[28] >> j) & 0x1)
          DrawSegment(16, 24, 5, j, 3);
       if ((seg_data[29] >> j) & 0x1)
@@ -457,9 +452,8 @@ void AlphaNumeric::Render2x7Num_2x7Num_4x1Num(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render2x7Num_2x7Num_10x1Num(const uint16_t* const seg_data, const uint16_t* const extra_seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 0, 1, j, 3);
@@ -471,7 +465,7 @@ void AlphaNumeric::Render2x7Num_2x7Num_10x1Num(const uint16_t* const seg_data, c
       SmoothDigitCorners((i + ((i < 7) ? 0 : 2)) * 8, 12);
    }
    // 10x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[28] >> j) & 0x1)
          DrawSegment(16, 24, 5, j, 3);
       if ((seg_data[29] >> j) & 0x1)
@@ -497,9 +491,8 @@ void AlphaNumeric::Render2x7Num_2x7Num_10x1Num(const uint16_t* const seg_data, c
 
 void AlphaNumeric::Render2x7Num_2x7Num_4x1Num_gen7(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 21, 1, j, 3);
@@ -511,7 +504,7 @@ void AlphaNumeric::Render2x7Num_2x7Num_4x1Num_gen7(const uint16_t* const seg_dat
       SmoothDigitCorners((i + ((i < 7) ? 0 : 2)) * 8, 1);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[28] >> j) & 0x1)
          DrawSegment(8, 13, 5, j, 3);
       if ((seg_data[29] >> j) & 0x1)
@@ -525,9 +518,8 @@ void AlphaNumeric::Render2x7Num_2x7Num_4x1Num_gen7(const uint16_t* const seg_dat
 
 void AlphaNumeric::Render2x7Num10_2x7Num10_4x1Num(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 0, 2, j, 3);
@@ -539,7 +531,7 @@ void AlphaNumeric::Render2x7Num10_2x7Num10_4x1Num(const uint16_t* const seg_data
       SmoothDigitCorners((i + ((i < 7) ? 0 : 2)) * 8, 20);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[28] >> j) & 0x1)
          DrawSegment(8, 12, 5, j, 3);
       if ((seg_data[29] >> j) & 0x1)
@@ -553,9 +545,8 @@ void AlphaNumeric::Render2x7Num10_2x7Num10_4x1Num(const uint16_t* const seg_data
 
 void AlphaNumeric::Render4x7Num10(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric10
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 1, 2, j, 3);
@@ -570,9 +561,8 @@ void AlphaNumeric::Render4x7Num10(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render6x4Num_4x1Num(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 8; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x4 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 4) ? 0 : 2)) * 8, 1, 5, j, 3);
@@ -588,7 +578,7 @@ void AlphaNumeric::Render6x4Num_4x1Num(const uint16_t* const seg_data)
       SmoothDigitCorners((i + ((i < 4) ? 0 : 2)) * 8, 17);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[24] >> j) & 0x1)
          DrawSegment(16, 25, 5, j, 3);
       if ((seg_data[25] >> j) & 0x1)
@@ -602,9 +592,8 @@ void AlphaNumeric::Render6x4Num_4x1Num(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render2x7Num_4x1Num_1x16Alpha(const uint16_t* const seg_data)
 {
-   int i, j;
-   for (i = 0; i < 14; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 14; i++) {
+      for (int j = 0; j < 16; j++) {
          // 2x7 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 7) ? 0 : 2)) * 8, 0, 1, j, 3);
@@ -612,7 +601,7 @@ void AlphaNumeric::Render2x7Num_4x1Num_1x16Alpha(const uint16_t* const seg_data)
       SmoothDigitCorners((i + ((i < 7) ? 0 : 2)) * 8, 0);
    }
    // 4x1 numeric small
-   for (j = 0; j < 16; j++) {
+   for (int j = 0; j < 16; j++) {
       if ((seg_data[14] >> j) & 0x1)
          DrawSegment(16, 12, 5, j, 3);
       if ((seg_data[15] >> j) & 0x1)
@@ -623,8 +612,8 @@ void AlphaNumeric::Render2x7Num_4x1Num_1x16Alpha(const uint16_t* const seg_data)
          DrawSegment(48, 12, 5, j, 3);
    }
    // 1x16 alphanumeric
-   for (i = 0; i < 12; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 12; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i + 18] >> j) & 0x1)
             DrawSegment((i * 8) + 16, 21, 0, j, 3);
       }
@@ -634,10 +623,9 @@ void AlphaNumeric::Render2x7Num_4x1Num_1x16Alpha(const uint16_t* const seg_data)
 
 void AlphaNumeric::Render1x16Alpha_1x16Num_1x7Num(const uint16_t* const seg_data)
 {
-   int i, j;
    // 1x16 alphanumeric
-   for (i = 0; i < 16; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 16; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i * 8), 9, 0, j, 3);
       }
@@ -645,8 +633,8 @@ void AlphaNumeric::Render1x16Alpha_1x16Num_1x7Num(const uint16_t* const seg_data
    }
 
    // 1x16 numeric
-   for (i = 0; i < 16; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 16; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i + 16] >> j) & 0x1)
             DrawSegment((i * 8), 21, 1, j, 3);
       }
@@ -654,8 +642,8 @@ void AlphaNumeric::Render1x16Alpha_1x16Num_1x7Num(const uint16_t* const seg_data
    }
 
    // 1x7 numeric small
-   for (i = 0; i < 7; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 7; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i + 32] >> j) & 0x1)
             DrawSegment((i * 8) + 68, 1, 5, j, 3);
       }
@@ -664,26 +652,25 @@ void AlphaNumeric::Render1x16Alpha_1x16Num_1x7Num(const uint16_t* const seg_data
 
 void AlphaNumeric::Render1x7Num_1x16Alpha_1x16Num(const uint16_t* const seg_data)
 {
-   int i, j;
    // 1x16 alphanumeric
-   for (i = 0; i < 16; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 16; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i+8] >> j) & 0x1)
             DrawSegment((i * 8), 9, 0, j, 3);
       }
       SmoothDigitCorners((i * 8), 9);
    }
    // 1x16 numeric
-   for (i = 0; i < 16; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 16; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i + 24] >> j) & 0x1)
             DrawSegment((i * 8), 21, 1, j, 3);
       }
       SmoothDigitCorners((i * 8), 21);
    }
    // 1x7 numeric small
-   for (i = 0; i < 7; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 7; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i+1] >> j) & 0x1)
             DrawSegment((i * 8) + 68, 1, 5, j, 3);
       }
@@ -692,33 +679,32 @@ void AlphaNumeric::Render1x7Num_1x16Alpha_1x16Num(const uint16_t* const seg_data
 
 void AlphaNumeric::Render1x16Alpha_1x16Num_1x7Num_1x4Num(const uint16_t* const seg_data)
 {
-   int i, j;
    // 1x16 alphanumeric
-   for (i = 0; i < 16; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 16; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i + 11] >> j) & 0x1)
             DrawSegment((i * 8), 9, 0, j, 3);
       }
       SmoothDigitCorners((i * 8), 9);
    }
    // 1x16 numeric
-   for (i = 0; i < 16; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 16; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i + 27] >> j) & 0x1)
             DrawSegment((i * 8), 21, 1, j, 3);
       }
       SmoothDigitCorners((i * 8), 21);
    }
    // 1x4 numeric small
-   for (i = 0; i < 4; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i + 7] >> j) & 0x1)
             DrawSegment((i * 8)+4, 1, 5, j, 3);
       }
    }
    // 1x7 numeric small
-   for (i = 0; i < 7; i++) {
-      for (j = 0; j < 16; j++) {
+   for (int i = 0; i < 7; i++) {
+      for (int j = 0; j < 16; j++) {
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i * 8)+68, 1, 5, j, 3);
       }

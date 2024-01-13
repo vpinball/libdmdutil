@@ -114,7 +114,6 @@ Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
    unsigned char response[29];
-   size_t bytes_read;
 
    result = sp_blocking_read(pSerialPort, response, 29, PIXELCADE_COMMAND_READ_TIMEOUT);
    if (response[0] != PIXELCADE_RESPONSE_ESTABLE_CONNECTION) {
@@ -124,7 +123,7 @@ Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
      return nullptr;
    }
 
-   if (response[1] != 'I' || response[2] != 'O' && response[3] != 'I' || response[4] != 'O') {
+   if (response[1] != 'I' || response[2] != 'O' || response[3] != 'I' || response[4] != 'O') {
      sp_close(pSerialPort);
      sp_free_port(pSerialPort);
      //Log("Pixelcade: expected magic code to equal IOIO but got %c%c%c%c", response[1], response[2], response[3], response[4]);
@@ -143,8 +142,6 @@ Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
    Log("Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s", pDevice, hardwareId, bootloaderId, firmware);
 
    return new Pixelcade(pSerialPort, width, height);
-
-   return nullptr;
 }
 
 void Pixelcade::Update(uint16_t* pData)
@@ -167,7 +164,7 @@ void Pixelcade::Update(uint16_t* pData)
 
 void Pixelcade::EnableRgbLedMatrix(int shifterLen32, int rows)
 {
-   uint8_t data[2] = { PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE, (uint8_t)(shifterLen32 & 0x0F | ((rows == 8 ? 0 : 1) << 4)) };
+   uint8_t data[2] = { PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE, (uint8_t)((shifterLen32 & 0x0F) | ((rows == 8 ? 0 : 1) << 4)) };
    sp_blocking_write(m_pSerialPort, data, 2, 0);
 }
 
@@ -182,9 +179,6 @@ void Pixelcade::Run()
    m_pThread = new std::thread([this]() {
       Log("Pixelcade run thread starting");
       EnableRgbLedMatrix(4, 16);
-
-      uint8_t planes[128 * 32 * 3 / 2];
-      uint16_t scaledFrame[128 * 32];
 
       while (m_running) {
          std::unique_lock<std::mutex> lock(m_mutex);
@@ -204,10 +198,12 @@ void Pixelcade::Run()
 
                static uint8_t command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
                sp_blocking_write(m_pSerialPort, &command, 1, PIXELCADE_COMMAND_WRITE_TIMEOUT);
-               
+
+               uint8_t planes[128 * 32 * 3 / 2];
                if (m_width == 128 && m_height == 32)
                   FrameUtil::SplitIntoRgbPlanes(pFrame, 128 * 32, 128, 16, (uint8_t*)planes);
                else {
+                  uint16_t scaledFrame[128 * 32];
                   FrameUtil::ResizeRgb565Bilinear(pFrame, m_width, m_height, scaledFrame, 128, 32);
                   FrameUtil::SplitIntoRgbPlanes(scaledFrame, 128 * 32, 128, 16, (uint8_t*)planes);
                }

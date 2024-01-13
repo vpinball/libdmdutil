@@ -50,22 +50,22 @@ class Pixelcade;
 class DMDUTILAPI DMD
 {
 public:
-   DMD(int width, int height, bool sam = false, const std::string& name = "");
+   DMD(int width, int height, bool sam = false, const char* name = nullptr);
    ~DMD();
 
    static bool IsFinding();
-   bool HasDisplay();
-   const int GetWidth() { return m_width; }
-   const int GetHeight() { return m_height; }
-   const int GetLength() { return m_length; }
-   const bool IsUpdated() { return m_updated; }
+   bool HasDisplay() const;
+   int GetWidth() const { return m_width; }
+   int GetHeight() const { return m_height; }
+   int GetLength() const { return m_length; }
+   bool IsUpdated() const { return m_updated; }
    void ResetUpdated() { m_updated = false; }
    void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
    void UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
    void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r, uint8_t g, uint8_t b);
-   uint8_t* GetLevelData();
-   uint32_t* GetRGB32Data();
- 
+   const uint8_t* GetLevelData() const { return m_pLevelData; }
+   const uint32_t* GetRGB32Data() const { return m_pRGB32Data; }
+
 private:
    enum class DmdMode {
       Unknown,
@@ -103,8 +103,8 @@ private:
    bool m_sam;
    uint8_t* m_pData;
    uint8_t* m_pRGB24Data;
-   uint16_t* m_segData1[128];
-   uint16_t* m_segData2[128];
+   uint16_t m_segData1[128];
+   uint16_t m_segData2[128];
    uint8_t* m_pLevelData;
    uint32_t* m_pRGB32Data;
    uint16_t* m_pRGB565Data;
