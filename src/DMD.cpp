@@ -11,6 +11,8 @@
 #include "Serum.h"
 #include "ZeDMD.h"
 
+#include <cstring>
+
 namespace DMDUtil {
 
 void ZEDMDCALLBACK ZeDMDLogCallback(const char* format, va_list args, const void* pUserData)
