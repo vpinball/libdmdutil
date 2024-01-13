@@ -157,7 +157,7 @@ const uint8_t AlphaNumeric::Segs[8][17][5][2] = {
       {{0,0},{0,0},{0,0},{0,0},{0,0}}
    },
    /* alphanumeric display characters 6pixel width*/
-   {   
+   {
       {{0,0},{1,0},{2,0},{3,0},{4,0}},
       {{4,0},{4,1},{4,2},{4,3},{4,4}},
       {{4,6},{4,7},{4,8},{4,9},{4,10}},
@@ -372,11 +372,11 @@ void AlphaNumeric::Render2x6Num_2x6Num_4x1Num(const uint16_t* const seg_data)
 {
    for (int i = 0; i < 12; i++) {
       for (int j = 0; j < 16; j++) {
-         // 2x7 numeric
+         // 2x6 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 6) ? 0 : 4)) * 8, 0, 1, j, 3);
-         
-         // 2x7 numeric
+
+         // 2x6 numeric
          if ((seg_data[i + 12] >> j) & 0x1)
             DrawSegment((i + ((i < 6) ? 0 : 4)) * 8, 12, 1, j, 3);
       }
@@ -400,10 +400,10 @@ void AlphaNumeric::Render2x6Num10_2x6Num10_4x1Num(const uint16_t* const seg_data
 {
    for (int i = 0; i < 12; i++) {
       for (int j = 0; j < 16; j++) {
-         // 2x7 numeric
+         // 2x6 numeric
          if ((seg_data[i] >> j) & 0x1)
             DrawSegment((i + ((i < 6) ? 0 : 4)) * 8, 0, 2, j, 3);
-         // 2x7 numeric
+         // 2x6 numeric
          if ((seg_data[i + 12] >> j) & 0x1)
             DrawSegment((i + ((i < 6) ? 0 : 4)) * 8, 20, 2, j, 3);
       }
