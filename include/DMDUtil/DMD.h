@@ -24,7 +24,7 @@ class ZeDMD;
 namespace DMDUtil {
 
 enum class AlphaNumericLayout {
-   None,
+   NoLayout,
    __2x16Alpha,
    __2x20Alpha,
    __2x7Alpha_2x7Num,
