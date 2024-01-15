@@ -279,18 +279,18 @@ bool DMD::UpdatePalette(const DMDUpdate* pUpdate)
 
    memset(m_palette, 0, 192);
 
-   uint8_t r = pUpdate->r;
-   uint8_t g = pUpdate->g;
-   uint8_t b = pUpdate->b;
+   const float r = (float)pUpdate->r;
+   const float g = (float)pUpdate->g;
+   const float b = (float)pUpdate->b;
 
-   int colors = (pUpdate->depth == 2) ? 4 : 16;
+   const int colors = (pUpdate->depth == 2) ? 4 : 16;
    int pos = 0;
 
    for (int i = 0; i < colors; i++) {
       float perc = FrameUtil::CalcBrightness((float)i / (float)(colors - 1));
-      m_palette[pos++] = (uint8_t)((float)r * perc);
-      m_palette[pos++] = (uint8_t)((float)g * perc);
-      m_palette[pos++] = (uint8_t)((float)b * perc);
+      m_palette[pos++] = (uint8_t)(r * perc);
+      m_palette[pos++] = (uint8_t)(g * perc);
+      m_palette[pos++] = (uint8_t)(b * perc);
    }
 
    return (memcmp(m_palette, palette, 192) != 0);
@@ -339,16 +339,12 @@ void DMD::UpdateData(const DMDUpdate* pUpdate, bool update)
 
    for (int i = 0; i < m_length; i++) {
       int pos = m_pData[i] * 3;
-      uint8_t r = m_palette[pos  ];
-      uint8_t g = m_palette[pos+1];
-      uint8_t b = m_palette[pos+2];
+      uint32_t r = m_palette[pos  ];
+      uint32_t g = m_palette[pos+1];
+      uint32_t b = m_palette[pos+2];
 
       m_pRGB32Data[i] = r | g << 8 | b << 16 | 0xFFu << 24;
-
-      uint16_t x1 = (r & 0xF8) | (g >> 5);
-      uint16_t x2 = ((g & 0x1C) << 3) | (b >> 3);
-
-      m_pRGB565Data[i] = ((x1 << 8) + x2);
+      m_pRGB565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
    }
 
    if (m_pZeDMD) {
@@ -395,9 +391,9 @@ void DMD::UpdateRGB24Data(const DMDUpdate* pUpdate, bool update)
 
    int pos = 0;
    for (int i = 0; i < m_length; i++) {
-      uint8_t r = m_pRGB24Data[pos++];
-      uint8_t g = m_pRGB24Data[pos++];
-      uint8_t b = m_pRGB24Data[pos++];
+      uint32_t r = m_pRGB24Data[pos++];
+      uint32_t g = m_pRGB24Data[pos++];
+      uint32_t b = m_pRGB24Data[pos++];
 
       if (pUpdate->depth != 24) {
          int v = (int)(0.2126f * (float)r + 0.7152f * (float)g + 0.0722f * (float)b);
@@ -420,11 +416,7 @@ void DMD::UpdateRGB24Data(const DMDUpdate* pUpdate, bool update)
       }
 
       m_pRGB32Data[i] = r | g << 8 | b << 16 | 0xFFu << 24;
-
-      uint16_t x1 = (r & 0xF8) | (g >> 5);
-      uint16_t x2 = ((g & 0x1C) << 3) | (b >> 3);
-
-      m_pRGB565Data[i] = ((x1 << 8) + x2);
+      m_pRGB565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
    }
 
    if (pUpdate->depth == 2) {
@@ -482,16 +474,12 @@ void DMD::UpdateAlphaNumericData(const DMDUpdate* pUpdate, bool update)
 
    for (int i = 0; i < m_length; i++) {
       int pos = pData[i] * 3;
-      uint8_t r = m_palette[pos  ];
-      uint8_t g = m_palette[pos+1];
-      uint8_t b = m_palette[pos+2];
+      uint32_t r = m_palette[pos  ];
+      uint32_t g = m_palette[pos+1];
+      uint32_t b = m_palette[pos+2];
 
       m_pRGB32Data[i] = r | g << 8 | b << 16 | 0xFFu << 24;
-
-      uint16_t x1 = (r & 0xF8) | (g >> 5);
-      uint16_t x2 = ((g & 0x1C) << 3) | (b >> 3);
-
-      m_pRGB565Data[i] = ((x1 << 8) + x2);
+      m_pRGB565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
    }
 
    if (m_pZeDMD) {

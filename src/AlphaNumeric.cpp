@@ -264,7 +264,7 @@ void AlphaNumeric::SmoothDigitCorners(const int x, const int y)
       DrawPixel(6 + x, 10 + y, 0);
 }
 
-void AlphaNumeric::SmoothDigitCorners6Px(int x, int y)
+void AlphaNumeric::SmoothDigitCorners6Px(const int x, const int y)
 {
    if (GetPixel(x, 1 + y) && GetPixel(1 + x, y))
       DrawPixel(0 + x, y, 0);
