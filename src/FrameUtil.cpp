@@ -38,9 +38,9 @@ void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, int w
       for (int y = 0; y < height; ++y) {
          if (y % (pairOffset * 2) >= pairOffset)
             continue;
-           
+
          int inputIndex0 = y * width + x;
-         int inputIndex1 = (y + pairOffset) * width + x;
+         int inputIndex1 = inputIndex0 + pairOffset * width;
 
          uint16_t color0 = rgb565[inputIndex0];
          uint16_t color1 = rgb565[inputIndex1];
@@ -48,21 +48,21 @@ void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, int w
          int r0 = 0, r1 = 0, g0 = 0, g1 = 0, b0 = 0, b1 = 0;
          switch (colorMatrix) {
             case ColorMatrix::Rgb:
-               r0 = (color0 >> 13) & 0x7;
-               g0 = (color0 >> 8) & 0x7;
-               b0 = (color0 >> 2) & 0x7;
-               r1 = (color1 >> 13) & 0x7;
-               g1 = (color1 >> 8) & 0x7;
-               b1 = (color1 >> 2) & 0x7;
+               r0 = (color0 >> 13) /*& 0x7*/;
+               g0 = (color0 >> 8)  /*& 0x7*/;
+               b0 = (color0 >> 2)  /*& 0x7*/;
+               r1 = (color1 >> 13) /*& 0x7*/;
+               g1 = (color1 >> 8)  /*& 0x7*/;
+               b1 = (color1 >> 2)  /*& 0x7*/;
                break;
 
             case ColorMatrix::Rbg:
-               r0 = (color0 >> 13) & 0x7;
-               b0 = (color0 >> 8) & 0x7;
-               g0 = (color0 >> 2) & 0x7;
-               r1 = (color1 >> 13) & 0x7;
-               b1 = (color1 >> 8) & 0x7;
-               g1 = (color1 >> 2) & 0x7;
+               r0 = (color0 >> 13) /*& 0x7*/;
+               b0 = (color0 >> 8)  /*& 0x7*/;
+               g0 = (color0 >> 2)  /*& 0x7*/;
+               r1 = (color1 >> 13) /*& 0x7*/;
+               b1 = (color1 >> 8)  /*& 0x7*/;
+               g1 = (color1 >> 2)  /*& 0x7*/;
                break;
          }
 
@@ -90,13 +90,15 @@ void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, int w
 
 inline uint16_t FrameUtil::InterpolateRgb565Color(uint16_t color1, uint16_t color2, float ratio)
 {
-   int red1 = (color1 >> 11) & 0x1F;
-   int green1 = (color1 >> 5) & 0x3F;
-   int blue1 = color1 & 0x1F;
+   //ratio *= ratio*(3.0f-2.0f*ratio); // = biquintic
 
-   int red2 = (color2 >> 11) & 0x1F;
-   int green2 = (color2 >> 5) & 0x3F;
-   int blue2 = color2 & 0x1F;
+   int red1 = (int)color1 >> 11;
+   int green1 = ((int)color1 >> 5) & 0x3F;
+   int blue1 = (int)color1 & 0x1F;
+
+   int red2 = (int)color2 >> 11;
+   int green2 = ((int)color2 >> 5) & 0x3F;
+   int blue2 = (int)color2 & 0x1F;
 
    int red = red1 + static_cast<int>((float)(red2 - red1) * ratio);
    int green = green1 + static_cast<int>((float)(green2 - green1) * ratio);
@@ -116,15 +118,48 @@ inline uint16_t FrameUtil::InterpolatedRgb565Pixel(const uint16_t* src, float sr
    float xDiff = srcX - (float)x;
    float yDiff = srcY - (float)y;
 
-   uint16_t a = src[y * srcWidth + x];
-   uint16_t b = x < srcWidth - 1 ? src[y * srcWidth + (x + 1)] : a;
-   uint16_t c = y < srcHeight - 1 ? src[(y + 1) * srcWidth + x] : a;
-   uint16_t d = (x < srcWidth - 1 && y < srcHeight - 1) ? src[(y + 1) * srcWidth + (x + 1)] : a;
+   //xDiff *= xDiff*(3.0f-2.0f*xDiff); // = biquintic
+   //yDiff *= yDiff*(3.0f-2.0f*yDiff);
 
-   uint16_t ab = InterpolateRgb565Color(a, b, xDiff);
-   uint16_t cd = InterpolateRgb565Color(c, d, xDiff);
+   const int offs = y * srcWidth + x;
+   int a = src[offs];
+   int b = (x < srcWidth - 1) ? src[offs + 1] : a;
+   int c = (y < srcHeight - 1) ? src[offs + srcWidth] : a;
+   int d = (x < srcWidth - 1 && y < srcHeight - 1) ? src[offs + srcWidth + 1] : c;
 
-   return InterpolateRgb565Color(ab, cd, yDiff);
+   int red1 = a >> 11;
+   int green1 = (a >> 5) & 0x3F;
+   int blue1 = a & 0x1F;
+
+   int red2 = b >> 11;
+   int green2 = (b >> 5) & 0x3F;
+   int blue2 = b & 0x1F;
+
+   float redab = (float)red1 + (float)(red2 - red1) * xDiff;
+   float greenab = (float)green1 + (float)(green2 - green1) * xDiff;
+   float blueab = (float)blue1 + (float)(blue2 - blue1) * xDiff;
+
+   red1 = c >> 11;
+   green1 = (c >> 5) & 0x3F;
+   blue1 = c & 0x1F;
+
+   red2 = d >> 11;
+   green2 = (d >> 5) & 0x3F;
+   blue2 = d & 0x1F;
+
+   float redcd = (float)red1 + (float)(red2 - red1) * xDiff;
+   float greencd = (float)green1 + (float)(green2 - green1) * xDiff;
+   float bluecd = (float)blue1 + (float)(blue2 - blue1) * xDiff;
+
+   float red = redab + (redcd - redab) * yDiff;
+   float green = greenab + (greencd - greenab) * yDiff;
+   float blue = blueab + (bluecd - blueab) * yDiff;
+
+   red = std::min(std::max(red, 0.f), (float)0x1F);
+   green = std::min(std::max(green, 0.f), (float)0x3F);
+   blue = std::min(std::max(blue, 0.f), (float)0x1F);
+
+   return (uint16_t)(((int)red << 11) | ((int)green << 5) | (int)blue);
 }
 
 void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth, int srcHeight, uint16_t* dest, int destWidth, int destHeight)
@@ -146,6 +181,7 @@ void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth, int srcH
 
    int offsetX = (destWidth - scaledWidth) / 2;
    int offsetY = (destHeight - scaledHeight) / 2;
+   int offs = offsetX + offsetY * destWidth;
 
    for (int y = 0; y < scaledHeight; ++y) {
       for (int x = 0; x < scaledWidth; ++x) {
@@ -155,7 +191,7 @@ void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth, int srcH
          srcX = std::max(0.0f, std::min(srcX, static_cast<float>(srcWidth - 1)));
          srcY = std::max(0.0f, std::min(srcY, static_cast<float>(srcHeight - 1)));
 
-         dest[(offsetY + y) * destWidth + (offsetX + x)] = InterpolatedRgb565Pixel(src, srcX, srcY, srcWidth, srcHeight);
+         dest[y * destWidth + offs + x)] = InterpolatedRgb565Pixel(src, srcX, srcY, srcWidth, srcHeight);
       }
    }
 }
