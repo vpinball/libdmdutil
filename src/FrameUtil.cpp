@@ -191,7 +191,7 @@ void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth, int srcH
          srcX = std::max(0.0f, std::min(srcX, static_cast<float>(srcWidth - 1)));
          srcY = std::max(0.0f, std::min(srcY, static_cast<float>(srcHeight - 1)));
 
-         dest[y * destWidth + offs + x)] = InterpolatedRgb565Pixel(src, srcX, srcY, srcWidth, srcHeight);
+         dest[y * destWidth + offs + x] = InterpolatedRgb565Pixel(src, srcX, srcY, srcWidth, srcHeight);
       }
    }
 }
