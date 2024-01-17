@@ -13,7 +13,6 @@
 #include <thread>
 #include <queue>
 #include <mutex>
-#include <condition_variable>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -120,7 +119,6 @@ private:
    std::thread* m_pThread;
    std::queue<DMDUpdate*> m_updates;
    std::mutex m_mutex;
-   std::condition_variable m_condVar;
    bool m_running;
 
    static bool m_finding;

@@ -62,22 +62,19 @@ DMD::DMD(int width, int height, bool sam, const char* name)
 DMD::~DMD()
 {
    if (m_pThread) {
-      Stop();
+      m_running = false;
 
       m_pThread->join();
       delete m_pThread;
       m_pThread = nullptr;
    }
 
-   {
-      std::lock_guard<std::mutex> lock(m_mutex);
-      while (!m_updates.empty()) {
-         DMDUpdate* const pUpdate = m_updates.front();
-         m_updates.pop();
-         free(pUpdate->pData);
-         free(pUpdate->pData2);
-         delete pUpdate;
-      }
+   while (!m_updates.empty()) {
+      DMDUpdate* const pUpdate = m_updates.front();
+      m_updates.pop();
+      free(pUpdate->pData);
+      free(pUpdate->pData2);
+      delete pUpdate;
    }
 
    free(m_pData);
@@ -109,7 +106,6 @@ bool DMD::HasDisplay() const
 
 void DMD::UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b)
 {
-   std::lock_guard<std::mutex> lock(m_mutex);
    DMDUpdate* const pUpdate = new DMDUpdate();
    memset(pUpdate, 0, sizeof(DMDUpdate));
    pUpdate->mode = DmdMode::Data;
@@ -122,13 +118,14 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint
    pUpdate->g = g;
    pUpdate->b = b;
 
-   m_updates.push(pUpdate);
-   m_condVar.notify_one();
+   {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      m_updates.push(pUpdate);
+   }
 }
 
 void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b)
 {
-   std::lock_guard<std::mutex> lock(m_mutex);
    DMDUpdate* const pUpdate = new DMDUpdate();
    memset(pUpdate, 0, sizeof(DMDUpdate));
    pUpdate->mode = DmdMode::RGB24;
@@ -141,13 +138,14 @@ void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g,
    pUpdate->g = g;
    pUpdate->b = b;
 
-   m_updates.push(pUpdate);
-   m_condVar.notify_one();
+   {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      m_updates.push(pUpdate);
+   }
 }
 
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r, uint8_t g, uint8_t b)
 {
-   std::lock_guard<std::mutex> lock(m_mutex);
    DMDUpdate* const pUpdate = new DMDUpdate();
    memset(pUpdate, 0, sizeof(DMDUpdate));
    pUpdate->mode = DmdMode::AlphaNumeric;
@@ -163,8 +161,10 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
    pUpdate->g = g;
    pUpdate->b = b;
 
-   m_updates.push(pUpdate);
-   m_condVar.notify_one();
+   {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      m_updates.push(pUpdate);
+   }
 }
 
 void DMD::FindDevices()
@@ -223,7 +223,6 @@ void DMD::FindDevices()
 
 void DMD::Run()
 {
-   std::lock_guard<std::mutex> lock(m_mutex);
    if (m_running)
       return;
 
@@ -235,13 +234,17 @@ void DMD::Run()
       DmdMode mode = DmdMode::Unknown;
 
       while (m_running) {
-         std::unique_lock<std::mutex> lock(m_mutex);
-         m_condVar.wait(lock, [this]{ return !m_updates.empty() || !m_running; });
+         DMDUpdate* pUpdate = nullptr;
 
-         while (!m_updates.empty()) {
-            DMDUpdate* const pUpdate = m_updates.front();
-            m_updates.pop();
+         {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (!m_updates.empty()) {
+               pUpdate = m_updates.front();
+               m_updates.pop();
+            }
+         }
 
+         if (pUpdate) {
             const bool update = (mode != pUpdate->mode);
             mode = pUpdate->mode;
 
@@ -256,17 +259,12 @@ void DMD::Run()
             free(pUpdate->pData2);
             delete pUpdate;
          }
+         else
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
 
       Log("DMD run thread finished");
    });
-}
-
-void DMD::Stop()
-{
-   std::lock_guard<std::mutex> lock(m_mutex);
-   m_running = false;
-   m_condVar.notify_all();
 }
 
 bool DMD::UpdatePalette(const DMDUpdate* pUpdate)
