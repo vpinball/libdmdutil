@@ -88,6 +88,12 @@ Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
      return nullptr;
    }
 
+   sp_set_baudrate(pSerialPort, 115200);
+   sp_set_bits(pSerialPort, 8);
+   sp_set_parity(pSerialPort, SP_PARITY_NONE);
+   sp_set_stopbits(pSerialPort, 1);
+   sp_set_xon_xoff(pSerialPort, SP_XONXOFF_DISABLED);
+
    sp_set_dtr(pSerialPort, SP_DTR_OFF);
    sp_set_rts(pSerialPort, SP_RTS_ON);
 
@@ -175,9 +181,6 @@ void Pixelcade::Run()
          }
 
          if (pFrame) {
-            static uint8_t command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
-            sp_blocking_write(m_pSerialPort, &command, 1, PIXELCADE_COMMAND_WRITE_TIMEOUT);
-
             uint8_t planes[128 * 32 * 3 / 2];
             if (m_width == 128 && m_height == 32)
                FrameUtil::SplitIntoRgbPlanes(pFrame, 128 * 32, 128, 16, (uint8_t*)planes);
@@ -187,26 +190,43 @@ void Pixelcade::Run()
                FrameUtil::SplitIntoRgbPlanes(scaledFrame, 128 * 32, 128, 16, (uint8_t*)planes);
             }
 
+            static uint8_t command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
+            sp_blocking_write(m_pSerialPort, &command, 1, PIXELCADE_COMMAND_WRITE_TIMEOUT);
+
             enum sp_return response = sp_blocking_write(m_pSerialPort, planes, 128 * 32 * 3 / 2, PIXELCADE_COMMAND_WRITE_TIMEOUT);
 
-            if (response == SP_ERR_FAIL) {
+            if (response > 0) {
+               if (errors > 0) {
+                  Log("Communication to Pixelcade restored after %d frames", errors);
+                  errors = 0;
+               }
+            }
+            else if (response == 0) {
+               if (errors++ > PIXELCADE_MAX_NO_RESPONSE) {
+                  Log("Error while transmitting to Pixelcade: no response for the past %d frames", PIXELCADE_MAX_NO_RESPONSE);
+                  m_running = false;
+               }
+            }
+            else if (response == SP_ERR_FAIL) {
                char* pMessage = sp_last_error_message();
                Log("Error while transmitting to Pixelcade: %s", pMessage);
                sp_free_error_message(pMessage);
                m_running = false;
-            }
-            else if ((int)response == 0) {
-               if (++errors > PIXELCADE_MAX_NO_RESPONSE) {
-                  Log("Error while transmitting to Pixelcade: no response for the past %d frames.", PIXELCADE_MAX_NO_RESPONSE);
-                  m_running = false;
-               }
             }
          }
          else
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
 
+      sp_flush(m_pSerialPort, SP_BUF_BOTH);
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
       sp_set_dtr(m_pSerialPort, SP_DTR_OFF);
+      sp_set_rts(m_pSerialPort, SP_RTS_OFF);
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
       sp_close(m_pSerialPort);
       sp_free_port(m_pSerialPort);
 
