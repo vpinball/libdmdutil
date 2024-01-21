@@ -2,7 +2,7 @@
 
 set -e
 
-LIBZEDMD_SHA=31db44899b603cd1535e068b5e0842a7ee5ba0bb
+LIBZEDMD_SHA=b2190a3efaa52d705c9a5c62f00b418376a2604d
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
@@ -37,7 +37,7 @@ cmake -DPLATFORM=macos -DARCH=arm64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE
 cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include
 cp third-party/runtime-libs/macos/arm64/libserialport.dylib ../../third-party/runtime-libs/macos/arm64
-cp build/libzedmd.0.4.1.dylib ../../third-party/runtime-libs/macos/arm64
+cp build/libzedmd.0.5.0.dylib ../../third-party/runtime-libs/macos/arm64
 cd ..
 
 #

@@ -99,12 +99,12 @@ if(BUILD_SHARED)
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd.0.4.1 serum.1.6.2 serialport)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd.0.5.0 serum.1.6.2 serialport)
    elseif(PLATFORM STREQUAL "linux")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC -l:libzedmd.so.0.4.1 -l:libserum.so.1.6.2 -l:libserialport.so.0)
+      target_link_libraries(dmdutil_shared PUBLIC -l:libzedmd.so.0.5.0 -l:libserum.so.1.6.2 -l:libserialport.so.0)
    elseif(PLATFORM STREQUAL "ios" OR PLATFORM STREQUAL "tvos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
@@ -162,13 +162,13 @@ if(BUILD_SHARED)
          endif()
       elseif(PLATFORM STREQUAL "macos")
          add_custom_command(TARGET dmdutil_test POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.0.4.1.dylib" "$<TARGET_FILE_DIR:dmdutil_test>"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.0.5.0.dylib" "$<TARGET_FILE_DIR:dmdutil_test>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.1.6.2.dylib" "$<TARGET_FILE_DIR:dmdutil_test>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.dylib" "$<TARGET_FILE_DIR:dmdutil_test>"
          )
       elseif(PLATFORM STREQUAL "linux")
          add_custom_command(TARGET dmdutil_test POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.so.0.4.1" "$<TARGET_FILE_DIR:dmdutil_test>"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.so.0.5.0" "$<TARGET_FILE_DIR:dmdutil_test>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.so.1.6.2" "$<TARGET_FILE_DIR:dmdutil_test>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.so.0" "$<TARGET_FILE_DIR:dmdutil_test>"
          )
@@ -234,10 +234,10 @@ if(BUILD_STATIC)
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd.0.4.1 serum.1.6.2 serialport)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd.0.5.0 serum.1.6.2 serialport)
 
          add_custom_command(TARGET dmdutil_test_s POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.0.4.1.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.0.5.0.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.1.6.2.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
          )
@@ -245,10 +245,10 @@ if(BUILD_STATIC)
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static -l:libzedmd.so.0.4.1 -l:libserum.so.1.6.2 -l:libserialport.so.0)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static -l:libzedmd.so.0.5.0 -l:libserum.so.1.6.2 -l:libserialport.so.0)
 
          add_custom_command(TARGET dmdutil_test_s POST_BUILD
-           COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.so.0.4.1" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+           COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.so.0.5.0" "$<TARGET_FILE_DIR:dmdutil_test_s>"
            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.so.1.6.2" "$<TARGET_FILE_DIR:dmdutil_test_s>"
            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.so.0" "$<TARGET_FILE_DIR:dmdutil_test_s>"
          )
