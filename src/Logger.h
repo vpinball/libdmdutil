@@ -2,6 +2,6 @@
 
 namespace DMDUtil {
 
-void Log(const char *format, ...);    
+void Log(const char *format, ...);
 
 }
