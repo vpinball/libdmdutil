@@ -3,26 +3,32 @@
 
 #include "DMDUtil/DMDUtil.h"
 
-void DMDUTILCALLBACK LogCallback(const char* format, va_list args) {
+void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
+{
   char buffer[1024];
   vsnprintf(buffer, sizeof(buffer), format, args);
   printf("%s\n", buffer);
 }
 
-uint8_t* CreateImage(int width, int height, int depth) {
+uint8_t* CreateImage(int width, int height, int depth)
+{
   uint8_t* pImage = (uint8_t*)malloc(width * height);
   int pos = 0;
-  for (int y = 0; y < height; ++y) {
+  for (int y = 0; y < height; ++y)
+  {
     for (int x = 0; x < width; ++x) pImage[pos++] = x % ((depth == 2) ? 4 : 16);
   }
 
   return pImage;
 }
 
-uint8_t* CreateImageRGB24(int width, int height) {
+uint8_t* CreateImageRGB24(int width, int height)
+{
   uint8_t* pImage = (uint8_t*)malloc(width * height * 3);
-  for (int y = 0; y < height; ++y) {
-    for (int x = 0; x < width; ++x) {
+  for (int y = 0; y < height; ++y)
+  {
+    for (int x = 0; x < width; ++x)
+    {
       int index = (y * width + x) * 3;
       pImage[index++] = (uint8_t)(255 * x / width);
       pImage[index++] = (uint8_t)(255 * y / height);
@@ -33,7 +39,8 @@ uint8_t* CreateImageRGB24(int width, int height) {
   return pImage;
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char* argv[])
+{
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
   pConfig->SetLogCallback(LogCallback);
 
@@ -44,10 +51,10 @@ int main(int argc, const char* argv[]) {
 
   printf("Finding displays...\n");
 
-  while (DMDUtil::DMD::IsFinding())
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  while (DMDUtil::DMD::IsFinding()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-  if (!pDmd->HasDisplay()) {
+  if (!pDmd->HasDisplay())
+  {
     printf("No displays to render.\n");
     delete pDmd;
     return 1;
@@ -59,7 +66,8 @@ int main(int argc, const char* argv[]) {
   uint8_t* pImage4 = CreateImage(pDmd->GetWidth(), pDmd->GetHeight(), 4);
   uint8_t* pImage24 = CreateImageRGB24(pDmd->GetWidth(), pDmd->GetHeight());
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 4; i++)
+  {
     pDmd->UpdateData(pImage2, 2, 255, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 

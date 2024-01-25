@@ -2,9 +2,11 @@
 
 #include "DMDUtil/Config.h"
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-void Log(const char *format, ...) {
+void Log(const char *format, ...)
+{
   DMDUtil_LogCallback logCallback = Config::GetInstance()->GetLogCallback();
 
   if (!logCallback) return;
