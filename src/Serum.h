@@ -3,9 +3,11 @@
 #include <cstdint>
 #include <string>
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-class Serum {
+class Serum
+{
  public:
   ~Serum();
 

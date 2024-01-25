@@ -21,9 +21,11 @@
 #define PIXELCADE_MAX_QUEUE_FRAMES 4
 #define PIXELCADE_MAX_NO_RESPONSE 20
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-class Pixelcade {
+class Pixelcade
+{
  public:
   Pixelcade(struct sp_port* pSerialPort, int width, int height);
   ~Pixelcade();

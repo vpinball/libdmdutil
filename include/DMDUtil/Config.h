@@ -11,12 +11,13 @@
 #include <cstdarg>
 #include <string>
 
-typedef void(DMDUTILCALLBACK* DMDUtil_LogCallback)(const char* format,
-                                                   va_list args);
+typedef void(DMDUTILCALLBACK* DMDUtil_LogCallback)(const char* format, va_list args);
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-class DMDUTILAPI Config {
+class DMDUTILAPI Config
+{
  public:
   static Config* GetInstance();
   bool IsAltColor() const { return m_altColor; }
@@ -33,17 +34,13 @@ class DMDUTILAPI Config {
   int GetZeDMDBrightness() const { return m_zedmdBrightness; }
   void SetZeDMDBrightness(int brightness) { m_zedmdBrightness = brightness; }
   bool IsZeDMDSaveSettings() const { return m_zedmdSaveSettings; }
-  void SetZeDMDSaveSettings(bool saveSettings) {
-    m_zedmdSaveSettings = saveSettings;
-  }
+  void SetZeDMDSaveSettings(bool saveSettings) { m_zedmdSaveSettings = saveSettings; }
   bool IsPixelcade() const { return m_pixelcade; }
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
   const DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
-  void SetLogCallback(DMDUtil_LogCallback callback) {
-    m_logCallback = callback;
-  }
+  void SetLogCallback(DMDUtil_LogCallback callback) { m_logCallback = callback; }
   const char* GetAltColorPath() const { return m_altColorPath.c_str(); }
 
  private:
