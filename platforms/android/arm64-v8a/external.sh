@@ -5,7 +5,13 @@ set -e
 LIBZEDMD_SHA=b2190a3efaa52d705c9a5c62f00b418376a2604d
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
 
-NUM_PROCS=$(nproc)
+if [[ $(uname) == "Linux" ]]; then
+   NUM_PROCS=$(nproc)
+elif [[ $(uname) == "Darwin" ]]; then
+   NUM_PROCS=$(sysctl -n hw.ncpu)
+else
+   NUM_PROCS=1
+fi
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
