@@ -1,11 +1,12 @@
 #include "DMDUtil/DMD.h"
 
 #include "DMDUtil/Config.h"
+#include "DMDUtil/VirtualDMD.h"
 
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-#include "Pixelcade.h"
+#include "PixelcadeDMD.h"
 #endif
 #include <cstring>
 
@@ -34,16 +35,16 @@ DMD::DMD(int width, int height, bool sam, const char* name)
   m_height = height;
   m_length = width * height;
   m_sam = sam;
-  m_pData = (uint8_t*)malloc(m_length);
-  memset(m_pData, 0, m_length);
-  m_pRGB24Data = (uint8_t*)malloc(m_length * 3);
-  memset(m_pRGB24Data, 0, m_length * 3);
+  m_pBuffer = (uint8_t*)malloc(m_length);
+  memset(m_pBuffer, 0, m_length);
+  m_pRGB24Buffer = (uint8_t*)malloc(m_length * 3);
+  memset(m_pRGB24Buffer, 0, m_length * 3);
   memset(m_segData1, 0, 128 * sizeof(uint16_t));
   memset(m_segData2, 0, 128 * sizeof(uint16_t));
   m_pLevelData = (uint8_t*)malloc(m_length);
   memset(m_pLevelData, 0, m_length);
-  m_pRGB32Data = (uint32_t*)malloc(m_length * sizeof(uint32_t));
-  memset(m_pRGB32Data, 0, m_length * sizeof(uint32_t));
+  m_pRGB24Data = (uint8_t*)malloc(m_length * 3);
+  memset(m_pRGB24Data, 0, m_length * 3);
   m_pRGB565Data = (uint16_t*)malloc(m_length * sizeof(uint16_t));
   memset(m_pRGB565Data, 0, m_length * sizeof(uint16_t));
   memset(m_palette, 0, 192);
@@ -53,11 +54,10 @@ DMD::DMD(int width, int height, bool sam, const char* name)
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  m_pPixelcade = nullptr;
+  m_pPixelcadeDMD = nullptr;
 #endif
   m_pThread = nullptr;
   m_running = false;
-  m_updated = false;
 
   FindDevices();
 
@@ -84,10 +84,10 @@ DMD::~DMD()
     delete pUpdate;
   }
 
-  free(m_pData);
-  free(m_pRGB24Data);
+  free(m_pBuffer);
+  free(m_pRGB24Buffer);
   free(m_pLevelData);
-  free(m_pRGB32Data);
+  free(m_pRGB24Data);
   free(m_pRGB565Data);
   delete m_pAlphaNumeric;
   delete m_pSerum;
@@ -95,8 +95,10 @@ DMD::~DMD()
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  delete m_pPixelcade;
+  delete m_pPixelcadeDMD;
 #endif
+
+  for (VirtualDMD* pVirtualDMD : m_virtualDMDs) delete pVirtualDMD;
 }
 
 bool DMD::IsFinding() { return m_finding; }
@@ -106,10 +108,17 @@ bool DMD::HasDisplay() const
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  return (m_pZeDMD != nullptr) || (m_pPixelcade != nullptr);
+  return (m_pZeDMD != nullptr) || (m_pPixelcadeDMD != nullptr);
 #else
   return (m_pZeDMD != nullptr);
 #endif
+}
+
+VirtualDMD* DMD::CreateVirtualDMD()
+{
+  VirtualDMD* const pVirtualDMD = new VirtualDMD(m_width, m_height);
+  m_virtualDMDs.push_back(pVirtualDMD);
+  return pVirtualDMD;
 }
 
 void DMD::UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b)
@@ -192,7 +201,7 @@ void DMD::FindDevices()
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-        Pixelcade* pPixelcade = nullptr;
+        PixelcadeDMD* pPixelcadeDMD = nullptr;
 #endif
 
         Config* const pConfig = Config::GetInstance();
@@ -224,14 +233,15 @@ void DMD::FindDevices()
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-        if (pConfig->IsPixelcade()) pPixelcade = Pixelcade::Connect(pConfig->GetPixelcadeDevice(), m_width, m_height);
+        if (pConfig->IsPixelcade())
+          pPixelcadeDMD = PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), m_width, m_height);
 #endif
 
         m_pZeDMD = pZeDMD;
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-        m_pPixelcade = pPixelcade;
+        m_pPixelcadeDMD = pPixelcadeDMD;
 #endif
 
         m_finding = false;
@@ -342,16 +352,16 @@ void DMD::UpdateData(const DMDUpdate* pUpdate, bool update)
   {
     if (pData)
     {
-      if (memcmp(m_pData, pData, m_length) != 0)
+      if (memcmp(m_pBuffer, pData, m_length) != 0)
       {
-        memcpy(m_pData, pData, m_length);
+        memcpy(m_pBuffer, pData, m_length);
         update = true;
       }
     }
 
     if (UpdatePalette(pUpdate)) update = true;
   }
-  else if (m_pSerum->Convert(pData, m_pData, m_palette))
+  else if (m_pSerum->Convert(pData, m_pBuffer, m_palette))
   {
     // if we have serum, run a conversion, and if success, we have an update (needed for rotations)
     // serum will take care of updating the data buffer
@@ -362,12 +372,16 @@ void DMD::UpdateData(const DMDUpdate* pUpdate, bool update)
 
   for (int i = 0; i < m_length; i++)
   {
-    int pos = m_pData[i] * 3;
+    int pos = m_pBuffer[i] * 3;
     uint32_t r = m_palette[pos];
     uint32_t g = m_palette[pos + 1];
     uint32_t b = m_palette[pos + 2];
 
-    m_pRGB32Data[i] = r | g << 8 | b << 16 | 0xFFu << 24;
+    pos = i * 3;
+    m_pRGB24Data[pos] = r;
+    m_pRGB24Data[pos + 1] = g;
+    m_pRGB24Data[pos + 2] = b;
+
     m_pRGB565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
   }
 
@@ -376,19 +390,19 @@ void DMD::UpdateData(const DMDUpdate* pUpdate, bool update)
     if (m_pSerum)
     {
       m_pZeDMD->SetPalette(m_palette, 64);
-      m_pZeDMD->RenderColoredGray6(m_pData, nullptr);
+      m_pZeDMD->RenderColoredGray6(m_pBuffer, nullptr);
     }
     else
     {
       if (pUpdate->depth == 2)
       {
         m_pZeDMD->SetPalette(m_palette, 4);
-        m_pZeDMD->RenderGray2(m_pData);
+        m_pZeDMD->RenderGray2(m_pBuffer);
       }
       else
       {
         m_pZeDMD->SetPalette(m_palette, 16);
-        m_pZeDMD->RenderGray4(m_pData);
+        m_pZeDMD->RenderGray4(m_pBuffer);
       }
     }
   }
@@ -396,10 +410,10 @@ void DMD::UpdateData(const DMDUpdate* pUpdate, bool update)
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  if (m_pPixelcade) m_pPixelcade->Update(m_pRGB565Data);
+  if (m_pPixelcadeDMD) m_pPixelcadeDMD->Update(m_pRGB565Data);
 #endif
 
-  m_updated = true;
+  for (VirtualDMD* pVirtualDMD : m_virtualDMDs) pVirtualDMD->Update(m_pLevelData, m_pRGB24Data);
 }
 
 void DMD::UpdateRGB24Data(const DMDUpdate* pUpdate, bool update)
@@ -411,18 +425,18 @@ void DMD::UpdateRGB24Data(const DMDUpdate* pUpdate, bool update)
     if (UpdatePalette(pUpdate)) update = true;
   }
 
-  if (memcmp(m_pRGB24Data, pData, m_length * 3) != 0) update = true;
+  if (memcmp(m_pRGB24Buffer, pData, m_length * 3) != 0) update = true;
 
   if (!update) return;
 
-  memcpy(m_pRGB24Data, pData, m_length * 3);
+  memcpy(m_pRGB24Buffer, pData, m_length * 3);
 
-  int pos = 0;
   for (int i = 0; i < m_length; i++)
   {
-    uint32_t r = m_pRGB24Data[pos++];
-    uint32_t g = m_pRGB24Data[pos++];
-    uint32_t b = m_pRGB24Data[pos++];
+    int pos = i * 3;
+    uint32_t r = m_pRGB24Buffer[pos];
+    uint32_t g = m_pRGB24Buffer[pos + 1];
+    uint32_t b = m_pRGB24Buffer[pos + 2];
 
     if (pUpdate->depth != 24)
     {
@@ -438,13 +452,15 @@ void DMD::UpdateRGB24Data(const DMDUpdate* pUpdate, bool update)
       m_pLevelData[i] = level;
 
       int pos2 = level * 3;
-
       r = m_palette[pos2];
       g = m_palette[pos2 + 1];
       b = m_palette[pos2 + 2];
     }
 
-    m_pRGB32Data[i] = r | g << 8 | b << 16 | 0xFFu << 24;
+    m_pRGB24Data[pos] = (uint8_t)r;
+    m_pRGB24Data[pos + 1] = (uint8_t)g;
+    m_pRGB24Data[pos + 2] = (uint8_t)b;
+
     m_pRGB565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
   }
 
@@ -466,16 +482,16 @@ void DMD::UpdateRGB24Data(const DMDUpdate* pUpdate, bool update)
   }
   else if (pUpdate->depth == 24)
   {
-    if (m_pZeDMD) m_pZeDMD->RenderRgb24((uint8_t*)m_pRGB24Data);
+    if (m_pZeDMD) m_pZeDMD->RenderRgb24((uint8_t*)m_pRGB24Buffer);
   }
 
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  if (m_pPixelcade) m_pPixelcade->Update(m_pRGB565Data);
+  if (m_pPixelcadeDMD) m_pPixelcadeDMD->Update(m_pRGB565Data);
 #endif
 
-  m_updated = true;
+  for (VirtualDMD* pVirtualDMD : m_virtualDMDs) pVirtualDMD->Update(m_pLevelData, m_pRGB24Data);
 }
 
 void DMD::UpdateAlphaNumericData(const DMDUpdate* pUpdate, bool update)
@@ -512,7 +528,11 @@ void DMD::UpdateAlphaNumericData(const DMDUpdate* pUpdate, bool update)
     uint32_t g = m_palette[pos + 1];
     uint32_t b = m_palette[pos + 2];
 
-    m_pRGB32Data[i] = r | g << 8 | b << 16 | 0xFFu << 24;
+    pos = i * 3;
+    m_pRGB24Data[pos] = (uint8_t)r;
+    m_pRGB24Data[pos + 1] = (uint8_t)g;
+    m_pRGB24Data[pos + 2] = (uint8_t)b;
+
     m_pRGB565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
   }
 
@@ -525,10 +545,10 @@ void DMD::UpdateAlphaNumericData(const DMDUpdate* pUpdate, bool update)
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  if (m_pPixelcade) m_pPixelcade->Update(m_pRGB565Data);
+  if (m_pPixelcadeDMD) m_pPixelcadeDMD->Update(m_pRGB565Data);
 #endif
 
-  m_updated = true;
+  for (VirtualDMD* pVirtualDMD : m_virtualDMDs) pVirtualDMD->Update(m_pLevelData, m_pRGB24Data);
 }
 
 }  // namespace DMDUtil

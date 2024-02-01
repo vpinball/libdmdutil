@@ -46,7 +46,8 @@ enum class AlphaNumericLayout
 
 class AlphaNumeric;
 class Serum;
-class Pixelcade;
+class PixelcadeDMD;
+class VirtualDMD;
 
 class DMDUTILAPI DMD
 {
@@ -59,14 +60,11 @@ class DMDUTILAPI DMD
   int GetWidth() const { return m_width; }
   int GetHeight() const { return m_height; }
   int GetLength() const { return m_length; }
-  bool IsUpdated() const { return m_updated; }
-  void ResetUpdated() { m_updated = false; }
+  VirtualDMD* CreateVirtualDMD();
   void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b);
-  const uint8_t* GetLevelData() const { return m_pLevelData; }
-  const uint32_t* GetRGB32Data() const { return m_pRGB32Data; }
 
  private:
   enum class DmdMode
@@ -107,12 +105,12 @@ class DMDUTILAPI DMD
   int m_height;
   int m_length;
   bool m_sam;
-  uint8_t* m_pData;
-  uint8_t* m_pRGB24Data;
+  uint8_t* m_pBuffer;
+  uint8_t* m_pRGB24Buffer;
   uint16_t m_segData1[128];
   uint16_t m_segData2[128];
   uint8_t* m_pLevelData;
-  uint32_t* m_pRGB32Data;
+  uint8_t* m_pRGB24Data;
   uint16_t* m_pRGB565Data;
   uint8_t m_palette[192];
   AlphaNumeric* m_pAlphaNumeric;
@@ -121,9 +119,9 @@ class DMDUTILAPI DMD
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  Pixelcade* m_pPixelcade;
+  PixelcadeDMD* m_pPixelcadeDMD;
 #endif
-  bool m_updated;
+  std::vector<VirtualDMD*> m_virtualDMDs;
 
   std::thread* m_pThread;
   std::queue<DMDUpdate*> m_updates;

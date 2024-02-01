@@ -4,7 +4,7 @@
  * https://github.com/freezy/dmd-extensions/blob/master/LibDmd/Output/Pixelcade/Pixelcade.cs
  */
 
-#include "Pixelcade.h"
+#include "PixelcadeDMD.h"
 
 #include <chrono>
 #include <cstring>
@@ -16,7 +16,7 @@
 namespace DMDUtil
 {
 
-Pixelcade::Pixelcade(struct sp_port* pSerialPort, int width, int height)
+PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height)
 {
   m_pSerialPort = pSerialPort;
   m_width = width;
@@ -28,7 +28,7 @@ Pixelcade::Pixelcade(struct sp_port* pSerialPort, int width, int height)
   Run();
 }
 
-Pixelcade::~Pixelcade()
+PixelcadeDMD::~PixelcadeDMD()
 {
   if (m_pThread)
   {
@@ -46,17 +46,17 @@ Pixelcade::~Pixelcade()
   }
 }
 
-Pixelcade* Pixelcade::Connect(const char* pDevice, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
 {
-  Pixelcade* pPixelcade = nullptr;
+  PixelcadeDMD* pPixelcadeDMD = nullptr;
 
   if (pDevice && *pDevice != 0)
   {
     Log("Connecting to Pixelcade on %s...", pDevice);
 
-    pPixelcade = Open(pDevice, width, height);
+    pPixelcadeDMD = Open(pDevice, width, height);
 
-    if (!pPixelcade) Log("Unable to connect to Pixelcade on %s", pDevice);
+    if (!pPixelcadeDMD) Log("Unable to connect to Pixelcade on %s", pDevice);
   }
   else
   {
@@ -68,19 +68,19 @@ Pixelcade* Pixelcade::Connect(const char* pDevice, int width, int height)
     {
       for (int i = 0; ppPorts[i]; i++)
       {
-        pPixelcade = Open(sp_get_port_name(ppPorts[i]), width, height);
-        if (pPixelcade) break;
+        pPixelcadeDMD = Open(sp_get_port_name(ppPorts[i]), width, height);
+        if (pPixelcadeDMD) break;
       }
       sp_free_port_list(ppPorts);
     }
 
-    if (!pPixelcade) Log("Unable to find Pixelcade");
+    if (!pPixelcadeDMD) Log("Unable to find Pixelcade");
   }
 
-  return pPixelcade;
+  return pPixelcadeDMD;
 }
 
-Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
 {
   struct sp_port* pSerialPort = nullptr;
   enum sp_return result = sp_get_port_by_name(pDevice, &pSerialPort);
@@ -115,7 +115,7 @@ Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
   {
     sp_close(pSerialPort);
     sp_free_port(pSerialPort);
-    // Log("Pixelcade: expected new connection to return 0x0, but got 0x%02d", response[0]);
+    // Log("Pixelcade expected new connection to return 0x0, but got 0x%02d", response[0]);
     return nullptr;
   }
 
@@ -123,7 +123,7 @@ Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
   {
     sp_close(pSerialPort);
     sp_free_port(pSerialPort);
-    // Log("Pixelcade: expected magic code to equal IOIO but got %c%c%c%c", response[1], response[2], response[3],
+    // Log("Pixelcade expected magic code to equal IOIO but got %c%c%c%c", response[1], response[2], response[3],
     // response[4]);
     return nullptr;
   }
@@ -140,10 +140,10 @@ Pixelcade* Pixelcade::Open(const char* pDevice, int width, int height)
   Log("Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s", pDevice, hardwareId, bootloaderId,
       firmware);
 
-  return new Pixelcade(pSerialPort, width, height);
+  return new PixelcadeDMD(pSerialPort, width, height);
 }
 
-void Pixelcade::Update(uint16_t* pData)
+void PixelcadeDMD::Update(uint16_t* pData)
 {
   uint16_t* pFrame = (uint16_t*)malloc(m_length * sizeof(uint16_t));
   memcpy(pFrame, pData, m_length * sizeof(uint16_t));
@@ -154,14 +154,14 @@ void Pixelcade::Update(uint16_t* pData)
   }
 }
 
-void Pixelcade::EnableRgbLedMatrix(int shifterLen32, int rows)
+void PixelcadeDMD::EnableRgbLedMatrix(int shifterLen32, int rows)
 {
   uint8_t data[2] = {PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE,
                      (uint8_t)((shifterLen32 & 0x0F) | ((rows == 8 ? 0 : 1) << 4))};
   sp_blocking_write(m_pSerialPort, data, 2, 0);
 }
 
-void Pixelcade::Run()
+void PixelcadeDMD::Run()
 {
   if (m_running) return;
 
@@ -170,7 +170,7 @@ void Pixelcade::Run()
   m_pThread = new std::thread(
       [this]()
       {
-        Log("Pixelcade run thread starting");
+        Log("PixelcadeDMD run thread starting");
         EnableRgbLedMatrix(4, 16);
 
         int errors = 0;
@@ -255,7 +255,7 @@ void Pixelcade::Run()
 
         m_pSerialPort = nullptr;
 
-        Log("Pixelcade run thread finished");
+        Log("PixelcadeDMD run thread finished");
       });
 }
 

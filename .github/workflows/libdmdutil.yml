@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
       - if: (matrix.platform == 'win')
         name: Add msbuild to path (win runner)
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v2
       - if: (matrix.platform == 'macos')
         name: Add autoconf and automake (mac runner)
         run: |
@@ -164,7 +164,7 @@ jobs:
           fi
           echo "artifact_path=${ARTIFACT_PATH}" >> $GITHUB_OUTPUT    
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}
           path: ${{ steps.artifacts.outputs.artifact_path }}
@@ -174,7 +174,7 @@ jobs:
     needs: [ version, build ]
     name: Build libdmdutil-macos
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
       - name: Unpack artifacts
         run: |
           cd libdmdutil-${{ needs.version.outputs.tag }}-macos-x64
@@ -208,7 +208,7 @@ jobs:
           cd tmp
           tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-macos.tar.gz *
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: libdmdutil-${{ needs.version.outputs.tag }}-macos
           path: libdmdutil-${{ needs.version.outputs.tag }}-macos.tar.gz
