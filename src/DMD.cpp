@@ -8,6 +8,8 @@
     defined(__ANDROID__))
 #include "PixelcadeDMD.h"
 #endif
+
+#include <algorithm>
 #include <cstring>
 
 #include "AlphaNumeric.h"
