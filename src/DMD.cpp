@@ -121,6 +121,19 @@ VirtualDMD* DMD::CreateVirtualDMD()
   return pVirtualDMD;
 }
 
+bool DMD::DestroyVirtualDMD(VirtualDMD* pVirtualDMD)
+{
+  auto it = std::find(m_virtualDMDs.begin(), m_virtualDMDs.end(), pVirtualDMD);
+  if (it != m_virtualDMDs.end())
+  {
+    m_virtualDMDs.erase(it);
+    delete pVirtualDMD;
+
+    return true;
+  }
+  return false;
+}
+
 void DMD::UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b)
 {
   DMDUpdate* const pUpdate = new DMDUpdate();

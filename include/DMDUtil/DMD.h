@@ -61,6 +61,7 @@ class DMDUTILAPI DMD
   int GetHeight() const { return m_height; }
   int GetLength() const { return m_length; }
   VirtualDMD* CreateVirtualDMD();
+  bool DestroyVirtualDMD(VirtualDMD* pVirtualDMD);
   void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,

@@ -34,6 +34,8 @@ void test()
    if (pRGB24Data) {
       // Render pRGB24Data
    }
+
+   pDmd->DestroyVirtualDMD(pVirtualDMD);
 }
 ```
 
