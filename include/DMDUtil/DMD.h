@@ -8,9 +8,14 @@
 #define DMDUTILCALLBACK
 #endif
 
+#define DMD_FRAME_BUFFER_SIZE 16
+
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <mutex>
 #include <queue>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 
@@ -51,6 +56,8 @@ class DMDUTILAPI DMD {
   DMD(int width, int height, bool sam = false, const char* name = nullptr);
   ~DMD();
 
+  enum class DmdMode { Unknown, Data, RGB24, AlphaNumeric };
+
   static bool IsFinding();
   bool HasDisplay() const;
   int GetWidth() const { return m_width; }
@@ -59,7 +66,7 @@ class DMDUTILAPI DMD {
   bool IsUpdated() const { return m_updated; }
   void ResetUpdated() { m_updated = false; }
   void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g,
-                  uint8_t b);
+                  uint8_t b, DmdMode mode = DmdMode::Data);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g,
                        uint8_t b);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1,
@@ -69,8 +76,6 @@ class DMDUTILAPI DMD {
   const uint32_t* GetRGB32Data() const { return m_pRGB32Data; }
 
  private:
-  enum class DmdMode { Unknown, Data, RGB24, AlphaNumeric };
-
   struct DMDUpdate {
     DmdMode mode;
     AlphaNumericLayout layout;
@@ -80,7 +85,11 @@ class DMDUTILAPI DMD {
     uint8_t r;
     uint8_t g;
     uint8_t b;
+    uint16_t width;
+    uint16_t height;
   };
+
+  DMDUpdate* m_updateBuffer[DMD_FRAME_BUFFER_SIZE];
 
   static constexpr uint8_t LEVELS_WPC[] = {0x14, 0x21, 0x43, 0x64};
   static constexpr uint8_t LEVELS_GTS3[] = {0x00, 0x1E, 0x23, 0x28, 0x2D, 0x32,
@@ -93,10 +102,14 @@ class DMDUTILAPI DMD {
   void FindDevices();
   void Run();
   void Stop();
-  bool UpdatePalette(const DMDUpdate* pUpdate);
+  bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g,
+                     uint8_t b);
   void UpdateData(const DMDUpdate* pUpdate, bool update);
   void UpdateRGB24Data(const DMDUpdate* pUpdate, bool update);
   void UpdateAlphaNumericData(const DMDUpdate* pUpdate, bool update);
+
+  void DmdFrameReadyResetThread();
+  void ZeDMDThread();
 
   int m_width;
   int m_height;
@@ -110,22 +123,28 @@ class DMDUTILAPI DMD {
   uint32_t* m_pRGB32Data;
   uint16_t* m_pRGB565Data;
   uint8_t m_palette[192];
+  uint8_t m_updateBufferPosition = 0;
   AlphaNumeric* m_pAlphaNumeric;
   Serum* m_pSerum;
   ZeDMD* m_pZeDMD;
+  bool m_updated;
+
+  std::thread* m_pZeDMDThread;
+  std::thread* m_pdmdFrameReadyResetThread;
+  std::shared_mutex m_dmdSharedMutex;
+  std::condition_variable_any m_dmdCV;
+  std::atomic<bool> m_dmdFrameReady = false;
+  std::atomic<bool> m_stopFlag = false;
+
+  static bool m_finding;
+
 #if !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
                               (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
       defined(__ANDROID__))
+  void PixelcadeThread();
   Pixelcade* m_pPixelcade;
+  std::thread* m_pPixelcadeThread;
 #endif
-  bool m_updated;
-
-  std::thread* m_pThread;
-  std::queue<DMDUpdate*> m_updates;
-  std::mutex m_mutex;
-  bool m_running;
-
-  static bool m_finding;
 };
 
 }  // namespace DMDUtil

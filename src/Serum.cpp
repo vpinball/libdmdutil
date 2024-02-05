@@ -69,4 +69,16 @@ bool Serum::Convert(uint8_t* pFrame, uint8_t* pDstFrame, uint8_t* pDstPalette) {
   return false;
 };
 
+void Serum::SetStandardPalette(const uint8_t* palette, const int bitDepth) {
+  Serum_SetStandardPalette(palette, bitDepth);
+}
+
+bool Serum::ColorizeWithMetadata(uint8_t* frame, int width, int height,
+                                 uint8_t* palette, uint8_t* rotations,
+                                 uint32_t* triggerID, uint32_t* hashcode,
+                                 int* frameID) {
+  return ColorizeWithMetadata(frame, width, height, palette, rotations,
+                              triggerID, hashcode, frameID);
+}
+
 }  // namespace DMDUtil
