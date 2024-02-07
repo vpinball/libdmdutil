@@ -10,10 +10,11 @@
 #include <iomanip>
 #include <sstream>
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-inline int FrameUtil::MapAdafruitIndex(int x, int y, int width, int height,
-                                       int numLogicalRows) {
+inline int FrameUtil::MapAdafruitIndex(int x, int y, int width, int height, int numLogicalRows)
+{
   int logicalRowLengthPerMatrix = 32 * 32 / 2 / numLogicalRows;
   int logicalRow = y % numLogicalRows;
   int dotPairsPerLogicalRow = width * height / numLogicalRows / 2;
@@ -21,23 +22,23 @@ inline int FrameUtil::MapAdafruitIndex(int x, int y, int width, int height,
   int matrixX = x / 32;
   int matrixY = y / 32;
   int totalMatrices = width * height / 1024;
-  int matrixNumber =
-      totalMatrices - ((matrixY + 1) * widthInMatrices) + matrixX;
+  int matrixNumber = totalMatrices - ((matrixY + 1) * widthInMatrices) + matrixX;
   int indexWithinMatrixRow = x % logicalRowLengthPerMatrix;
-  int index = logicalRow * dotPairsPerLogicalRow +
-              matrixNumber * logicalRowLengthPerMatrix + indexWithinMatrixRow;
+  int index = logicalRow * dotPairsPerLogicalRow + matrixNumber * logicalRowLengthPerMatrix + indexWithinMatrixRow;
   return index;
 }
 
-void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size,
-                                   int width, int numLogicalRows, uint8_t* dest,
-                                   ColorMatrix colorMatrix) {
+void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, int width, int numLogicalRows, uint8_t* dest,
+                                   ColorMatrix colorMatrix)
+{
   constexpr int pairOffset = 16;
   int height = rgb565Size / width;
   int subframeSize = rgb565Size / 2;
 
-  for (int x = 0; x < width; ++x) {
-    for (int y = 0; y < height; ++y) {
+  for (int x = 0; x < width; ++x)
+  {
+    for (int y = 0; y < height; ++y)
+    {
       if (y % (pairOffset * 2) >= pairOffset) continue;
 
       int inputIndex0 = y * width + x;
@@ -47,7 +48,8 @@ void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size,
       uint16_t color1 = rgb565[inputIndex1];
 
       int r0 = 0, r1 = 0, g0 = 0, g1 = 0, b0 = 0, b1 = 0;
-      switch (colorMatrix) {
+      switch (colorMatrix)
+      {
         case ColorMatrix::Rgb:
           r0 = (color0 >> 13) /*& 0x7*/;
           g0 = (color0 >> 8) /*& 0x7*/;
@@ -67,11 +69,10 @@ void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size,
           break;
       }
 
-      for (int subframe = 0; subframe < 3; ++subframe) {
-        uint8_t dotPair = (r0 & 1) << 5 | (g0 & 1) << 4 | (b0 & 1) << 3 |
-                          (r1 & 1) << 2 | (g1 & 1) << 1 | (b1 & 1);
-        int indexWithinSubframe =
-            MapAdafruitIndex(x, y, width, height, numLogicalRows);
+      for (int subframe = 0; subframe < 3; ++subframe)
+      {
+        uint8_t dotPair = (r0 & 1) << 5 | (g0 & 1) << 4 | (b0 & 1) << 3 | (r1 & 1) << 2 | (g1 & 1) << 1 | (b1 & 1);
+        int indexWithinSubframe = MapAdafruitIndex(x, y, width, height, numLogicalRows);
         int indexWithinOutput = subframe * subframeSize + indexWithinSubframe;
         dest[indexWithinOutput] = dotPair;
         r0 >>= 1;
@@ -85,9 +86,8 @@ void FrameUtil::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size,
   }
 }
 
-inline uint16_t FrameUtil::InterpolateRgb565Color(uint16_t color1,
-                                                  uint16_t color2,
-                                                  float ratio) {
+inline uint16_t FrameUtil::InterpolateRgb565Color(uint16_t color1, uint16_t color2, float ratio)
+{
   // ratio *= ratio*(3.0f-2.0f*ratio); // = biquintic
 
   int red1 = (int)color1 >> 11;
@@ -109,10 +109,9 @@ inline uint16_t FrameUtil::InterpolateRgb565Color(uint16_t color1,
   return (uint16_t)((red << 11) | (green << 5) | blue);
 }
 
-inline uint16_t FrameUtil::InterpolatedRgb565Pixel(const uint16_t* src,
-                                                   float srcX, float srcY,
-                                                   int srcWidth,
-                                                   int srcHeight) {
+inline uint16_t FrameUtil::InterpolatedRgb565Pixel(const uint16_t* src, float srcX, float srcY, int srcWidth,
+                                                   int srcHeight)
+{
   int x = (int)srcX;
   int y = (int)srcY;
   float xDiff = srcX - (float)x;
@@ -125,8 +124,7 @@ inline uint16_t FrameUtil::InterpolatedRgb565Pixel(const uint16_t* src,
   int a = src[offs];
   int b = (x < srcWidth - 1) ? src[offs + 1] : a;
   int c = (y < srcHeight - 1) ? src[offs + srcWidth] : a;
-  int d =
-      (x < srcWidth - 1 && y < srcHeight - 1) ? src[offs + srcWidth + 1] : c;
+  int d = (x < srcWidth - 1 && y < srcHeight - 1) ? src[offs + srcWidth + 1] : c;
 
   int red1 = a >> 11;
   int green1 = (a >> 5) & 0x3F;
@@ -163,19 +161,22 @@ inline uint16_t FrameUtil::InterpolatedRgb565Pixel(const uint16_t* src,
   return (uint16_t)(((int)red << 11) | ((int)green << 5) | (int)blue);
 }
 
-void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth,
-                                     int srcHeight, uint16_t* dest,
-                                     int destWidth, int destHeight) {
+void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth, int srcHeight, uint16_t* dest, int destWidth,
+                                     int destHeight)
+{
   memset(dest, 0, destWidth * destHeight * sizeof(uint16_t));
 
   float srcAspect = (float)srcWidth / (float)srcHeight;
   float destAspect = (float)destWidth / (float)destHeight;
   int scaledWidth, scaledHeight;
 
-  if (srcAspect > destAspect) {
+  if (srcAspect > destAspect)
+  {
     scaledWidth = destWidth;
     scaledHeight = (int)((float)destWidth / srcAspect);
-  } else {
+  }
+  else
+  {
     scaledHeight = destHeight;
     scaledWidth = (int)((float)destHeight * srcAspect);
   }
@@ -184,39 +185,40 @@ void FrameUtil::ResizeRgb565Bilinear(const uint16_t* src, int srcWidth,
   int offsetY = (destHeight - scaledHeight) / 2;
   int offs = offsetX + offsetY * destWidth;
 
-  for (int y = 0; y < scaledHeight; ++y) {
-    for (int x = 0; x < scaledWidth; ++x) {
-      float srcX =
-          ((float)x + 0.5f) * ((float)srcWidth / (float)scaledWidth) - 0.5f;
-      float srcY =
-          ((float)y + 0.5f) * ((float)srcHeight / (float)scaledHeight) - 0.5f;
+  for (int y = 0; y < scaledHeight; ++y)
+  {
+    for (int x = 0; x < scaledWidth; ++x)
+    {
+      float srcX = ((float)x + 0.5f) * ((float)srcWidth / (float)scaledWidth) - 0.5f;
+      float srcY = ((float)y + 0.5f) * ((float)srcHeight / (float)scaledHeight) - 0.5f;
 
       srcX = std::max(0.0f, std::min(srcX, static_cast<float>(srcWidth - 1)));
       srcY = std::max(0.0f, std::min(srcY, static_cast<float>(srcHeight - 1)));
 
-      dest[y * destWidth + offs + x] =
-          InterpolatedRgb565Pixel(src, srcX, srcY, srcWidth, srcHeight);
+      dest[y * destWidth + offs + x] = InterpolatedRgb565Pixel(src, srcX, srcY, srcWidth, srcHeight);
     }
   }
 }
 
-float FrameUtil::CalcBrightness(float x) {
-  // function to improve the brightness with fx=ax²+bc+c, f(0)=0, f(1)=1,
-  // f'(1.1)=0
+float FrameUtil::CalcBrightness(float x)
+{
+  // function to improve the brightness with fx=ax²+bc+c, f(0)=0, f(1)=1, f'(1.1)=0
   return (-x * x + 2.1f * x) / 1.1f;
 }
 
-std::string FrameUtil::HexDump(const uint8_t* data, size_t size) {
+std::string FrameUtil::HexDump(const uint8_t* data, size_t size)
+{
   constexpr int bytesPerLine = 32;
 
   std::stringstream ss;
 
-  for (size_t i = 0; i < size; i += bytesPerLine) {
+  for (size_t i = 0; i < size; i += bytesPerLine)
+  {
     for (size_t j = i; j < i + bytesPerLine && j < size; ++j)
-      ss << std::setw(2) << std::setfill('0') << std::hex
-         << static_cast<int>(data[j]) << ' ';
+      ss << std::setw(2) << std::setfill('0') << std::hex << static_cast<int>(data[j]) << ' ';
 
-    for (size_t j = i; j < i + bytesPerLine && j < size; ++j) {
+    for (size_t j = i; j < i + bytesPerLine && j < size; ++j)
+    {
       char ch = data[j];
       if (ch < 32 || ch > 126) ch = '.';
       ss << ch;

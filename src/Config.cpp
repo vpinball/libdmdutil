@@ -1,16 +1,19 @@
 #include "DMDUtil/Config.h"
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
 Config* Config::m_pInstance = nullptr;
 
-Config* Config::GetInstance() {
+Config* Config::GetInstance()
+{
   if (!m_pInstance) m_pInstance = new Config();
 
   return m_pInstance;
 }
 
-Config::Config() {
+Config::Config()
+{
   m_altColor = true;
   m_altColorPath.clear();
   m_zedmd = true;

@@ -15,18 +15,27 @@ void setup()
    DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
    pConfig->SetZeDMD(true);
    pConfig->SetZeDMDDevice("/dev/cu.usbserial-0001");
-   pConfig->SetPixelcade(false);
+   pConfig->SetPixelcadeDMD(false);
 }
 
 void test()
 {
-   uint8_t* pData = (uint8_t*)malloc(128 * 32);
    DMDUtil::DMD* pDmd = new DMDUtil::DMD(128, 32, false, "t2_l8");
+   DMDUtil::VirtualDMD* pVirtualDMD = pDmd->CreateVirtualDMD();
+
+   uint8_t* pData = (uint8_t*)malloc(128 * 32);
    .
    .
    .
    pDmd->UpdateData((const UINT8*)pData, 2, 255, 0, 0);
-   uint32_t* pRGB32Data = pDmd->GetRGB32Data();
+
+   uint8_t* pRGB24Data = pVirtualDMD->GetRGB24Data();
+
+   if (pRGB24Data) {
+      // Render pRGB24Data
+   }
+
+   pDmd->DestroyVirtualDMD(pVirtualDMD);
 }
 ```
 

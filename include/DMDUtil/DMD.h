@@ -25,9 +25,11 @@
 
 class ZeDMD;
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-enum class AlphaNumericLayout {
+enum class AlphaNumericLayout
+{
   NoLayout,
   __2x16Alpha,
   __2x20Alpha,
@@ -49,34 +51,38 @@ enum class AlphaNumericLayout {
 
 class AlphaNumeric;
 class Serum;
-class Pixelcade;
+class PixelcadeDMD;
+class VirtualDMD;
 
-class DMDUTILAPI DMD {
+class DMDUTILAPI DMD
+{
  public:
   DMD(int width, int height, bool sam = false, const char* name = nullptr);
   ~DMD();
-
-  enum class DmdMode { Unknown, Data, RGB24, AlphaNumeric };
 
   static bool IsFinding();
   bool HasDisplay() const;
   int GetWidth() const { return m_width; }
   int GetHeight() const { return m_height; }
   int GetLength() const { return m_length; }
-  bool IsUpdated() const { return m_updated; }
-  void ResetUpdated() { m_updated = false; }
-  void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g,
-                  uint8_t b, DmdMode mode = DmdMode::Data);
-  void UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g,
-                       uint8_t b);
-  void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1,
-                              const uint16_t* pData2, uint8_t r, uint8_t g,
-                              uint8_t b);
-  const uint8_t* GetLevelData() const { return m_pLevelData; }
-  const uint32_t* GetRGB32Data() const { return m_pRGB32Data; }
+  VirtualDMD* CreateVirtualDMD();
+  bool DestroyVirtualDMD(VirtualDMD* pVirtualDMD);
+  void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
+  void UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
+  void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
+                              uint8_t g, uint8_t b);
 
  private:
-  struct DMDUpdate {
+  enum class DmdMode
+  {
+    Unknown,
+    Data,
+    RGB24,
+    AlphaNumeric
+  };
+
+  struct DMDUpdate
+  {
     DmdMode mode;
     AlphaNumericLayout layout;
     int depth;
@@ -90,60 +96,57 @@ class DMDUTILAPI DMD {
   };
 
   DMDUpdate* m_updateBuffer[DMD_FRAME_BUFFER_SIZE];
+};
 
-  static constexpr uint8_t LEVELS_WPC[] = {0x14, 0x21, 0x43, 0x64};
-  static constexpr uint8_t LEVELS_GTS3[] = {0x00, 0x1E, 0x23, 0x28, 0x2D, 0x32,
-                                            0x37, 0x3C, 0x41, 0x46, 0x4B, 0x50,
-                                            0x55, 0x5A, 0x5F, 0x64};
-  static constexpr uint8_t LEVELS_SAM[] = {0x00, 0x14, 0x19, 0x1E, 0x23, 0x28,
-                                           0x2D, 0x32, 0x37, 0x3C, 0x41, 0x46,
-                                           0x4B, 0x50, 0x5A, 0x64};
+static constexpr uint8_t LEVELS_WPC[] = {0x14, 0x21, 0x43, 0x64};
+static constexpr uint8_t LEVELS_GTS3[] = {0x00, 0x1E, 0x23, 0x28, 0x2D, 0x32, 0x37, 0x3C,
+                                          0x41, 0x46, 0x4B, 0x50, 0x55, 0x5A, 0x5F, 0x64};
+static constexpr uint8_t LEVELS_SAM[] = {0x00, 0x14, 0x19, 0x1E, 0x23, 0x28, 0x2D, 0x32,
+                                         0x37, 0x3C, 0x41, 0x46, 0x4B, 0x50, 0x5A, 0x64};
 
-  void FindDevices();
-  void Run();
-  void Stop();
-  bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g,
-                     uint8_t b);
-  void UpdateData(const DMDUpdate* pUpdate, bool update);
-  void UpdateRGB24Data(const DMDUpdate* pUpdate, bool update);
-  void UpdateAlphaNumericData(const DMDUpdate* pUpdate, bool update);
+void FindDevices();
+void Run();
+void Stop();
+bool UpdatePalette(const DMDUpdate* pUpdate);
+void UpdateData(const DMDUpdate* pUpdate, bool update);
+void UpdateRGB24Data(const DMDUpdate* pUpdate, bool update);
+void UpdateAlphaNumericData(const DMDUpdate* pUpdate, bool update);
 
-  void DmdFrameReadyResetThread();
-  void ZeDMDThread();
+void DmdFrameReadyResetThread();
+void ZeDMDThread();
 
-  int m_width;
-  int m_height;
-  int m_length;
-  bool m_sam;
-  uint8_t* m_pData;
-  uint8_t* m_pRGB24Data;
-  uint16_t m_segData1[128];
-  uint16_t m_segData2[128];
-  uint8_t* m_pLevelData;
-  uint32_t* m_pRGB32Data;
-  uint16_t* m_pRGB565Data;
-  uint8_t m_palette[192];
-  uint8_t m_updateBufferPosition = 0;
-  AlphaNumeric* m_pAlphaNumeric;
-  Serum* m_pSerum;
-  ZeDMD* m_pZeDMD;
-  bool m_updated;
+int m_width;
+int m_height;
+int m_length;
+bool m_sam;
+uint8_t* m_pBuffer;
+uint8_t* m_pRGB24Buffer;
+uint16_t m_segData1[128];
+uint16_t m_segData2[128];
+uint8_t* m_pLevelData;
+uint8_t* m_pRGB24Data;
+uint16_t* m_pRGB565Data;
+uint8_t m_palette[192];
+uint8_t m_updateBufferPosition = 0;
+AlphaNumeric* m_pAlphaNumeric;
+Serum* m_pSerum;
+ZeDMD* m_pZeDMD;
 
-  std::thread* m_pZeDMDThread;
-  std::thread* m_pdmdFrameReadyResetThread;
-  std::shared_mutex m_dmdSharedMutex;
-  std::condition_variable_any m_dmdCV;
-  std::atomic<bool> m_dmdFrameReady = false;
-  std::atomic<bool> m_stopFlag = false;
+std::thread* m_pZeDMDThread;
+std::thread* m_pdmdFrameReadyResetThread;
+std::shared_mutex m_dmdSharedMutex;
+std::condition_variable_any m_dmdCV;
+std::atomic<bool> m_dmdFrameReady = false;
+std::atomic<bool> m_stopFlag = false;
 
-  static bool m_finding;
+static bool m_finding;
 
-#if !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
-                              (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
-      defined(__ANDROID__))
-  void PixelcadeThread();
-  Pixelcade* m_pPixelcade;
-  std::thread* m_pPixelcadeThread;
+#if !(                                                                                                                \
+    (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+    defined(__ANDROID__))
+void PixelcadeDMDThread();
+PixelcadeDMD* m_pPixelcadeDMD;
+std::thread* m_pPixelcadeDMDThread;
 #endif
 };
 

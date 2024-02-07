@@ -3,19 +3,16 @@
 #include <cstdint>
 #include <string>
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-class Serum {
+class Serum
+{
  public:
   ~Serum();
 
   static Serum* Load(const std::string& romName);
   bool Convert(uint8_t* pFrame, uint8_t* pDstFrame, uint8_t* pDstPalette);
-  void SetStandardPalette(const uint8_t* palette, const int bitDepth);
-  bool ColorizeWithMetadata(uint8_t* frame, int width, int height,
-                            uint8_t* palette, uint8_t* rotations,
-                            uint32_t* triggerID, uint32_t* hashcode,
-                            int* frameID);
 
  private:
   Serum(int width, int height);

@@ -1,6 +1,7 @@
 #pragma once
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
 void Log(const char *format, ...);
 

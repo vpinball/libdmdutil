@@ -11,22 +11,22 @@
 
 #include "DMDUtil/DMD.h"
 
-namespace DMDUtil {
+namespace DMDUtil
+{
 
-class AlphaNumeric {
+class AlphaNumeric
+{
  public:
   AlphaNumeric();
   ~AlphaNumeric() {}
 
   uint8_t* Render(AlphaNumericLayout layout, const uint16_t* const seg_data);
-  uint8_t* Render(AlphaNumericLayout layout, const uint16_t* const seg_data,
-                  const uint16_t* const seg_data2);
+  uint8_t* Render(AlphaNumericLayout layout, const uint16_t* const seg_data, const uint16_t* const seg_data2);
 
  private:
   void SmoothDigitCorners(const int x, const int y);
   void SmoothDigitCorners6Px(const int x, const int y);
-  void DrawSegment(const int x, const int y, const uint8_t type,
-                   const uint16_t seg, const uint8_t colour);
+  void DrawSegment(const int x, const int y, const uint8_t type, const uint16_t seg, const uint8_t colour);
   bool GetPixel(const int x, const int y) const;
   void DrawPixel(const int x, const int y, const uint8_t colour);
   void Clear();
@@ -38,8 +38,7 @@ class AlphaNumeric {
   void Render2x6Num_2x6Num_4x1Num(const uint16_t* const seg_data);
   void Render2x6Num10_2x6Num10_4x1Num(const uint16_t* const seg_data);
   void Render2x7Num_2x7Num_4x1Num(const uint16_t* const seg_data);
-  void Render2x7Num_2x7Num_10x1Num(const uint16_t* const seg_data,
-                                   const uint16_t* const extra_seg_data);
+  void Render2x7Num_2x7Num_10x1Num(const uint16_t* const seg_data, const uint16_t* const extra_seg_data);
   void Render2x7Num_2x7Num_4x1Num_gen7(const uint16_t* const seg_data);
   void Render2x7Num10_2x7Num10_4x1Num(const uint16_t* const seg_data);
   void Render4x7Num10(const uint16_t* const seg_data);
