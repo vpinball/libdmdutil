@@ -36,7 +36,6 @@ void VirtualDMD::Update(uint8_t* pRGB24Data)
   m_update = true;
 }
 
-
 void VirtualDMD::UpdateLevel(uint8_t* pLevelData)
 {
   memcpy(m_pLevelData, pLevelData, m_length);

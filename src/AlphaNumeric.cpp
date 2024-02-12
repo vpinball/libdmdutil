@@ -191,7 +191,7 @@ void AlphaNumeric::Render(uint8_t* pFrame, AlphaNumericLayout layout, const uint
 }
 
 void AlphaNumeric::Render(uint8_t* pFrame, AlphaNumericLayout layout, const uint16_t* const seg_data,
-                              const uint16_t* const seg_data2)
+                          const uint16_t* const seg_data2)
 {
   Clear(pFrame);
 
@@ -266,14 +266,19 @@ void AlphaNumeric::SmoothDigitCorners6Px(uint8_t* pFrame, const int x, const int
   if (GetPixel(pFrame, x + 4, 9 + y) && GetPixel(pFrame, 3 + x, 10 + y)) DrawPixel(pFrame, 4 + x, 10 + y, 0);
 }
 
-void AlphaNumeric::DrawSegment(uint8_t* pFrame, const int x, const int y, const uint8_t type, const uint16_t seg, const uint8_t colour)
+void AlphaNumeric::DrawSegment(uint8_t* pFrame, const int x, const int y, const uint8_t type, const uint16_t seg,
+                               const uint8_t colour)
 {
-  for (int i = 0; i < SegSizes[type][seg]; i++) DrawPixel(pFrame, Segs[type][seg][i][0] + x, Segs[type][seg][i][1] + y, colour);
+  for (int i = 0; i < SegSizes[type][seg]; i++)
+    DrawPixel(pFrame, Segs[type][seg][i][0] + x, Segs[type][seg][i][1] + y, colour);
 }
 
 bool AlphaNumeric::GetPixel(uint8_t* pFrame, const int x, const int y) const { return pFrame[y * 128 + x] > 0; }
 
-void AlphaNumeric::DrawPixel(uint8_t* pFrame, const int x, const int y, const uint8_t colour) { pFrame[y * 128 + x] = colour; }
+void AlphaNumeric::DrawPixel(uint8_t* pFrame, const int x, const int y, const uint8_t colour)
+{
+  pFrame[y * 128 + x] = colour;
+}
 
 void AlphaNumeric::Clear(uint8_t* pFrame) { memset(pFrame, 0, sizeof(pFrame)); }
 
@@ -418,7 +423,8 @@ void AlphaNumeric::Render2x7Num_2x7Num_4x1Num(uint8_t* pFrame, const uint16_t* c
   }
 }
 
-void AlphaNumeric::Render2x7Num_2x7Num_10x1Num(uint8_t* pFrame, const uint16_t* const seg_data, const uint16_t* const extra_seg_data)
+void AlphaNumeric::Render2x7Num_2x7Num_10x1Num(uint8_t* pFrame, const uint16_t* const seg_data,
+                                               const uint16_t* const extra_seg_data)
 {
   for (int i = 0; i < 14; i++)
   {

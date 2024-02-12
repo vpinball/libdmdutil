@@ -141,7 +141,8 @@ bool DMD::DestroyVirtualDMD(VirtualDMD* pVirtualDMD)
   return false;
 }
 
-void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b, DMDMode mode)
+void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
+                     DMDMode mode)
 {
   std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
   m_updateBuffer[m_updateBufferPosition]->mode = mode;
