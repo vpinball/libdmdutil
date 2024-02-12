@@ -2,6 +2,7 @@
 #include <thread>
 
 #include "DMDUtil/DMDUtil.h"
+#include "DMDUtil/VirtualDMD.h"
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -60,16 +61,21 @@ int main(int argc, const char* argv[])
     return 1;
   }
 
-  pDmd->CreateVirtualDMD(128, 32);
-
   printf("Rendering...\n");
 
   uint8_t* pImage2 = CreateImage(128, 32, 2);
   uint8_t* pImage4 = CreateImage(128, 32, 4);
   uint8_t* pImage24 = CreateImageRGB24(128, 32);
 
+  DMDUtil::VirtualDMD *pVirtualDMD128;
+  DMDUtil::VirtualDMD *pVirtualDMD196;
+
   for (int i = 0; i < 4; i++)
   {
+    if (i == 1) pVirtualDMD128 = pDmd->CreateVirtualDMD(128, 32);
+    if (i == 2) pVirtualDMD196 = pDmd->CreateVirtualDMD(192, 64);
+    if (i == 3) pDmd->DestroyVirtualDMD(pVirtualDMD196);
+
     pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
