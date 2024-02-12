@@ -119,7 +119,7 @@ VirtualDMD* DMD::CreateVirtualDMD(uint16_t width, uint16_t height)
 {
   VirtualDMD* const pVirtualDMD = new VirtualDMD(width, height);
   m_virtualDMDs.push_back(pVirtualDMD);
-  if (!m_pZeDMDThread) m_pZeDMDThread = new std::thread(&DMD::VirtualDMDThread, this);
+  if (!m_pVirtualDMDThread) m_pVirtualDMDThread = new std::thread(&DMD::VirtualDMDThread, this);
   return pVirtualDMD;
 }
 
