@@ -57,18 +57,15 @@ class VirtualDMD;
 class DMDUTILAPI DMD
 {
  public:
-  DMD(int width, int height, bool sam = false, const char* name = nullptr);
+  DMD(const char* name = nullptr);
   ~DMD();
 
   static bool IsFinding();
   bool HasDisplay() const;
-  int GetWidth() const { return m_width; }
-  int GetHeight() const { return m_height; }
-  int GetLength() const { return m_length; }
-  VirtualDMD* CreateVirtualDMD();
+  VirtualDMD* CreateVirtualDMD(uint16_t width, uint16_t height);
   bool DestroyVirtualDMD(VirtualDMD* pVirtualDMD);
-  void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
-  void UpdateRGB24Data(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b);
+  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b);
+  void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b);
 
@@ -86,6 +83,7 @@ class DMDUTILAPI DMD
     DMDMode mode;
     AlphaNumericLayout layout;
     int depth;
+    bool sam;
     void* pData;
     void* pData2;
     uint8_t r;
@@ -107,28 +105,18 @@ class DMDUTILAPI DMD
   void Run();
   void Stop();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
-  void UpdateData(const uint8_t* pData, int depth, uint8_t r, uint8_t g, uint8_t b, DMDMode node);
+  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b, DMDMode node);
 
   void DmdFrameReadyResetThread();
+  void VirtualDMDThread();
   void ZeDMDThread();
 
-  int m_width;
-  int m_height;
-  int m_length;
-  bool m_sam;
-  uint8_t* m_pBuffer;
-  uint8_t* m_pRGB24Buffer;
-  uint16_t m_segData1[128];
-  uint16_t m_segData2[128];
-  uint8_t* m_pLevelData;
-  uint8_t* m_pRGB24Data;
-  uint16_t* m_pRGB565Data;
-  uint8_t m_palette[192];
   uint8_t m_updateBufferPosition = 0;
   AlphaNumeric* m_pAlphaNumeric;
   Serum* m_pSerum;
   ZeDMD* m_pZeDMD;
 
+  std::thread* m_pVirtualDMDThread;
   std::thread* m_pZeDMDThread;
   std::thread* m_pdmdFrameReadyResetThread;
   std::shared_mutex m_dmdSharedMutex;

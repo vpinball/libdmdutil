@@ -47,7 +47,7 @@ int main(int argc, const char* argv[])
   int width = 128;
   int height = 32;
 
-  DMDUtil::DMD* pDmd = new DMDUtil::DMD(width, height);
+  DMDUtil::DMD* pDmd = new DMDUtil::DMD();
 
   printf("Finding displays...\n");
 
@@ -62,37 +62,37 @@ int main(int argc, const char* argv[])
 
   printf("Rendering...\n");
 
-  uint8_t* pImage2 = CreateImage(pDmd->GetWidth(), pDmd->GetHeight(), 2);
-  uint8_t* pImage4 = CreateImage(pDmd->GetWidth(), pDmd->GetHeight(), 4);
-  uint8_t* pImage24 = CreateImageRGB24(pDmd->GetWidth(), pDmd->GetHeight());
+  uint8_t* pImage2 = CreateImage(128, 32, 2);
+  uint8_t* pImage4 = CreateImage(128, 32, 4);
+  uint8_t* pImage24 = CreateImageRGB24(128, 32);
 
   for (int i = 0; i < 4; i++)
   {
-    pDmd->UpdateData(pImage2, 2, 255, 0, 0);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateData(pImage2, 2, 0, 255, 0);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 255, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateData(pImage2, 2, 0, 0, 255);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 0, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateData(pImage2, 2, 255, 255, 255);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 255, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateData(pImage4, 4, 255, 0, 0);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateData(pImage4, 4, 0, 255, 0);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 255, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateData(pImage4, 4, 0, 0, 255);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 0, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateData(pImage4, 4, 255, 255, 255);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 255, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    pDmd->UpdateRGB24Data(pImage24, 24, 0, 0, 0);
+    pDmd->UpdateRGB24Data(pImage24, 128, 32, 0, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
   }
 

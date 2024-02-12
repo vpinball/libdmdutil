@@ -7,7 +7,7 @@
 namespace DMDUtil
 {
 
-VirtualDMD::VirtualDMD(int width, int height)
+VirtualDMD::VirtualDMD(uint16_t width, uint16_t height)
 {
   m_width = width;
   m_height = height;
@@ -29,10 +29,17 @@ VirtualDMD::~VirtualDMD()
   free(m_pRGB24Data);
 }
 
-void VirtualDMD::Update(uint8_t* pLevelData, uint8_t* pRGB24Data)
+void VirtualDMD::Update(uint8_t* pRGB24Data)
+{
+  memcpy(m_pRGB24Data, pRGB24Data, m_length * 3);
+
+  m_update = true;
+}
+
+
+void VirtualDMD::UpdateLevel(uint8_t* pLevelData)
 {
   memcpy(m_pLevelData, pLevelData, m_length);
-  memcpy(m_pRGB24Data, pRGB24Data, m_length * 3);
 
   m_update = true;
 }

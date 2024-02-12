@@ -56,21 +56,13 @@ Serum* Serum::Load(const std::string& romName)
   return new Serum(width, height);
 }
 
-bool Serum::Convert(uint8_t* pFrame, uint8_t* pDstFrame, uint8_t* pDstPalette)
+bool Serum::Convert(uint8_t* pFrame, uint8_t* pDstFrame, uint8_t* pDstPalette, uint16_t width, uint16_t height)
 {
-  if (pFrame) memcpy(m_pFrame, pFrame, m_length);
-
+  if (pFrame) memcpy(pDstFrame, pFrame, width * height);
+ 
   unsigned int triggerId;
 
-  if (Serum_ColorizeOrApplyRotations(pFrame ? m_pFrame : nullptr, m_width, m_height, m_palette, &triggerId))
-  {
-    memcpy(pDstFrame, m_pFrame, m_length);
-    memcpy(pDstPalette, m_palette, 192);
-
-    return true;
-  }
-
-  return false;
+  return Serum_ColorizeOrApplyRotations(pDstFrame ? pDstFrame : nullptr, width, height, pDstPalette, &triggerId);
 };
 
 void Serum::SetStandardPalette(const uint8_t* palette, const int bitDepth)

@@ -16,10 +16,11 @@ namespace DMDUtil
 class DMDUTILAPI VirtualDMD
 {
  public:
-  VirtualDMD(int width, int height);
+  VirtualDMD(uint16_t width, uint16_t height);
   ~VirtualDMD();
 
-  void Update(uint8_t* pLevelData, uint8_t* pRGB24Data);
+  void Update(uint8_t* pRGB24Data);
+  void UpdateLevel(uint8_t* pLevelData);
   int GetWidth() { return m_width; }
   int GetHeight() { return m_height; }
   int GetLength() const { return m_length; }
@@ -28,8 +29,8 @@ class DMDUTILAPI VirtualDMD
   uint8_t* GetRGB24Data();
 
  private:
-  int m_width;
-  int m_height;
+  uint16_t m_width;
+  uint16_t m_height;
   int m_length;
   int m_pitch;
   int m_update;
