@@ -60,6 +60,8 @@ int main(int argc, const char* argv[])
     return 1;
   }
 
+  pDmd->CreateVirtualDMD(128, 32);
+
   printf("Rendering...\n");
 
   uint8_t* pImage2 = CreateImage(128, 32, 2);
