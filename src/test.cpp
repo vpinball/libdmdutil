@@ -74,6 +74,7 @@ int main(int argc, const char* argv[])
   DMDUtil::RGB24DMD* pRGB24DMD128;
   DMDUtil::RGB24DMD* pRGB24DMD196;
 
+  int ms = 200;
   for (int i = 0; i < 4; i++)
   {
     if (i == 0) pLevelDMD128_2 = pDmd->CreateLevelDMD(128, 32, 2);
@@ -85,32 +86,63 @@ int main(int argc, const char* argv[])
     if (i == 2) pRGB24DMD196 = pDmd->CreateRGB24DMD(192, 64);
     if (i == 3) pDmd->DestroyRGB24DMD(pRGB24DMD196);
 
+    printf("Delay %dms\n", ms);
+
     pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateData(pImage2, 2, 128, 32, 0, 255, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateData(pImage2, 2, 128, 32, 0, 0, 255);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateData(pImage2, 2, 128, 32, 255, 255, 255);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateData(pImage4, 4, 128, 32, 255, 0, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateData(pImage4, 4, 128, 32, 0, 255, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateData(pImage4, 4, 128, 32, 0, 0, 255);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateData(pImage4, 4, 128, 32, 255, 255, 255);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateRGB24Data(pImage24, 128, 32, 0, 0, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 2, 128, 32, 255, 0, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 2, 128, 32, 0, 255, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 2, 128, 32, 0, 0, 255);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 2, 128, 32, 255, 255, 255);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 4, 128, 32, 255, 0, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 4, 128, 32, 0, 255, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 4, 128, 32, 0, 0, 255);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 4, 128, 32, 255, 255, 255);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB24Data(pImage24, 24, 128, 32, 0, 0, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    ms -= 50;
   }
 
   printf("Finished rendering\n");

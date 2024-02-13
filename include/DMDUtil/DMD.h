@@ -89,8 +89,10 @@ class DMDUTILAPI DMD
     DMDMode mode;
     AlphaNumericLayout layout;
     int depth;
-    void* pData;
-    void* pData2;
+    uint8_t data[256 * 64 * 3];
+    uint16_t segData[128];
+    uint16_t segData2[128];
+    bool hasSegData2;
     uint8_t r;
     uint8_t g;
     uint8_t b;
@@ -107,6 +109,7 @@ class DMDUTILAPI DMD
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   DMDMode node, const char* name);
+  void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
 
   void DmdFrameReadyResetThread();
   void LevelDMDThread();
