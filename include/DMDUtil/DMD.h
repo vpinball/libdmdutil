@@ -52,22 +52,28 @@ enum class AlphaNumericLayout
 class AlphaNumeric;
 class Serum;
 class PixelcadeDMD;
-class VirtualDMD;
+class LevelDMD;
+class RGB24DMD;
 
 class DMDUTILAPI DMD
 {
  public:
-  DMD(const char* name = nullptr);
+  DMD();
   ~DMD();
 
   static bool IsFinding();
   bool HasDisplay() const;
-  VirtualDMD* CreateVirtualDMD(uint16_t width, uint16_t height);
-  bool DestroyVirtualDMD(VirtualDMD* pVirtualDMD);
-  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b);
+  LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
+  bool DestroyLevelDMD(LevelDMD* pLevelDMD);
+  RGB24DMD* CreateRGB24DMD(uint16_t width, uint16_t height);
+  bool DestroyRGB24DMD(RGB24DMD* pRGB24DMD);
+  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
+                  const char* name = nullptr);
+  void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
+                       uint8_t b);
   void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
-                              uint8_t g, uint8_t b);
+                              uint8_t g, uint8_t b, const char* name = nullptr);
 
  private:
   enum class DMDMode
@@ -83,7 +89,6 @@ class DMDUTILAPI DMD
     DMDMode mode;
     AlphaNumericLayout layout;
     int depth;
-    bool sam;
     void* pData;
     void* pData2;
     uint8_t r;
@@ -91,33 +96,32 @@ class DMDUTILAPI DMD
     uint8_t b;
     uint16_t width;
     uint16_t height;
+    const char* name;
   };
 
   DMDUpdate* m_updateBuffer[DMD_FRAME_BUFFER_SIZE];
-
-  static constexpr uint8_t LEVELS_WPC[] = {0x14, 0x21, 0x43, 0x64};
-  static constexpr uint8_t LEVELS_GTS3[] = {0x00, 0x1E, 0x23, 0x28, 0x2D, 0x32, 0x37, 0x3C,
-                                            0x41, 0x46, 0x4B, 0x50, 0x55, 0x5A, 0x5F, 0x64};
-  static constexpr uint8_t LEVELS_SAM[] = {0x00, 0x14, 0x19, 0x1E, 0x23, 0x28, 0x2D, 0x32,
-                                           0x37, 0x3C, 0x41, 0x46, 0x4B, 0x50, 0x5A, 0x64};
 
   void FindDevices();
   void Run();
   void Stop();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                  DMDMode node);
+                  DMDMode node, const char* name);
 
   void DmdFrameReadyResetThread();
-  void VirtualDMDThread();
+  void LevelDMDThread();
+  void RGB24DMDThread();
   void ZeDMDThread();
 
   uint8_t m_updateBufferPosition = 0;
   AlphaNumeric* m_pAlphaNumeric;
   Serum* m_pSerum;
   ZeDMD* m_pZeDMD;
+  std::vector<LevelDMD*> m_levelDMDs;
+  std::vector<RGB24DMD*> m_rgb24DMDs;
 
-  std::thread* m_pVirtualDMDThread;
+  std::thread* m_pLevelDMDThread;
+  std::thread* m_pRGB24DMDThread;
   std::thread* m_pZeDMDThread;
   std::thread* m_pdmdFrameReadyResetThread;
   std::shared_mutex m_dmdSharedMutex;
@@ -134,8 +138,6 @@ class DMDUTILAPI DMD
   PixelcadeDMD* m_pPixelcadeDMD;
   std::thread* m_pPixelcadeDMDThread;
 #endif
-
-  std::vector<VirtualDMD*> m_virtualDMDs;
 };
 
 }  // namespace DMDUtil

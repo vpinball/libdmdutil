@@ -2,7 +2,8 @@
 #include <thread>
 
 #include "DMDUtil/DMDUtil.h"
-#include "DMDUtil/VirtualDMD.h"
+#include "DMDUtil/LevelDMD.h"
+#include "DMDUtil/RGB24DMD.h"
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -67,14 +68,22 @@ int main(int argc, const char* argv[])
   uint8_t* pImage4 = CreateImage(128, 32, 4);
   uint8_t* pImage24 = CreateImageRGB24(128, 32);
 
-  DMDUtil::VirtualDMD *pVirtualDMD128;
-  DMDUtil::VirtualDMD *pVirtualDMD196;
+  DMDUtil::LevelDMD* pLevelDMD128_2;
+  DMDUtil::LevelDMD* pLevelDMD128_4;
+  DMDUtil::LevelDMD* pLevelDMD196_4;
+  DMDUtil::RGB24DMD* pRGB24DMD128;
+  DMDUtil::RGB24DMD* pRGB24DMD196;
 
   for (int i = 0; i < 4; i++)
   {
-    if (i == 1) pVirtualDMD128 = pDmd->CreateVirtualDMD(128, 32);
-    if (i == 2) pVirtualDMD196 = pDmd->CreateVirtualDMD(192, 64);
-    if (i == 3) pDmd->DestroyVirtualDMD(pVirtualDMD196);
+    if (i == 0) pLevelDMD128_2 = pDmd->CreateLevelDMD(128, 32, 2);
+    if (i == 1) pLevelDMD128_4 = pDmd->CreateLevelDMD(128, 32, 4);
+    if (i == 2) pLevelDMD196_4 = pDmd->CreateLevelDMD(192, 64, 4);
+    if (i == 3) pDmd->DestroyLevelDMD(pLevelDMD128_2);
+
+    if (i == 1) pRGB24DMD128 = pDmd->CreateRGB24DMD(128, 32);
+    if (i == 2) pRGB24DMD196 = pDmd->CreateRGB24DMD(192, 64);
+    if (i == 3) pDmd->DestroyRGB24DMD(pRGB24DMD196);
 
     pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));

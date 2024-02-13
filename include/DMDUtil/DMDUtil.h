@@ -13,4 +13,5 @@
 
 #include "Config.h"
 #include "DMD.h"
-#include "VirtualDMD.h"
+#include "LevelDMD.h"
+#include "RGB24DMD.h"

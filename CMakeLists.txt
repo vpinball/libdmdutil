@@ -65,7 +65,8 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(DMDUTIL_SOURCES
    src/Config.cpp
    src/DMD.cpp
-   src/VirtualDMD.cpp
+   src/LevelDMD.cpp
+   src/RGB24DMD.cpp
    src/Logger.cpp
    src/AlphaNumeric.cpp
    src/FrameUtil.cpp
