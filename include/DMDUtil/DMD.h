@@ -62,6 +62,7 @@ class DMDUTILAPI DMD
   DMD();
   ~DMD();
 
+  void FindDisplays();
   static bool IsFinding();
   bool HasDisplay() const;
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
@@ -72,7 +73,8 @@ class DMDUTILAPI DMD
                   const char* name = nullptr);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                        uint8_t b);
-  void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b);
+  void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height);
+  void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b, const char* name = nullptr);
 
@@ -81,7 +83,8 @@ class DMDUTILAPI DMD
   {
     Unknown,
     Data,
-    RGB24,
+    RGB24,  // RGB888
+    RGB16,  // RGB565
     AlphaNumeric
   };
 
@@ -91,7 +94,7 @@ class DMDUTILAPI DMD
     AlphaNumericLayout layout;
     int depth;
     uint8_t data[256 * 64 * 3];
-    uint16_t segData[128];
+    uint16_t segData[256 * 64];  // RGB16 or segment data
     uint16_t segData2[128];
     bool hasData;
     bool hasSegData;
@@ -106,9 +109,6 @@ class DMDUTILAPI DMD
 
   DMDUpdate* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
 
-  void FindDevices();
-  void Run();
-  void Stop();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   DMDMode node, const char* name);

@@ -49,10 +49,6 @@ DMD::DMD()
   m_pPixelcadeDMDThread = nullptr;
 #endif
 
-  FindDevices();
-
-  // todo virtual dmdm thread
-
   m_pdmdFrameReadyResetThread = new std::thread(&DMD::DmdFrameReadyResetThread, this);
 }
 
@@ -206,9 +202,9 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
 
         memcpy(m_updateBuffer[m_updateBufferPosition], &dmdUpdate, sizeof(DMDUpdate));
-
         m_dmdFrameReady = true;
         if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
+
         ul.unlock();
         m_dmdCV.notify_all();
       });
@@ -226,9 +222,43 @@ void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint1
   UpdateData(pData, depth, width, height, r, g, b, DMDMode::RGB24, nullptr);
 }
 
-void DMD::UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b)
+void DMD::UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height)
 {
-  UpdateData(pData, 24, width, height, r, g, b, DMDMode::RGB24, nullptr);
+  UpdateData(pData, 24, width, height, 0, 0, 0, DMDMode::RGB24, nullptr);
+}
+
+void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height)
+{
+  DMDUpdate dmdUpdate = DMDUpdate();
+  dmdUpdate.mode = DMDMode::RGB16;
+  dmdUpdate.depth = 24;
+  dmdUpdate.width = width;
+  dmdUpdate.height = height;
+  if (pData)
+  {
+    memcpy(dmdUpdate.segData, pData, width * height * sizeof(uint16_t));
+    dmdUpdate.hasData = true;
+  }
+  else
+  {
+    dmdUpdate.hasData = false;
+  }
+  dmdUpdate.hasSegData = false;
+  dmdUpdate.hasSegData2 = false;
+  strcpy(dmdUpdate.name, "");
+
+  new std::thread(
+      [this, dmdUpdate]()
+      {
+        std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
+
+        memcpy(m_updateBuffer[m_updateBufferPosition], &dmdUpdate, sizeof(DMDUpdate));
+        m_dmdFrameReady = true;
+        if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
+
+        ul.unlock();
+        m_dmdCV.notify_all();
+      });
 }
 
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
@@ -270,15 +300,15 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
 
         memcpy(m_updateBuffer[m_updateBufferPosition], &dmdUpdate, sizeof(DMDUpdate));
-
         m_dmdFrameReady = true;
         if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
+
         ul.unlock();
         m_dmdCV.notify_all();
       });
 }
 
-void DMD::FindDevices()
+void DMD::FindDisplays()
 {
   if (m_finding) return;
 
@@ -423,6 +453,10 @@ void DMD::ZeDMDThread()
                            m_updateBuffer[bufferPosition]->depth);
           m_pZeDMD->RenderRgb24(rgb24Data);
         }
+        else if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB16)
+        {
+          m_pZeDMD->RenderRgb565(m_updateBuffer[bufferPosition]->segData);
+        }
         else
         {
           if (m_updateBuffer[bufferPosition]->mode == DMDMode::Data)
@@ -551,6 +585,11 @@ void DMD::PixelcadeDMDThread()
 
             rgb565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
           }
+          update = true;
+        }
+        else if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB16)
+        {
+          memcpy(rgb565Data, m_updateBuffer[bufferPosition]->segData, 128 * 32 * sizeof(uint16_t));
           update = true;
         }
         else
@@ -705,7 +744,7 @@ void DMD::RGB24DMDThread()
             memset(renderBuffer, 0, sizeof(renderBuffer));
           }
         }
-        else
+        else if (m_updateBuffer[bufferPosition]->mode != DMDMode::RGB16)
         {
           // @todo At the momeent libserum only supports on instance. So don't apply colorization if any hardware DMD is
           // attached.

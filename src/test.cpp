@@ -53,6 +53,7 @@ int main(int argc, const char* argv[])
 
   printf("Finding displays...\n");
 
+  pDmd->FindDisplays();
   while (DMDUtil::DMD::IsFinding()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   if (!pDmd->HasDisplay())
@@ -67,6 +68,16 @@ int main(int argc, const char* argv[])
   uint8_t* pImage2 = CreateImage(128, 32, 2);
   uint8_t* pImage4 = CreateImage(128, 32, 4);
   uint8_t* pImage24 = CreateImageRGB24(128, 32);
+  uint16_t image16[128 * 32];
+  for (int i = 0; i < 128 * 32; i++)
+  {
+    int pos = i * 3;
+    uint32_t r = pImage24[pos];
+    uint32_t g = pImage24[pos + 1];
+    uint32_t b = pImage24[pos + 2];
+
+    image16[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
+  }
 
   DMDUtil::LevelDMD* pLevelDMD128_2;
   DMDUtil::LevelDMD* pLevelDMD128_4;
@@ -112,7 +123,7 @@ int main(int argc, const char* argv[])
     pDmd->UpdateData(pImage4, 4, 128, 32, 255, 255, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateRGB24Data(pImage24, 128, 32, 0, 0, 0);
+    pDmd->UpdateRGB24Data(pImage24, 128, 32);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateRGB24Data(pImage24, 2, 128, 32, 255, 0, 0);
@@ -140,6 +151,9 @@ int main(int argc, const char* argv[])
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateRGB24Data(pImage24, 24, 128, 32, 0, 0, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->UpdateRGB16Data(image16, 128, 32);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     ms -= 50;
