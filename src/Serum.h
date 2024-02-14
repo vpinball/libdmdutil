@@ -23,8 +23,6 @@ class Serum
   int m_width;
   int m_height;
   int m_length;
-  uint8_t* m_pFrame;
-  uint8_t m_palette[64 * 3];
 
   static bool m_isLoaded;
 };

@@ -8,7 +8,8 @@
 #define DMDUTILCALLBACK
 #endif
 
-#define DMD_FRAME_BUFFER_SIZE 16
+#define DMDUTIL_FRAME_BUFFER_SIZE 16
+#define DMDUTIL_MAX_NAME_SIZE 32
 
 #include <atomic>
 #include <condition_variable>
@@ -92,16 +93,18 @@ class DMDUTILAPI DMD
     uint8_t data[256 * 64 * 3];
     uint16_t segData[128];
     uint16_t segData2[128];
+    bool hasData;
+    bool hasSegData;
     bool hasSegData2;
     uint8_t r;
     uint8_t g;
     uint8_t b;
     uint16_t width;
     uint16_t height;
-    const char* name;
+    char name[DMDUTIL_MAX_NAME_SIZE];
   };
 
-  DMDUpdate* m_updateBuffer[DMD_FRAME_BUFFER_SIZE];
+  DMDUpdate* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
 
   void FindDevices();
   void Run();

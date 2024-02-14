@@ -16,14 +16,10 @@ Serum::Serum(int width, int height)
   m_width = width;
   m_height = height;
   m_length = width * height;
-  m_pFrame = (uint8_t*)malloc(m_length);
-  memset(m_pFrame, 0, m_length);
 }
 
 Serum::~Serum()
 {
-  free(m_pFrame);
-
   Serum_Dispose();
 
   m_isLoaded = false;
