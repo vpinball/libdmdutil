@@ -459,10 +459,9 @@ void DMD::ZeDMDThread()
           if (update)
           {
             if (m_updateBuffer[bufferPosition]->hasSegData2)
-              m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, (const uint16_t*)segData1,
-                                      (const uint16_t*)segData2);
+              m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1, segData2);
             else
-              m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, (const uint16_t*)segData1);
+              m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1);
 
             m_pZeDMD->SetPalette(palette, 4);
             m_pZeDMD->RenderGray2(renderBuffer);
@@ -514,14 +513,14 @@ void DMD::PixelcadeDMDThread()
 
         if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB24)
         {
-          AdjustRGB24Depth((uint8_t*)m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
+          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
                            m_updateBuffer[bufferPosition]->depth);
           for (int i = 0; i < length; i++)
           {
             int pos = i * 3;
-            uint32_t r = ((uint8_t*)(m_updateBuffer[bufferPosition]->data))[pos];
-            uint32_t g = ((uint8_t*)(m_updateBuffer[bufferPosition]->data))[pos + 1];
-            uint32_t b = ((uint8_t*)(m_updateBuffer[bufferPosition]->data))[pos + 2];
+            uint32_t r = m_updateBuffer[bufferPosition]->data[pos];
+            uint32_t g = m_updateBuffer[bufferPosition]->data[pos + 1];
+            uint32_t b = m_updateBuffer[bufferPosition]->data[pos + 2];
 
             rgb565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
           }
@@ -565,11 +564,9 @@ void DMD::PixelcadeDMDThread()
               uint8_t* pData;
 
               if (m_updateBuffer[bufferPosition]->hasSegData2)
-                m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, (const uint16_t*)segData1,
-                                        (const uint16_t*)segData2);
+                m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1, segData2);
               else
-                m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout,
-                                        (const uint16_t*)segData1);
+                m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1);
             }
           }
 
@@ -668,7 +665,7 @@ void DMD::RGB24DMDThread()
                             m_updateBuffer[bufferPosition]->g, m_updateBuffer[bufferPosition]->b);
             }
 
-            AdjustRGB24Depth((uint8_t*)m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
+            AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
                              m_updateBuffer[bufferPosition]->depth);
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
@@ -685,7 +682,7 @@ void DMD::RGB24DMDThread()
           // attached.
           if (m_updateBuffer[bufferPosition]->mode == DMDMode::Data && m_pSerum && !HasDisplay())
           {
-            update = m_pSerum->Convert((uint8_t*)m_updateBuffer[bufferPosition]->data, renderBuffer, palette,
+            update = m_pSerum->Convert(m_updateBuffer[bufferPosition]->data, renderBuffer, palette,
                                        m_updateBuffer[bufferPosition]->width, m_updateBuffer[bufferPosition]->height);
           }
           else
@@ -719,11 +716,9 @@ void DMD::RGB24DMDThread()
               if (update)
               {
                 if (m_updateBuffer[bufferPosition]->hasSegData2)
-                  m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout,
-                                          (const uint16_t*)segData1, (const uint16_t*)segData2);
+                  m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1, segData2);
                 else
-                  m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout,
-                                          (const uint16_t*)segData1);
+                  m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1);
               }
             }
           }
