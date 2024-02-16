@@ -358,7 +358,7 @@ void DMD::FindDisplays()
         if (pConfig->IsPixelcade())
         {
           pPixelcadeDMD = PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), 128, 32);
-          m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
+          if (pPixelcadeDMD) m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
         }
 
         m_pPixelcadeDMD = pPixelcadeDMD;
@@ -561,7 +561,7 @@ void DMD::PixelcadeDMDThread()
     while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
     {
       // @todo scaling
-      if (m_updateBuffer[bufferPosition]->width == 128 && m_updateBuffer[bufferPosition]->width == 32 &&
+      if (m_updateBuffer[bufferPosition]->width == 128 && m_updateBuffer[bufferPosition]->height == 32 &&
           (m_updateBuffer[bufferPosition]->hasData || m_updateBuffer[bufferPosition]->hasSegData))
       {
         int length = m_updateBuffer[bufferPosition]->width * m_updateBuffer[bufferPosition]->height;
