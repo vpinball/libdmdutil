@@ -4,6 +4,7 @@
 #include "DMDUtil/DMDUtil.h"
 #include "DMDUtil/LevelDMD.h"
 #include "DMDUtil/RGB24DMD.h"
+#include <string.h>
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -156,8 +157,30 @@ int main(int argc, const char* argv[])
     pDmd->UpdateRGB16Data(image16, 128, 32);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    ms -= 50;
+    ms -= 60;
   }
+
+  FILE* fileptr;
+  uint16_t size = width * height * 2;
+  uint8_t* buffer = (uint8_t*)malloc(size * sizeof(uint8_t));
+  uint16_t* rgb565 = (uint16_t*)malloc(size / 2 * sizeof(uint16_t));
+  char filename[128];
+
+  for (int i = 1; i <= 100; i++)
+  {
+    snprintf(filename, 87, "external/libzedmd-7d2b0fc39475940b61b0126f3ff308dd193fe2a8/test/rgb565_%dx%d/%04d.raw", width, height, i);
+    printf("Render raw: %s\n", filename);
+    fileptr = fopen(filename, "rb");
+    fread(buffer, size, 1, fileptr);
+    fclose(fileptr);
+
+    memcpy(rgb565, buffer, size);
+    pDmd->UpdateRGB16Data(rgb565, 128, 32);
+    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+  }
+
+  free(buffer);
+  free(rgb565);
 
   printf("Finished rendering\n");
 
