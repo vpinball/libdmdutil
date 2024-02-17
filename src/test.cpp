@@ -1,10 +1,11 @@
+#include <string.h>
+
 #include <chrono>
 #include <thread>
 
 #include "DMDUtil/DMDUtil.h"
 #include "DMDUtil/LevelDMD.h"
 #include "DMDUtil/RGB24DMD.h"
-#include <string.h>
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -64,6 +65,9 @@ int main(int argc, const char* argv[])
     return 1;
   }
 
+  pDmd->DumpDMDTxt();
+  pDmd->DumpDMDRaw();
+
   printf("Rendering...\n");
 
   uint8_t* pImage2 = CreateImage(128, 32, 2);
@@ -100,28 +104,28 @@ int main(int argc, const char* argv[])
 
     printf("Delay %dms\n", ms);
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0, "test2");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 255, 0);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 255, 0, "test2");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 0, 255);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 0, 255, "test2");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 255, 255);
+    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 255, 255, "test2");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 0, 0);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 0, 0, "test4");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 255, 0);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 255, 0, "test4");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 0, 255);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 0, 255, "test4");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 255, 255);
+    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 255, 255, "test4");
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateRGB24Data(pImage24, 128, 32);
@@ -168,7 +172,8 @@ int main(int argc, const char* argv[])
 
   for (int i = 1; i <= 100; i++)
   {
-    snprintf(filename, 87, "external/libzedmd-7d2b0fc39475940b61b0126f3ff308dd193fe2a8/test/rgb565_%dx%d/%04d.raw", width, height, i);
+    snprintf(filename, 87, "external/libzedmd-7d2b0fc39475940b61b0126f3ff308dd193fe2a8/test/rgb565_%dx%d/%04d.raw",
+             width, height, i);
     printf("Render raw: %s\n", filename);
     fileptr = fopen(filename, "rb");
     fread(buffer, size, 1, fileptr);

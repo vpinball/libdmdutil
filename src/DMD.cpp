@@ -11,6 +11,7 @@
 #endif
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 
 #include "AlphaNumeric.h"
@@ -42,6 +43,10 @@ DMD::DMD()
   m_pSerum = nullptr;
   m_pZeDMD = nullptr;
   m_pZeDMDThread = nullptr;
+  m_pLevelDMDThread = nullptr;
+  m_pRGB24DMDThread = nullptr;
+  m_pDumpDMDTxtThread = nullptr;
+  m_pDumpDMDRawThread = nullptr;
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -84,6 +89,20 @@ DMD::~DMD()
     m_pZeDMDThread = nullptr;
   }
 
+  if (m_pDumpDMDTxtThread)
+  {
+    m_pDumpDMDTxtThread->join();
+    delete m_pDumpDMDTxtThread;
+    m_pDumpDMDTxtThread = nullptr;
+  }
+
+  if (m_pDumpDMDRawThread)
+  {
+    m_pDumpDMDRawThread->join();
+    delete m_pDumpDMDRawThread;
+    m_pDumpDMDRawThread = nullptr;
+  }
+
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -119,6 +138,10 @@ bool DMD::HasDisplay() const
   return (m_pZeDMD != nullptr);
 #endif
 }
+
+void DMD::DumpDMDTxt() { m_pDumpDMDTxtThread = new std::thread(&DMD::DumpDMDTxtThread, this); }
+
+void DMD::DumpDMDRaw() { m_pDumpDMDRawThread = new std::thread(&DMD::DumpDMDRawThread, this); }
 
 LevelDMD* DMD::CreateLevelDMD(uint16_t width, uint16_t height, bool sam)
 {
@@ -194,7 +217,7 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   dmdUpdate.r = r;
   dmdUpdate.g = g;
   dmdUpdate.b = b;
-  strcpy(dmdUpdate.name, name ? name : "");
+  strcpy(dmdUpdate.name, name[0] != '\0' ? name : "");
 
   new std::thread(
       [this, dmdUpdate]()
@@ -219,12 +242,12 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
 void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                           uint8_t b)
 {
-  UpdateData(pData, depth, width, height, r, g, b, DMDMode::RGB24, nullptr);
+  UpdateData(pData, depth, width, height, r, g, b, DMDMode::RGB24, "");
 }
 
 void DMD::UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height)
 {
-  UpdateData(pData, 24, width, height, 0, 0, 0, DMDMode::RGB24, nullptr);
+  UpdateData(pData, 24, width, height, 0, 0, 0, DMDMode::RGB24, "");
 }
 
 void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height)
@@ -292,7 +315,7 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
   dmdUpdate.r = r;
   dmdUpdate.g = g;
   dmdUpdate.b = b;
-  strcpy(dmdUpdate.name, name ? name : "");
+  strcpy(dmdUpdate.name, name[0] != '\0' ? name : "");
 
   new std::thread(
       [this, dmdUpdate]()
@@ -870,6 +893,127 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
   else
   {
     memcpy(pDstData, pData, length);
+  }
+}
+
+void DMD::DumpDMDTxtThread()
+{
+  char name[DMDUTIL_MAX_NAME_SIZE] = "";
+  char filename[128];
+  int bufferPosition = 0;
+  uint8_t renderBuffer[256 * 64] = {0};
+  bool update = false;
+  std::chrono::steady_clock::time_point start;
+
+  while (true)
+  {
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    m_dmdCV.wait(sl, [&]() { return m_dmdFrameReady || m_stopFlag; });
+    sl.unlock();
+    if (m_stopFlag)
+    {
+      return;
+    }
+
+    while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
+    {
+      if (m_updateBuffer[bufferPosition]->depth <= 4 && m_updateBuffer[bufferPosition]->mode == DMDMode::Data &&
+          m_updateBuffer[bufferPosition]->hasData)
+      {
+        update = false;
+        if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
+        {
+          // New game ROM.
+          strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
+          snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.txt", name);
+          update = true;
+          start = std::chrono::steady_clock::now();
+        }
+
+        if (name[0] != '\0')
+        {
+          int length = m_updateBuffer[bufferPosition]->width * m_updateBuffer[bufferPosition]->height;
+          if (update || (memcmp(renderBuffer, m_updateBuffer[bufferPosition]->data, length) != 0))
+          {
+            memcpy(renderBuffer, m_updateBuffer[bufferPosition]->data, length);
+            FILE* f = fopen(filename, "a");
+            if (f)
+            {
+              fprintf(f, "0x%08x\n",
+                      (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::steady_clock::now() - start)
+                                     .count()));
+              for (int y = 0; y < m_updateBuffer[bufferPosition]->height; y++)
+              {
+                for (int x = 0; x < m_updateBuffer[bufferPosition]->width; x++)
+                {
+                  fprintf(f, "%x", renderBuffer[y * m_updateBuffer[bufferPosition]->width + x]);
+                }
+                fprintf(f, "\n");
+              }
+              fprintf(f, "\n");
+              fclose(f);
+            }
+          }
+        }
+      }
+
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+    }
+  }
+}
+
+void DMD::DumpDMDRawThread()
+{
+  char name[DMDUTIL_MAX_NAME_SIZE] = "";
+  char filename[128];
+  int bufferPosition = 0;
+  std::chrono::steady_clock::time_point start;
+
+  while (true)
+  {
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    m_dmdCV.wait(sl, [&]() { return m_dmdFrameReady || m_stopFlag; });
+    sl.unlock();
+    if (m_stopFlag)
+    {
+      return;
+    }
+
+    while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
+    {
+      if (m_updateBuffer[bufferPosition]->hasData || m_updateBuffer[bufferPosition]->hasSegData)
+      {
+        if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
+        {
+          // New game ROM.
+          strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
+          snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.raw", name);
+          start = std::chrono::steady_clock::now();
+        }
+
+        if (name[0] != '\0')
+        {
+          int length = m_updateBuffer[bufferPosition]->width * m_updateBuffer[bufferPosition]->height;
+          FILE* f = fopen(filename, "ab");
+          if (f)
+          {
+            auto current =
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            fwrite(&current, 1, 4, f);
+
+            uint32_t size = sizeof(m_updateBuffer[bufferPosition]);
+            fwrite(&size, 1, 4, f);
+
+            fwrite(m_updateBuffer[bufferPosition], 1, size, f);
+
+            fclose(f);
+          }
+        }
+      }
+
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+    }
   }
 }
 

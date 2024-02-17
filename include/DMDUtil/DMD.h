@@ -65,6 +65,8 @@ class DMDUTILAPI DMD
   void FindDisplays();
   static bool IsFinding();
   bool HasDisplay() const;
+  void DumpDMDTxt();
+  void DumpDMDRaw();
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
   bool DestroyLevelDMD(LevelDMD* pLevelDMD);
   RGB24DMD* CreateRGB24DMD(uint16_t width, uint16_t height);
@@ -118,6 +120,8 @@ class DMDUTILAPI DMD
   void LevelDMDThread();
   void RGB24DMDThread();
   void ZeDMDThread();
+  void DumpDMDTxtThread();
+  void DumpDMDRawThread();
 
   uint8_t m_updateBufferPosition = 0;
   AlphaNumeric* m_pAlphaNumeric;
@@ -130,6 +134,8 @@ class DMDUTILAPI DMD
   std::thread* m_pRGB24DMDThread;
   std::thread* m_pZeDMDThread;
   std::thread* m_pdmdFrameReadyResetThread;
+  std::thread* m_pDumpDMDTxtThread;
+  std::thread* m_pDumpDMDRawThread;
   std::shared_mutex m_dmdSharedMutex;
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_dmdFrameReady = false;
