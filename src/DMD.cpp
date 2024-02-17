@@ -224,9 +224,9 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
 
+        if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
         memcpy(m_updateBuffer[m_updateBufferPosition], &dmdUpdate, sizeof(DMDUpdate));
         m_dmdFrameReady = true;
-        if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
 
         ul.unlock();
         m_dmdCV.notify_all();
@@ -275,9 +275,9 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
 
+        if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
         memcpy(m_updateBuffer[m_updateBufferPosition], &dmdUpdate, sizeof(DMDUpdate));
         m_dmdFrameReady = true;
-        if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
 
         ul.unlock();
         m_dmdCV.notify_all();
@@ -322,9 +322,9 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
 
+        if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
         memcpy(m_updateBuffer[m_updateBufferPosition], &dmdUpdate, sizeof(DMDUpdate));
         m_dmdFrameReady = true;
-        if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
 
         ul.unlock();
         m_dmdCV.notify_all();
@@ -451,6 +451,8 @@ void DMD::ZeDMDThread()
 
     while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
     {
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
       // Note: libzedmd has its own update detection.
 
       if (m_updateBuffer[bufferPosition]->hasData || m_updateBuffer[bufferPosition]->hasSegData)
@@ -551,8 +553,6 @@ void DMD::ZeDMDThread()
           }
         }
       }
-
-      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
     }
   }
 }
@@ -583,6 +583,8 @@ void DMD::PixelcadeDMDThread()
 
     while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
     {
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
       // @todo scaling
       if (m_updateBuffer[bufferPosition]->width == 128 && m_updateBuffer[bufferPosition]->height == 32 &&
           (m_updateBuffer[bufferPosition]->hasData || m_updateBuffer[bufferPosition]->hasSegData))
@@ -675,8 +677,6 @@ void DMD::PixelcadeDMDThread()
 
         if (update) m_pPixelcadeDMD->Update(rgb565Data);
       }
-
-      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
     }
   }
 }
@@ -699,6 +699,8 @@ void DMD::LevelDMDThread()
 
     while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
     {
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
       if (!m_levelDMDs.empty() && m_updateBuffer[bufferPosition]->mode == DMDMode::Data && !m_pSerum &&
           m_updateBuffer[bufferPosition]->hasData)
       {
@@ -713,8 +715,6 @@ void DMD::LevelDMDThread()
           }
         }
       }
-
-      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
     }
   }
 }
@@ -740,6 +740,8 @@ void DMD::RGB24DMDThread()
 
     while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
     {
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
       if (!m_rgb24DMDs.empty() &&
           (m_updateBuffer[bufferPosition]->hasData || m_updateBuffer[bufferPosition]->hasSegData))
       {
@@ -832,8 +834,6 @@ void DMD::RGB24DMDThread()
           }
         }
       }
-
-      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
     }
   }
 }
@@ -917,6 +917,8 @@ void DMD::DumpDMDTxtThread()
 
     while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
     {
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
       if (m_updateBuffer[bufferPosition]->depth <= 4 && m_updateBuffer[bufferPosition]->mode == DMDMode::Data &&
           m_updateBuffer[bufferPosition]->hasData)
       {
@@ -957,8 +959,6 @@ void DMD::DumpDMDTxtThread()
           }
         }
       }
-
-      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
     }
   }
 }
@@ -982,6 +982,8 @@ void DMD::DumpDMDRawThread()
 
     while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
     {
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
       if (m_updateBuffer[bufferPosition]->hasData || m_updateBuffer[bufferPosition]->hasSegData)
       {
         if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
@@ -1011,8 +1013,6 @@ void DMD::DumpDMDRawThread()
           }
         }
       }
-
-      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
     }
   }
 }
