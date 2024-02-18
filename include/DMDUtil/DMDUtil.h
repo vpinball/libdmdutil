@@ -1,7 +1,7 @@
 #pragma once
 
 #define DMDUTIL_VERSION_MAJOR 0  // X Digits
-#define DMDUTIL_VERSION_MINOR 2  // Max 2 Digits
+#define DMDUTIL_VERSION_MINOR 3  // Max 2 Digits
 #define DMDUTIL_VERSION_PATCH 0  // Max 2 Digits
 
 #define _DMDUTIL_STR(x) #x
@@ -13,4 +13,5 @@
 
 #include "Config.h"
 #include "DMD.h"
-#include "VirtualDMD.h"
+#include "LevelDMD.h"
+#include "RGB24DMD.h"

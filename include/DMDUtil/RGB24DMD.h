@@ -13,29 +13,27 @@
 namespace DMDUtil
 {
 
-class DMDUTILAPI VirtualDMD
+class DMDUTILAPI RGB24DMD
 {
  public:
-  VirtualDMD(int width, int height);
-  ~VirtualDMD();
+  RGB24DMD(uint16_t width, uint16_t height);
+  ~RGB24DMD();
 
-  void Update(uint8_t* pLevelData, uint8_t* pRGB24Data);
+  void Update(uint8_t* pRGB24Data);
   int GetWidth() { return m_width; }
   int GetHeight() { return m_height; }
   int GetLength() const { return m_length; }
   int GetPitch() const { return m_pitch; }
-  uint8_t* GetLevelData();
-  uint8_t* GetRGB24Data();
+  uint8_t* GetData();
 
  private:
-  int m_width;
-  int m_height;
+  uint16_t m_width;
+  uint16_t m_height;
   int m_length;
   int m_pitch;
   int m_update;
 
-  uint8_t* m_pLevelData;
-  uint8_t* m_pRGB24Data;
+  uint8_t* m_pData;
 };
 
 }  // namespace DMDUtil
