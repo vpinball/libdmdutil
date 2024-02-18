@@ -2,7 +2,7 @@
 
 A cross platform library for performing DMD tasks.
 
-This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/zesinger/libserum), outputing to [ZeDMD](https://github.com/ppuc/zedmd) and [Pixelcade](https://pixelcade.org) devices, and providing intensity and RGB32 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
+This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/zesinger/libserum), outputing to [ZeDMD](https://github.com/ppuc/zedmd) and [Pixelcade](https://pixelcade.org) devices, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
 
 ## Usage:
 
@@ -20,22 +20,24 @@ void setup()
 
 void test()
 {
-   DMDUtil::DMD* pDmd = new DMDUtil::DMD(128, 32, false, "t2_l8");
-   DMDUtil::VirtualDMD* pVirtualDMD = pDmd->CreateVirtualDMD();
+   DMDUtil::DMD* pDmd = new DMDUtil::DMD();
+   pDmd->FindDisplays();
 
-   uint8_t* pData = (uint8_t*)malloc(128 * 32);
-   .
-   .
-   .
-   pDmd->UpdateData((const UINT8*)pData, 2, 255, 0, 0);
+   DMDUtil::RGB24DMD* pRGB24DMD = pDmd->CreateRGB24DMD(128, 32);
 
-   uint8_t* pRGB24Data = pVirtualDMD->GetRGB24Data();
+   uint8_t* pData = (uint8_t*)malloc(128 * 32 * 3);
+   .
+   .
+   .
+   pDmd->UpdateRGB24Data((const UINT8*)pData, 128, 32);
+
+   uint8_t* pRGB24Data = pRGB24DMD->GetRGB24Data();
 
    if (pRGB24Data) {
       // Render pRGB24Data
    }
 
-   pDmd->DestroyVirtualDMD(pVirtualDMD);
+   pDmd->DestroyRGB24DMD(pRGB24DMD);
 }
 ```
 

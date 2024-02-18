@@ -155,7 +155,7 @@ int main(int argc, const char* argv[])
     pDmd->UpdateRGB24Data(pImage24, 4, 128, 32, 255, 255, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateRGB24Data(pImage24, 24, 128, 32, 0, 0, 0);
+    pDmd->UpdateRGB24Data(pImage24, 128, 32);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     pDmd->UpdateRGB16Data(image16, 128, 32);
