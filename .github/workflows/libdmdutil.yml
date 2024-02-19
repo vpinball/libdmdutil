@@ -134,6 +134,7 @@ jobs:
              cp build/Release/dmdutil_static.lib tmp
              cp build/Release/dmdutil_test_s.exe tmp
              cp build/Release/dmdutil_test.exe tmp
+             cp -r test tmp/
           else
             ARTIFACT_PATH="libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
             if [[ "${{ matrix.platform }}" == "macos" ]]; then
