@@ -106,6 +106,10 @@ jobs:
             NUM_PROCS=$(nproc)
             cmake -DCMAKE_BUILD_TYPE=Release -DPLATFORM=${{ matrix.platform }} -DARCH=${{ matrix.arch }} -B build
             cmake --build build -- -j${NUM_PROCS}
+            build/dmdutil_test
+      - if: (!(matrix.arch == 'arm64' || matrix.arch == 'arm64-v8a' || matrix.arch == 'aarch64' || matrix.platform == 'win'))
+        name: dmdutil_test
+        run: build/dmdutil_test
       - name: Prepare artifacts
         id: artifacts
         run: |
