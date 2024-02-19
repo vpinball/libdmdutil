@@ -58,9 +58,7 @@ int main(int argc, const char* argv[])
 
   if (!pDmd->HasDisplay())
   {
-    printf("No displays to render.\n");
-    delete pDmd;
-    return 1;
+    printf("No hardware displays to render.\n");
   }
 
   pDmd->DumpDMDTxt();
