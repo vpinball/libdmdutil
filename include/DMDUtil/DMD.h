@@ -55,6 +55,7 @@ class Serum;
 class PixelcadeDMD;
 class LevelDMD;
 class RGB24DMD;
+class ConsoleDMD;
 
 class DMDUTILAPI DMD
 {
@@ -71,6 +72,8 @@ class DMDUTILAPI DMD
   bool DestroyLevelDMD(LevelDMD* pLevelDMD);
   RGB24DMD* CreateRGB24DMD(uint16_t width, uint16_t height);
   bool DestroyRGB24DMD(RGB24DMD* pRGB24DMD);
+  ConsoleDMD* CreateConsoleDMD(FILE* f = stdout);
+  bool DestroyConsoleDMD(ConsoleDMD* pConsoleDMD);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   const char* name = nullptr);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
@@ -119,6 +122,7 @@ class DMDUTILAPI DMD
   void DmdFrameReadyResetThread();
   void LevelDMDThread();
   void RGB24DMDThread();
+  void ConsoleDMDThread();
   void ZeDMDThread();
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
@@ -129,9 +133,11 @@ class DMDUTILAPI DMD
   ZeDMD* m_pZeDMD;
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
+  std::vector<ConsoleDMD*> m_consoleDMDs;
 
   std::thread* m_pLevelDMDThread;
   std::thread* m_pRGB24DMDThread;
+  std::thread* m_pConsoleDMDThread;
   std::thread* m_pZeDMDThread;
   std::thread* m_pdmdFrameReadyResetThread;
   std::thread* m_pDumpDMDTxtThread;
