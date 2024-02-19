@@ -38,6 +38,7 @@ cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include
 cp third-party/runtime-libs/macos/x64/libserialport.dylib ../../third-party/runtime-libs/macos/x64
 cp build/libzedmd.0.5.0.dylib ../../third-party/runtime-libs/macos/x64
+cp -r test ../../
 cd ..
 
 #

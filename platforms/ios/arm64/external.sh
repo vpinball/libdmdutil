@@ -36,6 +36,7 @@ platforms/ios/arm64/external.sh
 cmake -DPLATFORM=ios -DARCH=arm64 -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
 cp build/libzedmd.a ../../third-party/build-libs/ios/arm64
+cp -r test ../../
 cd ..
 
 #

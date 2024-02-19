@@ -169,11 +169,11 @@ int main(int argc, const char* argv[])
   uint16_t size = width * height * 2;
   uint8_t* buffer = (uint8_t*)malloc(size * sizeof(uint8_t));
   uint16_t* rgb565 = (uint16_t*)malloc(size / 2 * sizeof(uint16_t));
-  char filename[128];
+  char filename[28];
 
   for (int i = 1; i <= 100; i++)
   {
-    snprintf(filename, 87, "external/libzedmd-7d2b0fc39475940b61b0126f3ff308dd193fe2a8/test/rgb565_%dx%d/%04d.raw",
+    snprintf(filename, 28, "test/rgb565_%dx%d/%04d.raw",
              width, height, i);
     printf("Render raw: %s\n", filename);
     fileptr = fopen(filename, "rb");

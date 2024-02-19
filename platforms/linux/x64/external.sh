@@ -38,6 +38,7 @@ cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include
 cp third-party/runtime-libs/linux/x64/libserialport.so.0 ../../third-party/runtime-libs/linux/x64
 cp build/libzedmd.so.0.5.0 ../../third-party/runtime-libs/linux/x64
+cp -r test ../../
 cd ..
 
 #
