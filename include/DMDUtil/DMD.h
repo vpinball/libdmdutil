@@ -72,7 +72,7 @@ class DMDUTILAPI DMD
   bool DestroyLevelDMD(LevelDMD* pLevelDMD);
   RGB24DMD* CreateRGB24DMD(uint16_t width, uint16_t height);
   bool DestroyRGB24DMD(RGB24DMD* pRGB24DMD);
-  ConsoleDMD* CreateConsoleDMD(FILE* f = stdout);
+  ConsoleDMD* CreateConsoleDMD(bool overwrite, FILE* out = stdout);
   bool DestroyConsoleDMD(ConsoleDMD* pConsoleDMD);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   const char* name = nullptr);

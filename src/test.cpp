@@ -4,9 +4,6 @@
 #include <thread>
 
 #include "DMDUtil/DMDUtil.h"
-#include "DMDUtil/LevelDMD.h"
-#include "DMDUtil/RGB24DMD.h"
-#include "DMDUtil/ConsoleDMD.h"
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -95,7 +92,7 @@ int main(int argc, const char* argv[])
   int ms = 200;
   for (int i = 0; i < 4; i++)
   {
-    if (i == 0) pConsoleDMD = pDmd->CreateConsoleDMD();
+    if (i == 0) pConsoleDMD = pDmd->CreateConsoleDMD(false);
     if (i == 0) pLevelDMD128_2 = pDmd->CreateLevelDMD(128, 32, 2);
     if (i == 1) pDmd->DestroyConsoleDMD(pConsoleDMD);
     if (i == 1) pLevelDMD128_4 = pDmd->CreateLevelDMD(128, 32, 4);

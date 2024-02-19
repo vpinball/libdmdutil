@@ -205,9 +205,9 @@ bool DMD::DestroyRGB24DMD(RGB24DMD* pRGB24DMD)
   return false;
 }
 
-ConsoleDMD* DMD::CreateConsoleDMD(FILE* f)
+ConsoleDMD* DMD::CreateConsoleDMD(bool overwrite, FILE* out)
 {
-  ConsoleDMD* const pConsoleDMD = new ConsoleDMD(f);
+  ConsoleDMD* const pConsoleDMD = new ConsoleDMD(overwrite, out);
   m_consoleDMDs.push_back(pConsoleDMD);
   if (!m_pConsoleDMDThread) m_pConsoleDMDThread = new std::thread(&DMD::ConsoleDMDThread, this);
   return pConsoleDMD;
