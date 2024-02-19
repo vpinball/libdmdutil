@@ -12,6 +12,7 @@
 #define DMDUTIL_MINOR_VERSION DMDUTIL_STR(DMDUTIL_VERSION_MAJOR) "." DMDUTIL_STR(DMDUTIL_VERSION_MINOR)
 
 #include "Config.h"
+#include "ConsoleDMD.h"
 #include "DMD.h"
 #include "LevelDMD.h"
 #include "RGB24DMD.h"

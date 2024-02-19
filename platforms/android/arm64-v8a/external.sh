@@ -42,6 +42,7 @@ platforms/android/arm64-v8a/external.sh
 cmake -DPLATFORM=android -DARCH=arm64-v8a -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
 cp build/libzedmd.so ../../third-party/runtime-libs/android/arm64-v8a
+cp -r test ../../
 cd ..
 
 #

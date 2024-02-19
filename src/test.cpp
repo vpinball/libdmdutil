@@ -4,9 +4,6 @@
 #include <thread>
 
 #include "DMDUtil/DMDUtil.h"
-#include "DMDUtil/LevelDMD.h"
-#include "DMDUtil/RGB24DMD.h"
-#include "DMDUtil/ConsoleDMD.h"
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -95,7 +92,7 @@ int main(int argc, const char* argv[])
   int ms = 200;
   for (int i = 0; i < 4; i++)
   {
-    if (i == 0) pConsoleDMD = pDmd->CreateConsoleDMD();
+    if (i == 0) pConsoleDMD = pDmd->CreateConsoleDMD(false);
     if (i == 0) pLevelDMD128_2 = pDmd->CreateLevelDMD(128, 32, 2);
     if (i == 1) pDmd->DestroyConsoleDMD(pConsoleDMD);
     if (i == 1) pLevelDMD128_4 = pDmd->CreateLevelDMD(128, 32, 4);
@@ -172,11 +169,11 @@ int main(int argc, const char* argv[])
   uint16_t size = width * height * 2;
   uint8_t* buffer = (uint8_t*)malloc(size * sizeof(uint8_t));
   uint16_t* rgb565 = (uint16_t*)malloc(size / 2 * sizeof(uint16_t));
-  char filename[128];
+  char filename[28];
 
   for (int i = 1; i <= 100; i++)
   {
-    snprintf(filename, 87, "external/libzedmd-7d2b0fc39475940b61b0126f3ff308dd193fe2a8/test/rgb565_%dx%d/%04d.raw",
+    snprintf(filename, 28, "test/rgb565_%dx%d/%04d.raw",
              width, height, i);
     printf("Render raw: %s\n", filename);
     fileptr = fopen(filename, "rb");

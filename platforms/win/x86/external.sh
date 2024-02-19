@@ -37,6 +37,7 @@ cp third-party/build-libs/win/x86/libserialport.lib ../../third-party/build-libs
 cp third-party/runtime-libs/win/x86/libserialport.dll ../../third-party/runtime-libs/win/x86
 cp build/${BUILD_TYPE}/zedmd.lib ../../third-party/build-libs/win/x86
 cp build/${BUILD_TYPE}/zedmd.dll ../../third-party/runtime-libs/win/x86
+cp -r test ../../
 cd ..
 
 #

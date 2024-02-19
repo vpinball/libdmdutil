@@ -134,6 +134,7 @@ jobs:
              cp build/Release/dmdutil_static.lib tmp
              cp build/Release/dmdutil_test_s.exe tmp
              cp build/Release/dmdutil_test.exe tmp
+             cp -r test tmp/
           else
             ARTIFACT_PATH="libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
             if [[ "${{ matrix.platform }}" == "macos" ]]; then
@@ -159,6 +160,7 @@ jobs:
                cp build/libdmdutil.a tmp
                cp build/libdmdutil.so tmp
             fi
+            cp -r test tmp/
             cd tmp
             tar -czvf ../${ARTIFACT_PATH} *
           fi
@@ -185,6 +187,7 @@ jobs:
       - name: Combine macos architectures
         run: |
           mkdir tmp
+          cp -r libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/test tmp/
           lipo -create -output tmp/libdmdutil-${{ needs.version.outputs.tag }}.dylib \
              libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/libdmdutil.${{ needs.version.outputs.tag }}.dylib \
              libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/libdmdutil.${{ needs.version.outputs.tag }}.dylib 
