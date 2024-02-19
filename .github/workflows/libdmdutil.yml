@@ -159,6 +159,7 @@ jobs:
                cp build/libdmdutil.a tmp
                cp build/libdmdutil.so tmp
             fi
+            cp -r test tmp/
             cd tmp
             tar -czvf ../${ARTIFACT_PATH} *
           fi
