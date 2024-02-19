@@ -1,6 +1,7 @@
 #include "DMDUtil/DMD.h"
 
 #include "DMDUtil/Config.h"
+#include "DMDUtil/ConsoleDMD.h"
 #include "DMDUtil/LevelDMD.h"
 #include "DMDUtil/RGB24DMD.h"
 
@@ -45,6 +46,7 @@ DMD::DMD()
   m_pZeDMDThread = nullptr;
   m_pLevelDMDThread = nullptr;
   m_pRGB24DMDThread = nullptr;
+  m_pConsoleDMDThread = nullptr;
   m_pDumpDMDTxtThread = nullptr;
   m_pDumpDMDRawThread = nullptr;
 #if !(                                                                                                                \
@@ -80,6 +82,13 @@ DMD::~DMD()
     m_pRGB24DMDThread->join();
     delete m_pRGB24DMDThread;
     m_pRGB24DMDThread = nullptr;
+  }
+
+  if (m_pConsoleDMDThread)
+  {
+    m_pConsoleDMDThread->join();
+    delete m_pConsoleDMDThread;
+    m_pConsoleDMDThread = nullptr;
   }
 
   if (m_pZeDMDThread)
@@ -124,6 +133,7 @@ DMD::~DMD()
 
   for (LevelDMD* pLevelDMD : m_levelDMDs) delete pLevelDMD;
   for (RGB24DMD* pRGB24DMD : m_rgb24DMDs) delete pRGB24DMD;
+  for (ConsoleDMD* pConsoleDMD : m_consoleDMDs) delete pConsoleDMD;
 }
 
 bool DMD::IsFinding() { return m_finding; }
@@ -188,6 +198,32 @@ bool DMD::DestroyRGB24DMD(RGB24DMD* pRGB24DMD)
     if (m_rgb24DMDs.empty())
     {
       //@todo terminate RGB24DMDThread
+    }
+
+    return true;
+  }
+  return false;
+}
+
+ConsoleDMD* DMD::CreateConsoleDMD(FILE* f)
+{
+  ConsoleDMD* const pConsoleDMD = new ConsoleDMD(f);
+  m_consoleDMDs.push_back(pConsoleDMD);
+  if (!m_pConsoleDMDThread) m_pConsoleDMDThread = new std::thread(&DMD::ConsoleDMDThread, this);
+  return pConsoleDMD;
+}
+
+bool DMD::DestroyConsoleDMD(ConsoleDMD* pConsoleDMD)
+{
+  auto it = std::find(m_consoleDMDs.begin(), m_consoleDMDs.end(), pConsoleDMD);
+  if (it != m_consoleDMDs.end())
+  {
+    m_consoleDMDs.erase(it);
+    delete pConsoleDMD;
+
+    if (m_consoleDMDs.empty())
+    {
+      //@todo terminate ConsoleDMDThread
     }
 
     return true;
@@ -831,6 +867,43 @@ void DMD::RGB24DMDThread()
             {
               if (pRGB24DMD->GetLength() == length * 3) pRGB24DMD->Update(rgb24Data);
             }
+          }
+        }
+      }
+    }
+  }
+}
+
+void DMD::ConsoleDMDThread()
+{
+  int bufferPosition = 0;
+  uint8_t renderBuffer[256 * 64] = {0};
+
+  while (true)
+  {
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    m_dmdCV.wait(sl, [&]() { return m_dmdFrameReady || m_stopFlag; });
+    sl.unlock();
+    if (m_stopFlag)
+    {
+      return;
+    }
+
+    while (!m_stopFlag && bufferPosition != m_updateBufferPosition)
+    {
+      if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
+      if (!m_consoleDMDs.empty() && m_updateBuffer[bufferPosition]->mode == DMDMode::Data &&
+          m_updateBuffer[bufferPosition]->hasData)
+      {
+        int length = m_updateBuffer[bufferPosition]->width * m_updateBuffer[bufferPosition]->height;
+        if (memcmp(renderBuffer, m_updateBuffer[bufferPosition]->data, length) != 0)
+        {
+          memcpy(renderBuffer, m_updateBuffer[bufferPosition]->data, length);
+          for (ConsoleDMD* pConsoleDMD : m_consoleDMDs)
+          {
+            pConsoleDMD->Render(renderBuffer, m_updateBuffer[bufferPosition]->width,
+                                m_updateBuffer[bufferPosition]->height, m_updateBuffer[bufferPosition]->depth);
           }
         }
       }
