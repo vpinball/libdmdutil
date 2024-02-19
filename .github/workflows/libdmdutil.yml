@@ -187,6 +187,7 @@ jobs:
       - name: Combine macos architectures
         run: |
           mkdir tmp
+          cp -r libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/test tmp/
           lipo -create -output tmp/libdmdutil-${{ needs.version.outputs.tag }}.dylib \
              libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/libdmdutil.${{ needs.version.outputs.tag }}.dylib \
              libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/libdmdutil.${{ needs.version.outputs.tag }}.dylib 
