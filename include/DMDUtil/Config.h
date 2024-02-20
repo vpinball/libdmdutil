@@ -39,7 +39,7 @@ class DMDUTILAPI Config
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
-  const DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
+  DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
   void SetLogCallback(DMDUtil_LogCallback callback) { m_logCallback = callback; }
   const char* GetAltColorPath() const { return m_altColorPath.c_str(); }
 

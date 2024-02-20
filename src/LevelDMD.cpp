@@ -23,23 +23,23 @@ LevelDMD::LevelDMD(uint16_t width, uint16_t height, bool sam)
 
 LevelDMD::~LevelDMD() { free(m_pData); }
 
-void LevelDMD::Update(uint8_t* pData, uint8_t depth)
+void LevelDMD::Update(uint8_t* pLevelData, uint8_t depth)
 {
-  memcpy(m_pData, pData, m_length);
+  memcpy(m_pData, pLevelData, m_length);
   if (depth == 2)
   {
-    for (int i = 0; i < m_length; i++) m_pData[i] = LEVELS_WPC[pData[i]];
+    for (int i = 0; i < m_length; i++) m_pData[i] = LEVELS_WPC[pLevelData[i]];
     m_update = true;
   }
   else if (depth == 4)
   {
     if (m_sam)
     {
-      for (int i = 0; i < m_length; i++) m_pData[i] = LEVELS_SAM[pData[i]];
+      for (int i = 0; i < m_length; i++) m_pData[i] = LEVELS_SAM[pLevelData[i]];
     }
     else
     {
-      for (int i = 0; i < m_length; i++) m_pData[i] = LEVELS_GTS3[pData[i]];
+      for (int i = 0; i < m_length; i++) m_pData[i] = LEVELS_GTS3[pLevelData[i]];
     }
     m_update = true;
   }

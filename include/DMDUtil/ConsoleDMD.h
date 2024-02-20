@@ -12,7 +12,7 @@ class ConsoleDMD
   ConsoleDMD(bool overwrite, FILE* out);
   ~ConsoleDMD();
 
-  void Render(uint8_t* buffer, uint16_t width, uint16_t height, uint8_t bitDepth);
+  void Render(uint8_t* buffer, uint16_t width, uint16_t height, uint8_t bitDepth) const;
 
  private:
   bool m_overwrite;

@@ -20,8 +20,8 @@ class DMDUTILAPI RGB24DMD
   ~RGB24DMD();
 
   void Update(uint8_t* pRGB24Data);
-  int GetWidth() { return m_width; }
-  int GetHeight() { return m_height; }
+  int GetWidth() const { return m_width; }
+  int GetHeight() const { return m_height; }
   int GetLength() const { return m_length; }
   int GetPitch() const { return m_pitch; }
   uint8_t* GetData();
@@ -31,7 +31,7 @@ class DMDUTILAPI RGB24DMD
   uint16_t m_height;
   int m_length;
   int m_pitch;
-  int m_update;
+  bool m_update;
 
   uint8_t* m_pData;
 };

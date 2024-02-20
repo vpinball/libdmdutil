@@ -429,7 +429,7 @@ void DMD::FindDisplays()
 
 void DMD::DmdFrameReadyResetThread()
 {
-  char name[DMDUTIL_MAX_NAME_SIZE] = "";
+  char name[DMDUTIL_MAX_NAME_SIZE] = {0};
 
   while (true)
   {
@@ -688,8 +688,6 @@ void DMD::PixelcadeDMDThread()
 
             if (update)
             {
-              uint8_t* pData;
-
               if (m_updateBuffer[bufferPosition]->hasSegData2)
                 m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1, segData2);
               else
@@ -858,7 +856,7 @@ void DMD::RGB24DMDThread()
             {
               int palettePos = renderBuffer[i] * 3;
               int pos = i * 3;
-              rgb24Data[pos] = palette[palettePos];
+              rgb24Data[pos    ] = palette[palettePos];
               rgb24Data[pos + 1] = palette[palettePos + 1];
               rgb24Data[pos + 2] = palette[palettePos + 2];
             }
@@ -958,7 +956,7 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
       g = palette[pos2 + 1];
       b = palette[pos2 + 2];
 
-      pDstData[pos] = (uint8_t)r;
+      pDstData[pos    ] = (uint8_t)r;
       pDstData[pos + 1] = (uint8_t)g;
       pDstData[pos + 2] = (uint8_t)b;
     }
@@ -971,10 +969,9 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
 
 void DMD::DumpDMDTxtThread()
 {
-  char name[DMDUTIL_MAX_NAME_SIZE] = "";
+  char name[DMDUTIL_MAX_NAME_SIZE] = {0};
   char filename[128];
   int bufferPosition = 0;
-  int renderBufferPosition = 1;
   uint8_t renderBuffer[3][256 * 64] = {0};
   uint32_t passed[3] = {0};
   bool update = false;
@@ -1068,7 +1065,7 @@ void DMD::DumpDMDTxtThread()
 
 void DMD::DumpDMDRawThread()
 {
-  char name[DMDUTIL_MAX_NAME_SIZE] = "";
+  char name[DMDUTIL_MAX_NAME_SIZE] = {0};
   char filename[128];
   int bufferPosition = 0;
   std::chrono::steady_clock::time_point start;

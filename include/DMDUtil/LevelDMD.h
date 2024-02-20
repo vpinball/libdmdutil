@@ -20,8 +20,8 @@ class DMDUTILAPI LevelDMD
   ~LevelDMD();
 
   void Update(uint8_t* pLevelData, uint8_t depth);
-  int GetWidth() { return m_width; }
-  int GetHeight() { return m_height; }
+  int GetWidth() const { return m_width; }
+  int GetHeight() const { return m_height; }
   int GetLength() const { return m_length; }
   int GetPitch() const { return m_pitch; }
   uint8_t* GetData();
@@ -37,7 +37,7 @@ class DMDUTILAPI LevelDMD
   uint16_t m_height;
   int m_length;
   int m_pitch;
-  int m_update;
+  bool m_update;
   bool m_sam;
 
   uint8_t* m_pData;

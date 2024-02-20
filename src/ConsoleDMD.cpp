@@ -1,6 +1,6 @@
 #include "DMDUtil/ConsoleDMD.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 namespace DMDUtil
 {
@@ -13,7 +13,7 @@ ConsoleDMD::ConsoleDMD(bool overwrite, FILE* out)
 
 ConsoleDMD::~ConsoleDMD() {}
 
-void ConsoleDMD::Render(uint8_t* buffer, uint16_t width, uint16_t height, uint8_t bitDepth)
+void ConsoleDMD::Render(uint8_t* buffer, uint16_t width, uint16_t height, uint8_t bitDepth) const
 {
   for (uint16_t y = 0; y < height; y++)
   {
