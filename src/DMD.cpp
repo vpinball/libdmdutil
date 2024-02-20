@@ -974,9 +974,12 @@ void DMD::DumpDMDTxtThread()
   char name[DMDUTIL_MAX_NAME_SIZE] = "";
   char filename[128];
   int bufferPosition = 0;
-  uint8_t renderBuffer[256 * 64] = {0};
+  int renderBufferPosition = 1;
+  uint8_t renderBuffer[3][256 * 64] = {0};
+  uint32_t passed[3] = {0};
   bool update = false;
   std::chrono::steady_clock::time_point start;
+  FILE* f = nullptr;
 
   while (true)
   {
@@ -985,6 +988,7 @@ void DMD::DumpDMDTxtThread()
     sl.unlock();
     if (m_stopFlag)
     {
+      if (f) fclose(f);
       return;
     }
 
@@ -999,36 +1003,59 @@ void DMD::DumpDMDTxtThread()
         if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
         {
           // New game ROM.
+          start = std::chrono::steady_clock::now();
+          if (f) fclose(f);
           strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
           snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.txt", name);
+          f = fopen(filename, "a");
           update = true;
-          start = std::chrono::steady_clock::now();
+          memset(renderBuffer, 0, 2 * 256 * 64);
+          passed[0] = passed[1] = 0;
         }
 
         if (name[0] != '\0')
         {
           int length = m_updateBuffer[bufferPosition]->width * m_updateBuffer[bufferPosition]->height;
-          if (update || (memcmp(renderBuffer, m_updateBuffer[bufferPosition]->data, length) != 0))
+          if (update || (memcmp(renderBuffer[1], m_updateBuffer[bufferPosition]->data, length) != 0))
           {
-            memcpy(renderBuffer, m_updateBuffer[bufferPosition]->data, length);
-            FILE* f = fopen(filename, "a");
+            passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now() - start)
+                                       .count());
+            memcpy(renderBuffer[2], m_updateBuffer[bufferPosition]->data, length);
+
+            if (m_updateBuffer[bufferPosition]->depth == 2 && passed[2] < DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION)
+            {
+              int i = 0;
+              while (i < length &&
+                     ((bool)(renderBuffer[0][i] & 3) || (bool)(renderBuffer[2][i] & 3) == (bool)renderBuffer[1]))
+              {
+                i++;
+              }
+
+              if (i == length)
+              {
+                // renderBuffer[1] is a transitional frame, delete it.
+                memcpy(renderBuffer[1], renderBuffer[2], length);
+                passed[1] += passed[2];
+                continue;
+              }
+            }
+
             if (f)
             {
-              fprintf(f, "0x%08x\n",
-                      (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     std::chrono::steady_clock::now() - start)
-                                     .count()));
+              fprintf(f, "0x%08x\n", passed[0]);
               for (int y = 0; y < m_updateBuffer[bufferPosition]->height; y++)
               {
                 for (int x = 0; x < m_updateBuffer[bufferPosition]->width; x++)
                 {
-                  fprintf(f, "%x", renderBuffer[y * m_updateBuffer[bufferPosition]->width + x]);
+                  fprintf(f, "%x", renderBuffer[0][y * m_updateBuffer[bufferPosition]->width + x]);
                 }
                 fprintf(f, "\n");
               }
               fprintf(f, "\n");
-              fclose(f);
             }
+            memcpy(renderBuffer[0], renderBuffer[1], length);
+            memcpy(renderBuffer[1], renderBuffer[2], length);
           }
         }
       }
@@ -1042,6 +1069,7 @@ void DMD::DumpDMDRawThread()
   char filename[128];
   int bufferPosition = 0;
   std::chrono::steady_clock::time_point start;
+  FILE* f = nullptr;
 
   while (true)
   {
@@ -1050,6 +1078,7 @@ void DMD::DumpDMDRawThread()
     sl.unlock();
     if (m_stopFlag)
     {
+      if (f) fclose(f);
       return;
     }
 
@@ -1062,15 +1091,17 @@ void DMD::DumpDMDRawThread()
         if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
         {
           // New game ROM.
+          start = std::chrono::steady_clock::now();
+          if (f) fclose(f);
           strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
           snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.raw", name);
-          start = std::chrono::steady_clock::now();
+          f = fopen(filename, "ab");
         }
 
         if (name[0] != '\0')
         {
           int length = m_updateBuffer[bufferPosition]->width * m_updateBuffer[bufferPosition]->height;
-          FILE* f = fopen(filename, "ab");
+
           if (f)
           {
             auto current =
@@ -1081,8 +1112,6 @@ void DMD::DumpDMDRawThread()
             fwrite(&size, 1, 4, f);
 
             fwrite(m_updateBuffer[bufferPosition], 1, size, f);
-
-            fclose(f);
           }
         }
       }

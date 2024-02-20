@@ -10,6 +10,7 @@
 
 #define DMDUTIL_FRAME_BUFFER_SIZE 16
 #define DMDUTIL_MAX_NAME_SIZE 32
+#define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
 
 #include <atomic>
 #include <condition_variable>
