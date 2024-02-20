@@ -913,22 +913,20 @@ bool DMD::UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, 
 {
   if (depth != 2 && depth != 4) return false;
   uint8_t palette[192];
-  memcpy(palette, pPalette, 192);
-
-  memset(pPalette, 0, 192);
 
   const uint8_t colors = (depth == 2) ? 4 : 16;
+  memcpy(palette, pPalette, colors*3);
   uint8_t pos = 0;
 
   for (uint8_t i = 0; i < colors; i++)
   {
     float perc = FrameUtil::CalcBrightness((float)i / (float)(colors - 1));
-    pPalette[pos++] = (uint8_t)(((float)r) * perc);
-    pPalette[pos++] = (uint8_t)(((float)g) * perc);
-    pPalette[pos++] = (uint8_t)(((float)b) * perc);
+    pPalette[pos++] = (uint8_t)((float)r * perc);
+    pPalette[pos++] = (uint8_t)((float)g * perc);
+    pPalette[pos++] = (uint8_t)((float)b * perc);
   }
 
-  return (memcmp(pPalette, palette, 192) != 0);
+  return (memcmp(pPalette, palette, colors*3) != 0);
 }
 
 void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth)
