@@ -746,7 +746,7 @@ void DMD::LevelDMDThread()
           memcpy(renderBuffer, m_updateBuffer[bufferPosition]->data, length);
           for (LevelDMD* pLevelDMD : m_levelDMDs)
           {
-            if (pLevelDMD->GetLength() == length * 3)
+            if (pLevelDMD->GetLength() == length)
               pLevelDMD->Update(renderBuffer, m_updateBuffer[bufferPosition]->depth);
           }
         }
