@@ -1023,15 +1023,17 @@ void DMD::DumpDMDTxtThread()
                                        .count());
             memcpy(renderBuffer[2], m_updateBuffer[bufferPosition]->data, length);
 
-            if (m_updateBuffer[bufferPosition]->depth == 2 && passed[2] < DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION)
+            if (m_updateBuffer[bufferPosition]->depth == 2 &&
+                (passed[2] - passed[1]) < DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION)
             {
               int i = 0;
               while (i < length &&
-                     ((bool)(renderBuffer[0][i] & 3) || (bool)(renderBuffer[2][i] & 3) == (bool)renderBuffer[1]))
+                     ((renderBuffer[0][i] == 2) ||
+                      ((renderBuffer[0][i] == 3) || (renderBuffer[2][i] > 1)) == (renderBuffer[1][i] > 0)))
               {
                 i++;
               }
-
+              printf("C: %d\n", i);
               if (i == length)
               {
                 // renderBuffer[1] is a transitional frame, delete it.
@@ -1055,7 +1057,9 @@ void DMD::DumpDMDTxtThread()
               fprintf(f, "\n");
             }
             memcpy(renderBuffer[0], renderBuffer[1], length);
+            passed[0] = passed[1];
             memcpy(renderBuffer[1], renderBuffer[2], length);
+            passed[1] = passed[2];
           }
         }
       }
