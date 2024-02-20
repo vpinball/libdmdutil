@@ -737,7 +737,7 @@ void DMD::LevelDMDThread()
     {
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
-      if (!m_levelDMDs.empty() && m_updateBuffer[bufferPosition]->mode == DMDMode::Data && !m_pSerum &&
+      if (!m_levelDMDs.empty() && m_updateBuffer[bufferPosition]->mode == DMDMode::Data &&
           m_updateBuffer[bufferPosition]->hasData)
       {
         int length = m_updateBuffer[bufferPosition]->width * m_updateBuffer[bufferPosition]->height;
