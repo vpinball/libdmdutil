@@ -1033,7 +1033,6 @@ void DMD::DumpDMDTxtThread()
               {
                 i++;
               }
-              printf("C: %d\n", i);
               if (i == length)
               {
                 // renderBuffer[1] is a transitional frame, delete it.
