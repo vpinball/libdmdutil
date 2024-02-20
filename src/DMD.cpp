@@ -253,7 +253,7 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   dmdUpdate.r = r;
   dmdUpdate.g = g;
   dmdUpdate.b = b;
-  strcpy(dmdUpdate.name, name[0] != '\0' ? name : "");
+  strcpy(dmdUpdate.name, name ? name : "");
 
   new std::thread(
       [this, dmdUpdate]()
@@ -351,7 +351,7 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
   dmdUpdate.r = r;
   dmdUpdate.g = g;
   dmdUpdate.b = b;
-  strcpy(dmdUpdate.name, name[0] != '\0' ? name : "");
+  strcpy(dmdUpdate.name, name ? name : "");
 
   new std::thread(
       [this, dmdUpdate]()
