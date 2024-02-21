@@ -255,7 +255,7 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   dmdUpdate.b = b;
   strcpy(dmdUpdate.name, name ? name : "");
 
-  new std::thread(
+  std::thread(
       [this, dmdUpdate]()
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
@@ -266,7 +266,8 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
 
         ul.unlock();
         m_dmdCV.notify_all();
-      });
+      })
+      .detach();
 }
 
 void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
@@ -306,7 +307,7 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
   dmdUpdate.hasSegData2 = false;
   strcpy(dmdUpdate.name, "");
 
-  new std::thread(
+  std::thread(
       [this, dmdUpdate]()
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
@@ -317,7 +318,8 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
 
         ul.unlock();
         m_dmdCV.notify_all();
-      });
+      })
+      .detach();
 }
 
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
@@ -353,7 +355,7 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
   dmdUpdate.b = b;
   strcpy(dmdUpdate.name, name ? name : "");
 
-  new std::thread(
+  std::thread(
       [this, dmdUpdate]()
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
@@ -364,7 +366,8 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
 
         ul.unlock();
         m_dmdCV.notify_all();
-      });
+      })
+      .detach();
 }
 
 void DMD::FindDisplays()
@@ -373,7 +376,7 @@ void DMD::FindDisplays()
 
   m_finding = true;
 
-  new std::thread(
+  std::thread(
       [this]()
       {
         Config* const pConfig = Config::GetInstance();
@@ -424,7 +427,8 @@ void DMD::FindDisplays()
 #endif
 
         m_finding = false;
-      });
+      })
+      .detach();
 }
 
 void DMD::DmdFrameReadyResetThread()
@@ -644,7 +648,7 @@ void DMD::PixelcadeDMDThread()
           for (int i = 0; i < length; i++)
           {
             int pos = i * 3;
-            uint32_t r = rgb24Data[pos];
+            uint32_t r = rgb24Data[pos    ];
             uint32_t g = rgb24Data[pos + 1];
             uint32_t b = rgb24Data[pos + 2];
 
@@ -862,7 +866,7 @@ void DMD::RGB24DMDThread()
             {
               int palettePos = renderBuffer[i] * 3;
               int pos = i * 3;
-              rgb24Data[pos    ] = palette[palettePos];
+              rgb24Data[pos] = palette[palettePos];
               rgb24Data[pos + 1] = palette[palettePos + 1];
               rgb24Data[pos + 2] = palette[palettePos + 2];
             }
@@ -921,7 +925,7 @@ bool DMD::UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, 
   uint8_t palette[192];
 
   const uint8_t colors = (depth == 2) ? 4 : 16;
-  memcpy(palette, pPalette, colors*3);
+  memcpy(palette, pPalette, colors * 3);
   uint8_t pos = 0;
 
   for (uint8_t i = 0; i < colors; i++)
@@ -932,7 +936,7 @@ bool DMD::UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, 
     pPalette[pos++] = (uint8_t)((float)b * perc);
   }
 
-  return (memcmp(pPalette, palette, colors*3) != 0);
+  return (memcmp(pPalette, palette, colors * 3) != 0);
 }
 
 void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth)
@@ -963,7 +967,7 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
   }
   else
   {
-    memcpy(pDstData, pData, length*3);
+    memcpy(pDstData, pData, length * 3);
   }
 }
 
