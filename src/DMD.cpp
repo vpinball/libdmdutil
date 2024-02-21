@@ -605,12 +605,10 @@ void DMD::ZeDMDThread()
 void DMD::PixelcadeDMDThread()
 {
   int bufferPosition = 0;
-  uint16_t segData1[128];
-  uint16_t segData2[128];
+  uint16_t segData1[128] = {0};
+  uint16_t segData2[128] = {0};
   uint8_t palette[192] = {0};
   uint16_t rgb565Data[128 * 32] = {0};
-  uint8_t renderBuffer[128 * 32] = {0};
-  uint8_t rgb24Data[128 * 32 * 3] = {0};
 
   while (true)
   {
@@ -640,14 +638,15 @@ void DMD::PixelcadeDMDThread()
 
         if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB24)
         {
+          uint8_t rgb24Data[128 * 32 * 3];
           AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length, palette,
                            m_updateBuffer[bufferPosition]->depth);
           for (int i = 0; i < length; i++)
           {
             int pos = i * 3;
-            uint32_t r = m_updateBuffer[bufferPosition]->data[pos];
-            uint32_t g = m_updateBuffer[bufferPosition]->data[pos + 1];
-            uint32_t b = m_updateBuffer[bufferPosition]->data[pos + 2];
+            uint32_t r = rgb24Data[pos];
+            uint32_t g = rgb24Data[pos + 1];
+            uint32_t b = rgb24Data[pos + 2];
 
             rgb565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
           }
@@ -660,9 +659,11 @@ void DMD::PixelcadeDMDThread()
         }
         else
         {
+          uint8_t renderBuffer[128 * 32];
+
           if (m_updateBuffer[bufferPosition]->mode == DMDMode::Data)
           {
-            // @todo At the momeent libserum only supports on instance. So don't apply colorization if a ZeDMD is
+            // @todo At the moment libserum only supports one instance. So don't apply colorization if a ZeDMD is
             // attached.
             if (m_pSerum && !m_pZeDMD)
             {
@@ -678,16 +679,16 @@ void DMD::PixelcadeDMDThread()
           }
           else if (m_updateBuffer[bufferPosition]->mode == DMDMode::AlphaNumeric)
           {
-            if (memcmp(segData1, m_updateBuffer[bufferPosition]->segData, 128 * sizeof(uint16_t)) != 0)
+            if (memcmp(segData1, m_updateBuffer[bufferPosition]->segData, sizeof(segData1)) != 0)
             {
-              memcpy(segData1, m_updateBuffer[bufferPosition]->segData, 128 * sizeof(uint16_t));
+              memcpy(segData1, m_updateBuffer[bufferPosition]->segData, sizeof(segData1));
               update = true;
             }
 
             if (m_updateBuffer[bufferPosition]->hasSegData2 &&
-                memcmp(segData2, m_updateBuffer[bufferPosition]->segData2, 128 * sizeof(uint16_t)) != 0)
+                memcmp(segData2, m_updateBuffer[bufferPosition]->segData2, sizeof(segData2)) != 0)
             {
-              memcpy(segData2, m_updateBuffer[bufferPosition]->segData2, 128 * sizeof(uint16_t));
+              memcpy(segData2, m_updateBuffer[bufferPosition]->segData2, sizeof(segData2));
               update = true;
             }
 
@@ -761,8 +762,8 @@ void DMD::LevelDMDThread()
 void DMD::RGB24DMDThread()
 {
   int bufferPosition = 0;
-  uint16_t segData1[128];
-  uint16_t segData2[128];
+  uint16_t segData1[128] = {0};
+  uint16_t segData2[128] = {0};
   uint8_t palette[192] = {0};
   uint8_t renderBuffer[256 * 64] = {0};
   uint8_t rgb24Data[256 * 64 * 3] = {0};
@@ -832,16 +833,16 @@ void DMD::RGB24DMDThread()
             }
             else if (m_updateBuffer[bufferPosition]->mode == DMDMode::AlphaNumeric)
             {
-              if (memcmp(segData1, m_updateBuffer[bufferPosition]->segData, 128 * sizeof(uint16_t)) != 0)
+              if (memcmp(segData1, m_updateBuffer[bufferPosition]->segData, sizeof(segData1)) != 0)
               {
-                memcpy(segData1, m_updateBuffer[bufferPosition]->segData, 128 * sizeof(uint16_t));
+                memcpy(segData1, m_updateBuffer[bufferPosition]->segData, sizeof(segData1));
                 update = true;
               }
 
               if (m_updateBuffer[bufferPosition]->hasSegData2 &&
-                  memcmp(segData2, m_updateBuffer[bufferPosition]->segData2, 128 * sizeof(uint16_t)) != 0)
+                  memcmp(segData2, m_updateBuffer[bufferPosition]->segData2, sizeof(segData2)) != 0)
               {
-                memcpy(segData2, m_updateBuffer[bufferPosition]->segData2, 128 * sizeof(uint16_t));
+                memcpy(segData2, m_updateBuffer[bufferPosition]->segData2, sizeof(segData2));
                 update = true;
               }
 
@@ -969,11 +970,9 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
 void DMD::DumpDMDTxtThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-  char filename[128];
   int bufferPosition = 0;
   uint8_t renderBuffer[3][256 * 64] = {0};
   uint32_t passed[3] = {0};
-  bool update = false;
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
 
@@ -995,13 +994,14 @@ void DMD::DumpDMDTxtThread()
       if (m_updateBuffer[bufferPosition]->depth <= 4 && m_updateBuffer[bufferPosition]->mode == DMDMode::Data &&
           m_updateBuffer[bufferPosition]->hasData)
       {
-        update = false;
+        bool update = false;
         if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
         {
           // New game ROM.
           start = std::chrono::steady_clock::now();
           if (f) fclose(f);
           strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
+          char filename[128];
           snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.txt", name);
           f = fopen(filename, "a");
           update = true;
@@ -1065,7 +1065,6 @@ void DMD::DumpDMDTxtThread()
 void DMD::DumpDMDRawThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-  char filename[128];
   int bufferPosition = 0;
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
@@ -1093,6 +1092,7 @@ void DMD::DumpDMDRawThread()
           start = std::chrono::steady_clock::now();
           if (f) fclose(f);
           strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
+          char filename[128];
           snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.raw", name);
           f = fopen(filename, "ab");
         }
