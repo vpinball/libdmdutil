@@ -12,7 +12,7 @@ LevelDMD::LevelDMD(uint16_t width, uint16_t height, bool sam)
   m_width = width;
   m_height = height;
   m_length = width * height;
-  m_pitch = width * 3;
+  m_pitch = width;
   m_sam = sam;
 
   m_pData = (uint8_t*)malloc(m_length);
