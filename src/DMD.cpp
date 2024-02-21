@@ -873,7 +873,7 @@ void DMD::RGB24DMDThread()
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
             {
-              if (pRGB24DMD->GetLength() == length) pRGB24DMD->Update(rgb24Data);
+              if (pRGB24DMD->GetLength() == length * 3) pRGB24DMD->Update(rgb24Data);
             }
           }
         }
