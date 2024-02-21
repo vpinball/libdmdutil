@@ -241,7 +241,7 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   dmdUpdate.height = height;
   if (pData)
   {
-    memcpy(dmdUpdate.data, pData, width * height * (mode == DMDMode::RGB24 ? 3 : 1));
+    memcpy(dmdUpdate.data, pData, width * height * (mode == DMDMode::RGB16 ? 2 : (mode == DMDMode::RGB24 ? 3 : 1)));
     dmdUpdate.hasData = true;
   }
   else
@@ -510,7 +510,7 @@ void DMD::ZeDMDThread()
 
         if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB24)
         {
-          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, width * height * 3, palette,
+          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, width * height, palette,
                            m_updateBuffer[bufferPosition]->depth);
           m_pZeDMD->RenderRgb24(rgb24Data);
         }
@@ -635,7 +635,7 @@ void DMD::PixelcadeDMDThread()
 
         if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB24)
         {
-          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
+          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length, palette,
                            m_updateBuffer[bufferPosition]->depth);
           for (int i = 0; i < length; i++)
           {
@@ -792,7 +792,7 @@ void DMD::RGB24DMDThread()
                             m_updateBuffer[bufferPosition]->g, m_updateBuffer[bufferPosition]->b);
             }
 
-            AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
+            AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length, palette,
                              m_updateBuffer[bufferPosition]->depth);
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
@@ -805,7 +805,7 @@ void DMD::RGB24DMDThread()
         }
         else if (m_updateBuffer[bufferPosition]->mode != DMDMode::RGB16)
         {
-          // @todo At the momeent libserum only supports on instance. So don't apply colorization if any hardware DMD is
+          // @todo At the moment libserum only supports one instance. So don't apply colorization if any hardware DMD is
           // attached.
           if (m_updateBuffer[bufferPosition]->mode == DMDMode::Data && m_pSerum && !HasDisplay())
           {
@@ -863,7 +863,7 @@ void DMD::RGB24DMDThread()
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
             {
-              if (pRGB24DMD->GetLength() == length * 3) pRGB24DMD->Update(rgb24Data);
+              if (pRGB24DMD->GetLength() == length) pRGB24DMD->Update(rgb24Data);
             }
           }
         }
@@ -950,18 +950,14 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
         level = (uint8_t)(v >> 4);
 
       int pos2 = level * 3;
-      r = palette[pos2];
-      g = palette[pos2 + 1];
-      b = palette[pos2 + 2];
-
-      pDstData[pos    ] = (uint8_t)r;
-      pDstData[pos + 1] = (uint8_t)g;
-      pDstData[pos + 2] = (uint8_t)b;
+      pDstData[pos    ] = palette[pos2];
+      pDstData[pos + 1] = palette[pos2 + 1];
+      pDstData[pos + 2] = palette[pos2 + 2];
     }
   }
   else
   {
-    memcpy(pDstData, pData, length);
+    memcpy(pDstData, pData, length*3);
   }
 }
 
