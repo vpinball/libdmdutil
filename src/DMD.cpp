@@ -278,12 +278,12 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
 void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                           uint8_t b)
 {
-  UpdateData(pData, depth, width, height, r, g, b, DMDMode::RGB24, "");
+  UpdateData(pData, depth, width, height, r, g, b, DMDMode::RGB24, nullptr);
 }
 
 void DMD::UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height)
 {
-  UpdateData(pData, 24, width, height, 0, 0, 0, DMDMode::RGB24, "");
+  UpdateData(pData, 24, width, height, 0, 0, 0, DMDMode::RGB24, nullptr);
 }
 
 void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height)
@@ -468,12 +468,9 @@ void DMD::ZeDMDThread()
   int bufferPosition = 0;
   uint16_t width = 0;
   uint16_t height = 0;
-  uint16_t segData1[128];
-  uint16_t segData2[128];
+  uint16_t segData1[128] = {0};
+  uint16_t segData2[128] = {0};
   uint8_t palette[192] = {0};
-  // ZeDMD HD supports 256 * 64 pixels.
-  uint8_t renderBuffer[256 * 64] = {0};
-  uint8_t rgb24Data[256 * 64 * 3] = {0};
 
   while (true)
   {
@@ -510,6 +507,9 @@ void DMD::ZeDMDThread()
 
         if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB24)
         {
+          // ZeDMD HD supports 256 * 64 pixels.
+          uint8_t rgb24Data[256 * 64 * 3];
+
           AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, width * height, palette,
                            m_updateBuffer[bufferPosition]->depth);
           m_pZeDMD->RenderRgb24(rgb24Data);
@@ -522,6 +522,8 @@ void DMD::ZeDMDThread()
         {
           if (m_updateBuffer[bufferPosition]->mode == DMDMode::Data)
           {
+            // ZeDMD HD supports 256 * 64 pixels.
+            uint8_t renderBuffer[256 * 64];
             memcpy(renderBuffer, m_updateBuffer[bufferPosition]->data, width * height);
 
             if (m_pSerum)
@@ -563,21 +565,24 @@ void DMD::ZeDMDThread()
           }
           else if (m_updateBuffer[bufferPosition]->mode == DMDMode::AlphaNumeric)
           {
-            if (memcmp(segData1, m_updateBuffer[bufferPosition]->segData, 128 * sizeof(uint16_t)) != 0)
+            if (memcmp(segData1, m_updateBuffer[bufferPosition]->segData, sizeof(segData1)) != 0)
             {
-              memcpy(segData1, m_updateBuffer[bufferPosition]->segData, 128 * sizeof(uint16_t));
+              memcpy(segData1, m_updateBuffer[bufferPosition]->segData, sizeof(segData1));
               update = true;
             }
 
             if (m_updateBuffer[bufferPosition]->hasSegData2 &&
-                memcmp(segData2, m_updateBuffer[bufferPosition]->segData2, 128 * sizeof(uint16_t)) != 0)
+                memcmp(segData2, m_updateBuffer[bufferPosition]->segData2, sizeof(segData2)) != 0)
             {
-              memcpy(segData2, m_updateBuffer[bufferPosition]->segData2, 128 * sizeof(uint16_t));
+              memcpy(segData2, m_updateBuffer[bufferPosition]->segData2, sizeof(segData2));
               update = true;
             }
 
             if (update)
             {
+              // ZeDMD HD supports 256 * 64 pixels.
+              uint8_t renderBuffer[256 * 64];
+
               if (m_updateBuffer[bufferPosition]->hasSegData2)
                 m_pAlphaNumeric->Render(renderBuffer, m_updateBuffer[bufferPosition]->layout, segData1, segData2);
               else
