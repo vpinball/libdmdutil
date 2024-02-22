@@ -514,7 +514,7 @@ void DMD::ZeDMDThread()
           // ZeDMD HD supports 256 * 64 pixels.
           uint8_t rgb24Data[256 * 64 * 3];
 
-          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, width * height, palette,
+          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, width * height * 3, palette,
                            m_updateBuffer[bufferPosition]->depth);
           m_pZeDMD->RenderRgb24(rgb24Data);
         }
@@ -643,7 +643,7 @@ void DMD::PixelcadeDMDThread()
         if (m_updateBuffer[bufferPosition]->mode == DMDMode::RGB24)
         {
           uint8_t rgb24Data[128 * 32 * 3];
-          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length, palette,
+          AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
                            m_updateBuffer[bufferPosition]->depth);
           for (int i = 0; i < length; i++)
           {
@@ -802,7 +802,7 @@ void DMD::RGB24DMDThread()
                             m_updateBuffer[bufferPosition]->g, m_updateBuffer[bufferPosition]->b);
             }
 
-            AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length, palette,
+            AdjustRGB24Depth(m_updateBuffer[bufferPosition]->data, rgb24Data, length * 3, palette,
                              m_updateBuffer[bufferPosition]->depth);
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
@@ -967,7 +967,7 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
   }
   else
   {
-    memcpy(pDstData, pData, length * 3);
+    memcpy(pDstData, pData, length);
   }
 }
 
