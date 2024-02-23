@@ -72,4 +72,12 @@ bool Serum::ColorizeWithMetadata(uint8_t* frame, int width, int height, uint8_t*
   return Serum_ColorizeWithMetadata(frame, width, height, palette, rotations, triggerID, hashcode, frameID);
 }
 
+void Serum::SetIgnoreUnknownFramesTimeout(uint8_t milliseconds){
+  return Serum_SetIgnoreUnknownFramesTimeout(milliseconds);
+}
+
+void Serum::SetMaximumUnknownFramesToSkip(uint8_t maximum){
+  return Serum_SetMaximumUnknownFramesToSkip(maximum);
+}
+
 }  // namespace DMDUtil

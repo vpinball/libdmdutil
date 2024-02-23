@@ -452,6 +452,11 @@ void DMD::DmdFrameReadyResetThread()
       strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
 
       m_pSerum = (Config::GetInstance()->IsAltColor() && name[0] != '\0') ? Serum::Load(name) : nullptr;
+      if (m_pSerum)
+      {
+        m_pSerum->SetIgnoreUnknownFramesTimeout((uint8_t)Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
+        m_pSerum->SetMaximumUnknownFramesToSkip((uint8_t)Config::GetInstance()->GetMaximumUnknownFramesToSkip());
+      }
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -648,7 +653,7 @@ void DMD::PixelcadeDMDThread()
           for (int i = 0; i < length; i++)
           {
             int pos = i * 3;
-            uint32_t r = rgb24Data[pos    ];
+            uint32_t r = rgb24Data[pos];
             uint32_t g = rgb24Data[pos + 1];
             uint32_t b = rgb24Data[pos + 2];
 
@@ -960,7 +965,7 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
         level = (uint8_t)(v >> 4);
 
       int pos2 = level * 3;
-      pDstData[pos    ] = palette[pos2];
+      pDstData[pos] = palette[pos2];
       pDstData[pos + 1] = palette[pos2 + 1];
       pDstData[pos + 2] = palette[pos2 + 2];
     }

@@ -23,6 +23,10 @@ class DMDUTILAPI Config
   bool IsAltColor() const { return m_altColor; }
   void SetAltColor(bool altColor) { m_altColor = altColor; }
   void SetAltColorPath(const char* path) { m_altColorPath = path; }
+  void SetIgnoreUnknownFramesTimeout(int framesTimeout) { m_framesTimeout = framesTimeout; }
+  void SetMaximumUnknownFramesToSkip(int framesToSkip) { m_framesToSkip = framesToSkip; }
+  int GetIgnoreUnknownFramesTimeout() { return m_framesTimeout; }
+  int GetMaximumUnknownFramesToSkip() { return m_framesToSkip; }
   bool IsZeDMD() const { return m_zedmd; }
   void SetZeDMD(bool zedmd) { m_zedmd = zedmd; }
   const char* GetZeDMDDevice() const { return m_zedmdDevice.c_str(); }
@@ -50,6 +54,8 @@ class DMDUTILAPI Config
   static Config* m_pInstance;
   bool m_altColor;
   std::string m_altColorPath;
+  int m_framesTimeout;
+  int m_framesToSkip;
   bool m_zedmd;
   std::string m_zedmdDevice;
   bool m_zedmdDebug;
