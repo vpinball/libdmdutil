@@ -454,8 +454,8 @@ void DMD::DmdFrameReadyResetThread()
       m_pSerum = (Config::GetInstance()->IsAltColor() && name[0] != '\0') ? Serum::Load(name) : nullptr;
       if (m_pSerum)
       {
-        m_pSerum->SetIgnoreUnknownFramesTimeout((uint8_t)Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
-        m_pSerum->SetMaximumUnknownFramesToSkip((uint8_t)Config::GetInstance()->GetMaximumUnknownFramesToSkip());
+        m_pSerum->SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
+        m_pSerum->SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
       }
     }
 
