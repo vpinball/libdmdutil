@@ -37,7 +37,7 @@ cmake -DPLATFORM=linux -DARCH=aarch64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMA
 cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include
 cp third-party/runtime-libs/linux/aarch64/libserialport.so.0 ../../third-party/runtime-libs/linux/aarch64
-cp build/libzedmd.so.0.5.0 ../../third-party/runtime-libs/linux/aarch64
+cp build/libzedmd.so.0.6.0 ../../third-party/runtime-libs/linux/aarch64
 cp -r test ../../
 cd ..
 
