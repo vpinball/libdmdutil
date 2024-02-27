@@ -73,7 +73,7 @@ bool Serum::ColorizeWithMetadata(uint8_t* frame, int width, int height, uint8_t*
 }
 
 void Serum::SetIgnoreUnknownFramesTimeout(int milliseconds){
-  return SetIgnoreUnknownFramesTimeout((uint16_t) milliseconds);
+  return Serum_SetIgnoreUnknownFramesTimeout((uint16_t) milliseconds);
 }
 
 void Serum::SetMaximumUnknownFramesToSkip(int maximum){
