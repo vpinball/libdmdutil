@@ -174,6 +174,7 @@ int main(int argc, const char* argv[])
     snprintf(filename, 28, "test/rgb565_%dx%d/%04d.raw", width, height, i);
     printf("Render raw: %s\n", filename);
     fileptr = fopen(filename, "rb");
+    if (!fileptr) continue;
     fread(buffer, size, 1, fileptr);
     fclose(fileptr);
 
