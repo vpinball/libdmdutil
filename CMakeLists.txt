@@ -87,9 +87,9 @@ set(DMDUTIL_INCLUDE_DIRS
 
 if(BUILD_SHARED)
    add_library(dmdutil_shared SHARED ${DMDUTIL_SOURCES})
-    
+
    target_include_directories(dmdutil_shared PUBLIC ${DMDUTIL_INCLUDE_DIRS})
-    
+
    if(PLATFORM STREQUAL "win")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
@@ -139,6 +139,12 @@ if(BUILD_SHARED)
    install(DIRECTORY include/DMDUtil DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
+      add_executable(dmdserver
+         src/dmdServer.cpp
+      )
+
+      target_link_libraries(dmdserver PUBLIC dmdutil_shared)
+
       add_executable(dmdutil_test
          src/test.cpp
       )
@@ -182,7 +188,7 @@ if(BUILD_SHARED)
       endif()
    endif()
 endif()
- 
+
 if(BUILD_STATIC)
    add_library(dmdutil_static STATIC ${DMDUTIL_SOURCES})
 

@@ -27,6 +27,10 @@
 
 class ZeDMD;
 
+namespace CppSockets {
+  class TcpClient;
+}
+
 namespace DMDUtil
 {
 
@@ -64,6 +68,45 @@ class DMDUTILAPI DMD
   DMD();
   ~DMD();
 
+  enum class Mode
+  {
+    Unknown,
+    Data,
+    RGB24,  // RGB888
+    RGB16,  // RGB565
+    AlphaNumeric
+  };
+
+  struct Update
+  {
+    Mode mode;
+    AlphaNumericLayout layout;
+    int depth;
+    uint8_t data[256 * 64 * 3];
+    uint16_t segData[256 * 64];  // RGB16 or segment data
+    uint16_t segData2[128];
+    bool hasData;
+    bool hasSegData;
+    bool hasSegData2;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint16_t width;
+    uint16_t height;
+    char name[DMDUTIL_MAX_NAME_SIZE];
+  };
+
+  struct StreamHeader
+  {
+    const char protocol[10] = "DMDStream";
+    uint8_t version = 1;
+    Mode mode = Mode::Data;
+    uint16_t width = 0;
+    uint16_t height = 0;
+    uint32_t length = 0;
+  };
+
+  bool ConnectDMDServer();
   void FindDisplays();
   static bool IsFinding();
   bool HasDisplay() const;
@@ -83,44 +126,17 @@ class DMDUTILAPI DMD
   void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b, const char* name = nullptr);
+  void QueueUpdate(Update* pUpdate);
 
  private:
-  enum class DMDMode
-  {
-    Unknown,
-    Data,
-    RGB24,  // RGB888
-    RGB16,  // RGB565
-    AlphaNumeric
-  };
-
-  struct DMDUpdate
-  {
-    DMDMode mode;
-    AlphaNumericLayout layout;
-    int depth;
-    uint8_t data[256 * 64 * 3];
-    uint16_t segData[256 * 64];  // RGB16 or segment data
-    uint16_t segData2[128];
-    bool hasData;
-    bool hasSegData;
-    bool hasSegData2;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    uint16_t width;
-    uint16_t height;
-    char name[DMDUTIL_MAX_NAME_SIZE];
-  };
-
-  DMDUpdate* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
+  Update* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
 
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                  DMDMode mode, const char* name);
+                  Mode mode, const char* name);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
 
-  void DmdFrameReadyResetThread();
+  void DmdFrameThread();
   void LevelDMDThread();
   void RGB24DMDThread();
   void ConsoleDMDThread();
@@ -135,12 +151,13 @@ class DMDUTILAPI DMD
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;
+  CppSockets::TcpClient* m_pDMDServerClient;
 
   std::thread* m_pLevelDMDThread;
   std::thread* m_pRGB24DMDThread;
   std::thread* m_pConsoleDMDThread;
   std::thread* m_pZeDMDThread;
-  std::thread* m_pdmdFrameReadyResetThread;
+  std::thread* m_pDmdFrameThread;
   std::thread* m_pDumpDMDTxtThread;
   std::thread* m_pDumpDMDRawThread;
   std::shared_mutex m_dmdSharedMutex;

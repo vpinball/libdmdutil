@@ -16,6 +16,7 @@ fi
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
+echo "  CPPSOCKETS_SHA: ${CPPSOCKETS_SHA}"
 echo ""
 
 if [ -z "${BUILD_TYPE}" ]; then
@@ -56,4 +57,14 @@ cp src/serum-decode.h ../../third-party/include
 cmake -DPLATFORM=android -DARCH=arm64-v8a -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
 cp build/libserum.so ../../third-party/runtime-libs/android/arm64-v8a
+cd ..
+
+#
+# build CppSockets and copy to external
+#
+
+curl -sL https://github.com/fredlllll/CppSockets/archive/${CPPSOCKETS_SHA}.zip -o CppSockets.zip
+unzip CppSockets.zip
+cd CppSockets-$CPPSOCKETS_SHA
+cp *.hpp ../../third-party/include/
 cd ..
