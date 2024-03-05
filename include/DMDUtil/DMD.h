@@ -100,7 +100,7 @@ class DMDUTILAPI DMD
   {
     const char protocol[10] = "DMDStream";
     uint8_t version = 1;
-    Mode mode = Mode::Data;
+    Mode mode = Mode::Data; // int
     uint16_t width = 0;
     uint16_t height = 0;
     uint32_t length = 0;

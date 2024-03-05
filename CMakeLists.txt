@@ -142,13 +142,16 @@ if(BUILD_SHARED)
       add_executable(dmdserver
          src/dmdServer.cpp
       )
-
       target_link_libraries(dmdserver PUBLIC dmdutil_shared)
+
+      add_executable(dmdserver_test
+         src/testDmdServer.cpp
+      )
+      target_link_libraries(dmdserver_test PUBLIC dmdutil_shared)
 
       add_executable(dmdutil_test
          src/test.cpp
       )
-
       target_link_libraries(dmdutil_test PUBLIC dmdutil_shared)
 
       if(POST_BUILD_COPY_EXT_LIBS)
