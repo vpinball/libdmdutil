@@ -20,8 +20,6 @@
 #include "Logger.h"
 #include "Serum.h"
 #include "ZeDMD.h"
-#include "TcpClient.hpp"
-
 
 namespace DMDUtil
 {
@@ -59,7 +57,7 @@ DMD::DMD()
 #endif
 
   m_pDmdFrameThread = new std::thread(&DMD::DmdFrameThread, this);
-  m_pDMDServerClient = nullptr;
+  m_pDMDServerConnector = nullptr;
 }
 
 DMD::~DMD()
@@ -137,12 +135,23 @@ DMD::~DMD()
   for (LevelDMD* pLevelDMD : m_levelDMDs) delete pLevelDMD;
   for (RGB24DMD* pRGB24DMD : m_rgb24DMDs) delete pRGB24DMD;
   for (ConsoleDMD* pConsoleDMD : m_consoleDMDs) delete pConsoleDMD;
+
+  if (m_pDMDServerConnector)
+  {
+    m_pDMDServerConnector->close();
+    delete m_pDMDServerConnector;
+    m_pDMDServerConnector = nullptr;
+  }
 }
 
 bool DMD::ConnectDMDServer()
 {
-  m_pDMDServerClient = new CppSockets::TcpClient("localhost", 6789);
-  return (m_pDMDServerClient);
+  if (!m_pDMDServerConnector)
+  {
+    sockpp::initialize();
+    m_pDMDServerConnector = new sockpp::tcp_connector({"localhost", 6789});
+  }
+  return (m_pDMDServerConnector);
 }
 
 bool DMD::IsFinding() { return m_finding; }
@@ -264,28 +273,28 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   dmdUpdate.b = b;
   strcpy(dmdUpdate.name, name ? name : "");
 
-  QueueUpdate(&dmdUpdate);
+  QueueUpdate(dmdUpdate);
 }
 
-void DMD::QueueUpdate(Update* pUpdate)
+void DMD::QueueUpdate(Update dmdUpdate)
 {
   std::thread(
-      [this, pUpdate]()
+      [this, dmdUpdate]()
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
 
         if (++m_updateBufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) m_updateBufferPosition = 0;
-        memcpy(m_updateBuffer[m_updateBufferPosition], pUpdate, sizeof(Update));
+        memcpy(m_updateBuffer[m_updateBufferPosition], &dmdUpdate, sizeof(Update));
         m_dmdFrameReady = true;
 
         ul.unlock();
         m_dmdCV.notify_all();
 
-        if (m_pDMDServerClient)
+        if (m_pDMDServerConnector)
         {
           StreamHeader header;
-          m_pDMDServerClient->sendData(&header, sizeof(StreamHeader));
-          m_pDMDServerClient->sendData(pUpdate, sizeof(Update));
+          m_pDMDServerConnector->write_n(&header, sizeof(StreamHeader));
+          m_pDMDServerConnector->write_n(&dmdUpdate, sizeof(Update));
         }
       })
       .detach();
@@ -328,7 +337,7 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
   dmdUpdate.hasSegData2 = false;
   strcpy(dmdUpdate.name, "");
 
-  QueueUpdate(&dmdUpdate);
+  QueueUpdate(dmdUpdate);
 }
 
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
@@ -364,7 +373,7 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
   dmdUpdate.b = b;
   strcpy(dmdUpdate.name, name ? name : "");
 
-  QueueUpdate(&dmdUpdate);
+  QueueUpdate(dmdUpdate);
 }
 
 void DMD::FindDisplays()

@@ -1,11 +1,17 @@
+#include <algorithm>
 #include <chrono>
-#include <cstring>
+#include <iostream>
 #include <thread>
+#include <vector>
 
 #include "DMDUtil/DMDUtil.h"
-#include "TcpServer.hpp"
+#include "sockpp/tcp_acceptor.h"
+
+using namespace std;
 
 DMDUtil::DMD* pDmd;
+uint32_t currentThreadId = 0;
+std::vector<uint32_t> threads;
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -14,34 +20,59 @@ void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
   fprintf(stderr, "%s\n", buffer);
 }
 
-void acceptClient(std::shared_ptr<CppSockets::TcpClient> client)
+void run(sockpp::tcp_socket sock, uint32_t threadId)
 {
-  DMDUtil::DMD::StreamHeader* pHeader;
-  while (true)
+  uint8_t buffer[sizeof(DMDUtil::DMD::Update)];
+  DMDUtil::DMD::StreamHeader* pHeader = (DMDUtil::DMD::StreamHeader*)malloc(sizeof(DMDUtil::DMD::StreamHeader));
+  ssize_t n;
+
+  while ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader))) > 0)
   {
-    auto cntHeader = client->receiveData(pHeader, sizeof(DMDUtil::DMD::StreamHeader));
-    if (cntHeader == sizeof(DMDUtil::DMD::StreamHeader))
+    if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
+      memcpy(pHeader, buffer, n);
       if (strcmp(pHeader->protocol, "DMDStream") == 0 && pHeader->version == 1)
       {
         switch (pHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
-            DMDUtil::DMD::Update* pData;
-            auto cntData = client->receiveData(pData, sizeof(DMDUtil::DMD::Update));
-            if (cntData == sizeof(DMDUtil::DMD::Update))
+            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
+                threadId == currentThreadId)
             {
-              pDmd->QueueUpdate(pData);
+              DMDUtil::DMD::Update data;
+              memcpy(&data, buffer, n);
+              pDmd->QueueUpdate(data);
+            }
+            break;
+
+          case DMDUtil::DMD::Mode::RGB16:
+            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId)
+            {
+              pDmd->UpdateRGB16Data((uint16_t*)buffer, pHeader->width, pHeader->height);
+            }
+            break;
+
+          case DMDUtil::DMD::Mode::RGB24:
+            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId)
+            {
+              pDmd->UpdateRGB24Data(buffer, pHeader->width, pHeader->height);
             }
             break;
         }
       }
     }
   }
+
+  threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
+  currentThreadId = threads.back();
+
+  free(pHeader);
 }
 
 int main(int argc, const char* argv[])
 {
+  uint32_t threadId = 0;
+
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
   pConfig->SetLogCallback(LogCallback);
 
@@ -49,18 +80,37 @@ int main(int argc, const char* argv[])
 
   pDmd->FindDisplays();
 
-  CppSockets::cppSocketsInit();
-  CppSockets::TcpServer server(6789);
-  server.acceptCallback = &acceptClient;
-  server.startListening();
+  sockpp::initialize();
 
-  while (DMDUtil::DMD::IsFinding()) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  sockpp::tcp_acceptor acc({"localhost", 6789});
+  if (!acc)
+  {
+    cerr << "Error creating the acceptor: " << acc.last_error_str() << endl;
+    return 1;
+  }
+
+  while (DMDUtil::DMD::IsFinding()) this_thread::sleep_for(chrono::milliseconds(100));
 
   while (pDmd->HasDisplay())
-    ;
+  {
+    sockpp::inet_address peer;
 
-  server.stopListening();
-  server.close();
+    // Accept a new client connection
+    sockpp::tcp_socket sock = acc.accept(&peer);
+
+    if (!sock)
+    {
+      cerr << "Error accepting incoming connection: " << acc.last_error_str() << endl;
+    }
+    else
+    {
+      currentThreadId = threadId++;
+      threads.push_back(currentThreadId);
+      // Create a thread and transfer the new stream to it.
+      thread thr(run, std::move(sock), currentThreadId);
+      thr.detach();
+    }
+  }
 
   return 0;
 }

@@ -4,14 +4,14 @@ set -e
 
 LIBZEDMD_SHA=08e98a858eb6e1394b4844bec7dd27c7c0d9a845
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
-CPPSOCKETS_SHA=6ed9f98a46f073cc6aa7c8bcc610f9fdaedc4b13
+LIBLIBSOCKPP_SHA=4a0d8e087452b5c74179b268c0aceadef90906b9
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
-echo "  CPPSOCKETS_SHA: ${CPPSOCKETS_SHA}"
+echo "  LIBSOCKPP_SHA: ${LIBSOCKPP_SHA}"
 echo ""
 
 if [ -z "${BUILD_TYPE}" ]; then
@@ -37,9 +37,9 @@ cp src/ZeDMD.h ../../third-party/include/
 platforms/macos/x64/external.sh
 cmake -DPLATFORM=macos -DARCH=x64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp third-party/include/libserialport.h ../../third-party/include
-cp third-party/runtime-libs/macos/x64/libserialport.dylib ../../third-party/runtime-libs/macos/x64
-cp build/libzedmd.0.6.0.dylib ../../third-party/runtime-libs/macos/x64
+cp third-party/include/libserialport.h ../../third-party/include/
+cp third-party/runtime-libs/macos/x64/libserialport.dylib ../../third-party/runtime-libs/macos/x64/
+cp build/libzedmd.0.6.0.dylib ../../third-party/runtime-libs/macos/x64/
 cp -r test ../../
 cd ..
 
@@ -53,15 +53,18 @@ cd libserum-$LIBSERUM_SHA
 cp src/serum-decode.h ../../third-party/include/
 cmake -DPLATFORM=macos -DARCH=x64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp build/libserum.1.6.2.dylib ../../third-party/runtime-libs/macos/x64
+cp build/libserum.1.6.2.dylib ../../third-party/runtime-libs/macos/x64/
 cd ..
 
 #
-# build CppSockets and copy to external
+# build libsockpp and copy to external
 #
 
-curl -sL https://github.com/fredlllll/CppSockets/archive/${CPPSOCKETS_SHA}.zip -o CppSockets.zip
-unzip CppSockets.zip
-cd CppSockets-$CPPSOCKETS_SHA
-cp *.hpp ../../third-party/include/
+curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o sockpp.zip
+unzip sockpp.zip
+cd sockpp-$LIBSOCKPP_SHA
+cp -r include/sockpp ../../third-party/include/
+cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake --build build -- -j${NUM_PROCS}
+cp build/sockpp.1.dylib ../../third-party/runtime-libs/macos/x64/
 cd ..

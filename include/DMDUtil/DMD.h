@@ -20,16 +20,13 @@
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include "sockpp/tcp_connector.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
 
 class ZeDMD;
-
-namespace CppSockets {
-  class TcpClient;
-}
 
 namespace DMDUtil
 {
@@ -77,6 +74,7 @@ class DMDUTILAPI DMD
     AlphaNumeric
   };
 
+#pragma pack(push, 1) // Align to 1-byte boundaries, important for sending over socket.
   struct Update
   {
     Mode mode;
@@ -98,13 +96,14 @@ class DMDUTILAPI DMD
 
   struct StreamHeader
   {
-    const char protocol[10] = "DMDStream";
+    char protocol[10] = "DMDStream";
     uint8_t version = 1;
-    Mode mode = Mode::Data; // int
+    Mode mode = Mode::Data;  // int
     uint16_t width = 0;
     uint16_t height = 0;
     uint32_t length = 0;
   };
+#pragma pack(pop) // Reset to default packing
 
   bool ConnectDMDServer();
   void FindDisplays();
@@ -126,7 +125,7 @@ class DMDUTILAPI DMD
   void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b, const char* name = nullptr);
-  void QueueUpdate(Update* pUpdate);
+  void QueueUpdate(Update dmdUpdate);
 
  private:
   Update* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
@@ -151,7 +150,7 @@ class DMDUTILAPI DMD
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;
-  CppSockets::TcpClient* m_pDMDServerClient;
+  sockpp::tcp_connector* m_pDMDServerConnector;
 
   std::thread* m_pLevelDMDThread;
   std::thread* m_pRGB24DMDThread;
