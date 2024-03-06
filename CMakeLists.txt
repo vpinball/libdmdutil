@@ -104,12 +104,12 @@ if(BUILD_SHARED)
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd.0.6.0 serum.1.6.2 serialport sockpp.1.0.0)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum serialport sockpp)
    elseif(PLATFORM STREQUAL "linux")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC -l:libzedmd.so.0.6.0 -l:libserum.so.1.6.2 -l:libserialport.so.0 -l:libsockpp.so.1.0.0)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum serialport sockpp)
    elseif(PLATFORM STREQUAL "ios" OR PLATFORM STREQUAL "tvos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
@@ -179,17 +179,12 @@ if(BUILD_SHARED)
             endif()
          elseif(PLATFORM STREQUAL "macos")
             add_custom_command(TARGET dmdserver POST_BUILD
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.0.6.0.dylib" "$<TARGET_FILE_DIR:dmdserver>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.1.6.2.dylib" "$<TARGET_FILE_DIR:dmdserver>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.dylib" "$<TARGET_FILE_DIR:dmdserver>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/sockpp.1.0.0.dylib" "$<TARGET_FILE_DIR:dmdserver>"
+               COMMAND cp -P "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.dylib" "$<TARGET_FILE_DIR:dmdserver>"
             )
          elseif(PLATFORM STREQUAL "linux")
             add_custom_command(TARGET dmdserver POST_BUILD
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.so.0.6.0" "$<TARGET_FILE_DIR:dmdserver>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.so.1.6.2" "$<TARGET_FILE_DIR:dmdserver>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.so.0" "$<TARGET_FILE_DIR:dmdserver>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libsockpp.so.1" "$<TARGET_FILE_DIR:dmdserver>"
+               COMMAND cp -P "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.so" "$<TARGET_FILE_DIR:dmdserver>"
+               COMMAND cp -P "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.so.*" "$<TARGET_FILE_DIR:dmdserver>"
             )
          endif()
       endif()
@@ -227,20 +222,20 @@ if(BUILD_STATIC)
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
          if(ARCH STREQUAL "x64")
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd64 serum64 libserialport64 ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd64 serum64 libserialport64 sockpp ws2_32)
          else()
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd serum libserialport ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd serum libserialport sockpp ws2_32)
          endif()
       elseif(PLATFORM STREQUAL "macos")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd.0.6.0 serum.1.6.2 serialport)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd serum serialport sockpp)
       elseif(PLATFORM STREQUAL "linux")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static -l:libzedmd.so.0.6.0 -l:libserum.so.1.6.2 -l:libserialport.so.0)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd serum serialport sockpp)
       endif()
 
       if(POST_BUILD_COPY_EXT_LIBS)
@@ -266,15 +261,12 @@ if(BUILD_STATIC)
             endif()
          elseif(PLATFORM STREQUAL "macos")
             add_custom_command(TARGET dmdutil_test_s POST_BUILD
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.0.6.0.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.1.6.2.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+               COMMAND cp -P "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.dylib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
             )
          else()
             add_custom_command(TARGET dmdutil_test_s POST_BUILD
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libzedmd.so.0.6.0" "$<TARGET_FILE_DIR:dmdutil_test_s>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserum.so.1.6.2" "$<TARGET_FILE_DIR:dmdutil_test_s>"
-               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.so.0" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+               COMMAND cp -P "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.so" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+               COMMAND cp -P "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.so.*" "$<TARGET_FILE_DIR:dmdutil_test_s>"
             )
          endif()
       endif()

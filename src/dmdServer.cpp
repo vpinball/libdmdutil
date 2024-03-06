@@ -58,6 +58,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
               pDmd->UpdateRGB24Data(buffer, pHeader->width, pHeader->height);
             }
             break;
+
+          default: break;
         }
       }
     }

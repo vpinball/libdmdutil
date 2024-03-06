@@ -143,23 +143,17 @@ jobs:
             ARTIFACT_PATH="libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
             if [[ "${{ matrix.platform }}" == "macos" ]]; then
                cp build/libdmdutil.a tmp
-               cp build/libdmdutil.*.dylib tmp
-               cp build/libzedmd.*.dylib tmp
-               cp build/libserum.*.dylib tmp
-               cp build/libserialport.dylib tmp
+               cp -P build/*.dylib tmp
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
             elif [[ "${{ matrix.platform }}" == "linux" ]]; then
                cp build/libdmdutil.a tmp
-               cp build/libdmdutil.so.* tmp
-               cp build/libzedmd.so.* tmp
-               cp build/libserum.so.* tmp
-               cp build/libserialport.so.* tmp
+               cp -P build/*.{so,so.*} tmp
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
             elif [[ "${{ matrix.platform }}" == "ios" || "${{ matrix.platform }}" == "tvos" ]]; then
                cp build/libdmdutil.a tmp
-               cp build/libdmdutil.*.dylib tmp
+               cp -P build/*.dylib tmp
             elif [[ "${{ matrix.platform }}" == "android" ]]; then
                cp build/libdmdutil.a tmp
                cp build/libdmdutil.so tmp

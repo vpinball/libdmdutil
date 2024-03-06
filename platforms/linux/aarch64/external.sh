@@ -38,8 +38,8 @@ platforms/linux/aarch64/external.sh
 cmake -DPLATFORM=linux -DARCH=aarch64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include/
-cp third-party/runtime-libs/linux/aarch64/libserialport.so.0 ../../third-party/runtime-libs/linux/aarch64/
-cp build/libzedmd.so.0.6.0 ../../third-party/runtime-libs/linux/aarch64/
+cp -P third-party/runtime-libs/linux/aarch64/libserialport.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
+cp -P build/libzedmd.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cp -r test ../../
 cd ..
 
@@ -53,7 +53,7 @@ cd libserum-$LIBSERUM_SHA
 cp src/serum-decode.h ../../third-party/include/
 cmake -DPLATFORM=linux -DARCH=aarch64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp build/libserum.so.1.6.2 ../../third-party/runtime-libs/linux/aarch64/
+cp -P build/libserum.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
 
 #
@@ -66,5 +66,5 @@ cd sockpp-$LIBSOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp -P build/libsockpp.so.* ../../third-party/runtime-libs/runtime-libs/linux/aarch64/
+cp -P build/libsockpp.{so,so.*} ../../third-party/runtime-libs/runtime-libs/linux/aarch64/
 cd ..
