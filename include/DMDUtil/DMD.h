@@ -20,6 +20,7 @@
 #include <shared_mutex>
 #include <string>
 #include <thread>
+
 #include "sockpp/tcp_connector.h"
 
 #if defined(__APPLE__)
@@ -74,7 +75,7 @@ class DMDUTILAPI DMD
     AlphaNumeric
   };
 
-#pragma pack(push, 1) // Align to 1-byte boundaries, important for sending over socket.
+#pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
   struct Update
   {
     Mode mode;
@@ -103,7 +104,7 @@ class DMDUTILAPI DMD
     uint16_t height = 0;
     uint32_t length = 0;
   };
-#pragma pack(pop) // Reset to default packing
+#pragma pack(pop)  // Reset to default packing
 
   bool ConnectDMDServer();
   void FindDisplays();

@@ -1,6 +1,5 @@
-#include <cstring>
-
 #include <chrono>
+#include <cstring>
 #include <thread>
 
 #include "DMDUtil/DMDUtil.h"
@@ -41,7 +40,8 @@ uint8_t* CreateImageRGB24(int width, int height)
   return pImage;
 }
 
-void run(DMDUtil::DMD* pDmd) {
+void run(DMDUtil::DMD* pDmd)
+{
   int width = 128;
   int height = 32;
 
