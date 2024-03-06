@@ -70,5 +70,5 @@ cmake -DSOCKPP_BUILD_SHARED=OFF \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
-cp build/sockpp.a ../../third-party/build-libs/tvos/arm64/
+cp build/libsockpp.a ../../third-party/build-libs/tvos/arm64/
 cd ..

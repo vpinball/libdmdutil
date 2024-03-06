@@ -68,7 +68,15 @@ curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o so
 unzip sockpp.zip
 cd sockpp-$LIBSOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake -DSOCKPP_BUILD_SHARED=ON \
+   -DSOCKPP_BUILD_STATIC=OFF \
+   -DCMAKE_SYSTEM_NAME=Android \
+   -DCMAKE_SYSTEM_VERSION=30 \
+   -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=TRUE \
+   -DCMAKE_INSTALL_RPATH="\$ORIGIN" \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
 cmake --build build -- -j${NUM_PROCS}
 cp build/libsockpp.so ../../third-party/runtime-libs/android/arm64-v8a/
 cd ..
