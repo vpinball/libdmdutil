@@ -62,7 +62,13 @@ curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o so
 unzip sockpp.zip
 cd sockpp-$LIBSOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
-cmake -DSOCKPP_BUILD_SHARED=OFF -DSOCKPP_BUILD_STATIC=ON -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake -DSOCKPP_BUILD_SHARED=OFF \
+   -DSOCKPP_BUILD_STATIC=ON \
+   -DCMAKE_SYSTEM_NAME=tvOS \
+   -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
+   -DCMAKE_OSX_ARCHITECTURES=arm64 \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
 cmake --build build -- -j${NUM_PROCS}
 cp build/sockpp.a ../../third-party/build-libs/tvos/arm64/
 cd ..

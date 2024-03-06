@@ -64,7 +64,12 @@ curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o so
 unzip sockpp.zip
 cd sockpp-$LIBSOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake -DSOCKPP_BUILD_SHARED=ON \
+   -DSOCKPP_BUILD_STATIC=OFF \
+   -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+   -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
 cmake --build build -- -j${NUM_PROCS}
 cp -P build/*.dylib ../../third-party/runtime-libs/macos/x64/
 cd ..
