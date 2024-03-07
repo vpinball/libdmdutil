@@ -4,7 +4,7 @@ set -e
 
 LIBZEDMD_SHA=08e98a858eb6e1394b4844bec7dd27c7c0d9a845
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
-LIBSOCKPP_SHA=4a0d8e087452b5c74179b268c0aceadef90906b9
+LIBSOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 
 if [[ $(uname) == "Linux" ]]; then
    NUM_PROCS=$(nproc)
@@ -13,6 +13,8 @@ elif [[ $(uname) == "Darwin" ]]; then
 else
    NUM_PROCS=1
 fi
+
+SCRIPT_DIR=$(realpath "$(dirname "$0")")
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
@@ -67,6 +69,7 @@ cd ..
 curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o sockpp.zip
 unzip sockpp.zip
 cd sockpp-$LIBSOCKPP_SHA
+patch -p1 < $SCRIPT_DIR/sockpp/001.patch
 cp -r include/sockpp ../../third-party/include/
 cmake -DSOCKPP_BUILD_SHARED=ON \
    -DSOCKPP_BUILD_STATIC=OFF \

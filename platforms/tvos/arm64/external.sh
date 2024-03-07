@@ -4,9 +4,11 @@ set -e
 
 LIBZEDMD_SHA=08e98a858eb6e1394b4844bec7dd27c7c0d9a845
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
-LIBSOCKPP_SHA=4a0d8e087452b5c74179b268c0aceadef90906b9
+LIBSOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
+
+SCRIPT_DIR=$(realpath "$(dirname "$0")")
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
