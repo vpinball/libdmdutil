@@ -63,10 +63,10 @@ jobs:
             arch: arm64
     steps:
       - uses: actions/checkout@v4
-      - if: (matrix.platform == 'win')
+      - if: (matrix.os == 'windows-latest')
         name: Add msbuild to path (win runner)
         uses: microsoft/setup-msbuild@v2
-      - if: (matrix.platform == 'macos')
+      - if: (matrix.os == 'macos-latest')
         name: Add autoconf and automake (mac runner)
         run: |
            brew install autoconf automake coreutils 

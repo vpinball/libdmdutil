@@ -69,5 +69,5 @@ cd sockpp-$LIBSOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp -P build/libsockpp.{so,so.*} ../../third-party/runtime-libs/runtime-libs/linux/aarch64/
+cp -P build/libsockpp.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
