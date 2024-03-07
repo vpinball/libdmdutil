@@ -68,11 +68,11 @@ class DMDUTILAPI DMD
 
   enum class Mode
   {
-    Unknown,
-    Data,
-    RGB24,  // RGB888
-    RGB16,  // RGB565
-    AlphaNumeric
+    Unknown,      // int 0
+    Data,         // int 1
+    RGB24,        // int 2, RGB888
+    RGB16,        // int 3, RGB565
+    AlphaNumeric  // int 4
   };
 
 #pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.

@@ -30,6 +30,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   {
     if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
+      // At the moment the server only listens on localhost.
+      // Therefore, we don't have to take care about litte vs. big endian and can use memcpy.
       memcpy(pHeader, buffer, n);
       if (strcmp(pHeader->protocol, "DMDStream") == 0 && pHeader->version == 1)
       {
@@ -48,6 +50,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
           case DMDUtil::DMD::Mode::RGB16:
             if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId)
             {
+              // At the moment the server only listens on localhost.
+              // Therefore, we don't have to take care about litte vs. big endian and can use the buffer as uint16_t as
+              // it is.
               pDmd->UpdateRGB16Data((uint16_t*)buffer, pHeader->width, pHeader->height);
             }
             break;
@@ -59,11 +64,18 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             }
             break;
 
-          default: break;
+          default:
+            // Other modes aren't supported via network.
+            break;
         }
       }
     }
   }
+
+  // Clear the DMD by sending a black screen.
+  // Fixed dimension of 128x32 should be OK for all devices.
+  memset(buffer, 0, sizeof(DMDUtil::DMD::Update));
+  pDmd->UpdateRGB24Data(buffer, 128, 32);
 
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
   currentThreadId = threads.back();
@@ -114,5 +126,6 @@ int main(int argc, const char* argv[])
     }
   }
 
-  return 0;
+  cerr << "No DMD displays found." << endl;
+  return -1;
 }
