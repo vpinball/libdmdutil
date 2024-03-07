@@ -40,7 +40,7 @@ platforms/linux/x64/external.sh
 cmake -DPLATFORM=linux -DARCH=x64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include/
-ln -s $(ls -v third-party/runtime-libs/linux/x64/libserialport.so.* | tail -n 1) third-party/runtime-libs/linux/x64/libserialport.so
+ln -s $(ls -v third-party/runtime-libs/linux/x64/libserialport.so.* | tail -n 1 | xargs basename) third-party/runtime-libs/linux/x64/libserialport.so
 cp -P third-party/runtime-libs/linux/x64/libserialport.{so,so.*} ../../third-party/runtime-libs/linux/x64/
 cp -P build/libzedmd.{so,so.*} ../../third-party/runtime-libs/linux/x64/
 cp -r test ../../

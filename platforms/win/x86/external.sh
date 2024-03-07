@@ -68,6 +68,6 @@ cd sockpp-$LIBSOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
 cmake -G "Visual Studio 17 2022" -B build
 cmake --build build --config ${BUILD_TYPE}
-cp build/${BUILD_TYPE}/ssockpp.lib ../../third-party/build-libs/win/x86/
-cp build/${BUILD_TYPE}/ssockpp.dll ../../third-party/runtime-libs/win/x86/
+cp build/${BUILD_TYPE}/sockpp.lib ../../third-party/build-libs/win/x86/
+cp build/${BUILD_TYPE}/sockpp.dll ../../third-party/runtime-libs/win/x86/
 cd ..
