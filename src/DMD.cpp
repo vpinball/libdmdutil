@@ -148,8 +148,9 @@ bool DMD::ConnectDMDServer()
 {
   if (!m_pDMDServerConnector)
   {
+    Config* const pConfig = Config::GetInstance();
     sockpp::initialize();
-    m_pDMDServerConnector = new sockpp::tcp_connector({"localhost", 6789});
+    m_pDMDServerConnector = new sockpp::tcp_connector({pConfig->GetDmdServerAddr(), pConfig->GetDmdServerPort()});
   }
   return (m_pDMDServerConnector);
 }
@@ -166,6 +167,10 @@ bool DMD::HasDisplay() const
   return (m_pZeDMD != nullptr);
 #endif
 }
+
+void DMD::SetRomName(const char* name) { strcpy(m_romName, name ? name : ""); }
+
+void DMD::SetAltColorPath(const char* path) { strcpy(m_altColorPath, path ? path : ""); }
 
 void DMD::DumpDMDTxt() { m_pDumpDMDTxtThread = new std::thread(&DMD::DumpDMDTxtThread, this); }
 
@@ -250,7 +255,7 @@ bool DMD::DestroyConsoleDMD(ConsoleDMD* pConsoleDMD)
 }
 
 void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                     Mode mode, const char* name)
+                     Mode mode)
 {
   Update dmdUpdate = Update();
   dmdUpdate.mode = mode;
@@ -271,7 +276,6 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   dmdUpdate.r = r;
   dmdUpdate.g = g;
   dmdUpdate.b = b;
-  strcpy(dmdUpdate.name, name ? name : "");
 
   QueueUpdate(dmdUpdate);
 }
@@ -293,6 +297,8 @@ void DMD::QueueUpdate(Update dmdUpdate)
         if (m_pDMDServerConnector)
         {
           StreamHeader header;
+          strcpy(header.name, m_romName);
+          strcpy(header.path, m_altColorPath);
           m_pDMDServerConnector->write_n(&header, sizeof(StreamHeader));
           m_pDMDServerConnector->write_n(&dmdUpdate, sizeof(Update));
         }
@@ -300,21 +306,20 @@ void DMD::QueueUpdate(Update dmdUpdate)
       .detach();
 }
 
-void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                     const char* name)
+void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b)
 {
-  UpdateData(pData, depth, width, height, r, g, b, Mode::Data, name);
+  UpdateData(pData, depth, width, height, r, g, b, Mode::Data);
 }
 
 void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                           uint8_t b)
 {
-  UpdateData(pData, depth, width, height, r, g, b, Mode::RGB24, nullptr);
+  UpdateData(pData, depth, width, height, r, g, b, Mode::RGB24);
 }
 
 void DMD::UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height)
 {
-  UpdateData(pData, 24, width, height, 0, 0, 0, Mode::RGB24, nullptr);
+  UpdateData(pData, 24, width, height, 0, 0, 0, Mode::RGB24);
 }
 
 void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height)
@@ -335,13 +340,12 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
   }
   dmdUpdate.hasSegData = false;
   dmdUpdate.hasSegData2 = false;
-  strcpy(dmdUpdate.name, "");
 
   QueueUpdate(dmdUpdate);
 }
 
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
-                                 uint8_t g, uint8_t b, const char* name)
+                                 uint8_t g, uint8_t b)
 {
   Update dmdUpdate = Update();
   dmdUpdate.mode = Mode::AlphaNumeric;
@@ -371,7 +375,6 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
   dmdUpdate.r = r;
   dmdUpdate.g = g;
   dmdUpdate.b = b;
-  strcpy(dmdUpdate.name, name ? name : "");
 
   QueueUpdate(dmdUpdate);
 }
@@ -380,61 +383,69 @@ void DMD::FindDisplays()
 {
   if (m_finding) return;
 
-  m_finding = true;
+  Config* const pConfig = Config::GetInstance();
+  if (pConfig->IsDmdServer())
+  {
+    ConnectDMDServer();
+  }
+  else
+  {
+    m_finding = true;
 
-  std::thread(
-      [this]()
-      {
-        Config* const pConfig = Config::GetInstance();
-
-        ZeDMD* pZeDMD = nullptr;
-
-        if (pConfig->IsZeDMD())
+    std::thread(
+        [this]()
         {
-          pZeDMD = new ZeDMD();
-          pZeDMD->SetLogCallback(ZeDMDLogCallback, nullptr);
+          Config* const pConfig = Config::GetInstance();
 
-          if (pConfig->GetZeDMDDevice() != nullptr && pConfig->GetZeDMDDevice()[0] != '\0')
-            pZeDMD->SetDevice(pConfig->GetZeDMDDevice());
+          ZeDMD* pZeDMD = nullptr;
 
-          if (pZeDMD->Open())
+          if (pConfig->IsZeDMD())
           {
-            if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
+            pZeDMD = new ZeDMD();
+            pZeDMD->SetLogCallback(ZeDMDLogCallback, nullptr);
 
-            if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
+            if (pConfig->GetZeDMDDevice() != nullptr && pConfig->GetZeDMDDevice()[0] != '\0')
+              pZeDMD->SetDevice(pConfig->GetZeDMDDevice());
 
-            if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
+            if (pZeDMD->Open())
+            {
+              if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
 
-            if (pConfig->IsZeDMDSaveSettings()) pZeDMD->SaveSettings();
+              if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
 
-            m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
+              if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
+
+              if (pConfig->IsZeDMDSaveSettings()) pZeDMD->SaveSettings();
+
+              m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
+            }
+            else
+            {
+              delete pZeDMD;
+              pZeDMD = nullptr;
+            }
           }
-          else
-          {
-            delete pZeDMD;
-            pZeDMD = nullptr;
-          }
-        }
 
-        m_pZeDMD = pZeDMD;
+          m_pZeDMD = pZeDMD;
 
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-        PixelcadeDMD* pPixelcadeDMD = nullptr;
+          PixelcadeDMD* pPixelcadeDMD = nullptr;
 
-        if (pConfig->IsPixelcade())
-        {
-          pPixelcadeDMD = PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), 128, 32);
-          if (pPixelcadeDMD) m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
-        }
+          if (pConfig->IsPixelcade())
+          {
+            pPixelcadeDMD = PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), 128, 32);
+            if (pPixelcadeDMD) m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
+          }
 
-        m_pPixelcadeDMD = pPixelcadeDMD;
+          m_pPixelcadeDMD = pPixelcadeDMD;
 #endif
 
-        m_finding = false;
-      })
-      .detach();
+          m_finding = false;
+        })
+        .detach();
+  }
 }
 
 void DMD::DmdFrameThread()
@@ -447,7 +458,7 @@ void DMD::DmdFrameThread()
     m_dmdCV.wait(sl, [&]() { return m_dmdFrameReady || m_stopFlag; });
     sl.unlock();
 
-    if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
+    if (strcmp(m_romName, name) != 0)
     {
       if (m_pSerum)
       {
@@ -455,9 +466,10 @@ void DMD::DmdFrameThread()
         m_pSerum = nullptr;
       }
 
-      strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
+      strcpy(name, m_romName);
 
-      m_pSerum = (Config::GetInstance()->IsAltColor() && name[0] != '\0') ? Serum::Load(name) : nullptr;
+      m_pSerum =
+          (Config::GetInstance()->IsAltColor() && name[0] != '\0') ? Serum::Load(m_altColorPath, m_romName) : nullptr;
       if (m_pSerum)
       {
         m_pSerum->SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
@@ -998,7 +1010,11 @@ void DMD::DumpDMDTxtThread()
     sl.unlock();
     if (m_stopFlag)
     {
-      if (f) fclose(f);
+      if (f)
+      {
+        fclose(f);
+        f = nullptr;
+      }
       return;
     }
 
@@ -1010,18 +1026,26 @@ void DMD::DumpDMDTxtThread()
           m_updateBuffer[bufferPosition]->hasData)
       {
         bool update = false;
-        if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
+        if (strcmp(m_romName, name) != 0)
         {
           // New game ROM.
           start = std::chrono::steady_clock::now();
-          if (f) fclose(f);
-          strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
-          char filename[128];
-          snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.txt", name);
-          f = fopen(filename, "a");
-          update = true;
-          memset(renderBuffer, 0, 2 * 256 * 64);
-          passed[0] = passed[1] = 0;
+          if (f)
+          {
+            fclose(f);
+            f = nullptr;
+          }
+          strcpy(name, m_romName);
+
+          if (name[0] != '\0')
+          {
+            char filename[128];
+            snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.txt", name);
+            f = fopen(filename, "a");
+            update = true;
+            memset(renderBuffer, 0, 2 * 256 * 64);
+            passed[0] = passed[1] = 0;
+          }
         }
 
         if (name[0] != '\0')
@@ -1091,7 +1115,11 @@ void DMD::DumpDMDRawThread()
     sl.unlock();
     if (m_stopFlag)
     {
-      if (f) fclose(f);
+      if (f)
+      {
+        fclose(f);
+        f = nullptr;
+      }
       return;
     }
 
@@ -1101,15 +1129,23 @@ void DMD::DumpDMDRawThread()
 
       if (m_updateBuffer[bufferPosition]->hasData || m_updateBuffer[bufferPosition]->hasSegData)
       {
-        if (strcmp(m_updateBuffer[m_updateBufferPosition]->name, name) != 0)
+        if (strcmp(m_romName, name) != 0)
         {
           // New game ROM.
           start = std::chrono::steady_clock::now();
-          if (f) fclose(f);
-          strcpy(name, m_updateBuffer[m_updateBufferPosition]->name);
-          char filename[128];
-          snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.raw", name);
-          f = fopen(filename, "ab");
+          if (f)
+          {
+            fclose(f);
+            f = nullptr;
+          }
+          strcpy(name, m_romName);
+
+          if (name[0] != '\0')
+          {
+            char filename[128];
+            snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.raw", name);
+            f = fopen(filename, "ab");
+          }
         }
 
         if (name[0] != '\0')

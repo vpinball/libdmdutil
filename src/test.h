@@ -84,29 +84,35 @@ void run(DMDUtil::DMD* pDmd)
 
     printf("Delay %dms\n", ms);
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0, "test2");
+    pDmd->SetRomName("test2");
+
+    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 255, 0, "test2");
+    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 255, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 0, 255, "test2");
+    pDmd->UpdateData(pImage2, 2, 128, 32, 0, 0, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 255, 255, "test2");
+    pDmd->UpdateData(pImage2, 2, 128, 32, 255, 255, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 0, 0, "test4");
+    pDmd->SetRomName("test4");
+
+    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 0, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 255, 0, "test4");
+    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 255, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 0, 255, "test4");
+    pDmd->UpdateData(pImage4, 4, 128, 32, 0, 0, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 255, 255, "test4");
+    pDmd->UpdateData(pImage4, 4, 128, 32, 255, 255, 255);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+
+    pDmd->SetRomName("");
 
     pDmd->UpdateRGB24Data(pImage24, 128, 32);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));

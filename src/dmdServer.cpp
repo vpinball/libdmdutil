@@ -1,17 +1,41 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <sstream>
 #include <thread>
 #include <vector>
 
 #include "DMDUtil/DMDUtil.h"
+#include "cargs.h"
 #include "sockpp/tcp_acceptor.h"
+
+#define DMDSERVER_MAX_WIDTH 256
+#define DMDSERVER_MAX_HEIGHT 64
 
 using namespace std;
 
 DMDUtil::DMD* pDmd;
 uint32_t currentThreadId = 0;
 std::vector<uint32_t> threads;
+
+static struct cag_option options[] = {
+    {.identifier = 'a',
+     .access_letters = "a",
+     .access_name = "addr",
+     .value_name = "VALUE",
+     .description = "IP address or host name (optional, default is 'localhost')"},
+    {.identifier = 'p',
+     .access_letters = "p",
+     .access_name = "port",
+     .value_name = "VALUE",
+     .description = "Port (optional, default is '6789')"},
+    {.identifier = 'w',
+     .access_letters = "w",
+     .access_name = "wait-for-displays",
+     .value_name = NULL,
+     .description = "Don't terminate if no displays are connected (optional, default is to terminate the server "
+                    "process if no displays could be found)"},
+    {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 {
@@ -43,12 +67,20 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             {
               DMDUtil::DMD::Update data;
               memcpy(&data, buffer, n);
-              pDmd->QueueUpdate(data);
+
+              if (data.width <= DMDSERVER_MAX_WIDTH && data.height <= DMDSERVER_MAX_HEIGHT)
+              {
+                pDmd->SetRomName(pHeader->name);
+                pDmd->SetAltColorPath(pHeader->path);
+
+                pDmd->QueueUpdate(data);
+              }
             }
             break;
 
           case DMDUtil::DMD::Mode::RGB16:
-            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId)
+            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId &&
+                pHeader->width <= DMDSERVER_MAX_WIDTH && pHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
               // At the moment the server only listens on localhost.
               // Therefore, we don't have to take care about litte vs. big endian and can use the buffer as uint16_t as
@@ -58,7 +90,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             break;
 
           case DMDUtil::DMD::Mode::RGB24:
-            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId)
+            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId &&
+                pHeader->width <= DMDSERVER_MAX_WIDTH && pHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
               pDmd->UpdateRGB24Data(buffer, pHeader->width, pHeader->height);
             }
@@ -83,27 +116,72 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   free(pHeader);
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
   uint32_t threadId = 0;
-
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
   pConfig->SetLogCallback(LogCallback);
+  pConfig->SetDmdServer(false);  // This is the server. It must not connect to a different server!
+  pConfig->SetDmdServerAddr("localhost");
+  pConfig->SetDmdServerPort(6789);
 
-  pDmd = new DMDUtil::DMD();
+  cag_option_context cag_context;
+  bool opt_wait = false;
+  const char* pPort = nullptr;
 
-  pDmd->FindDisplays();
+  cag_option_prepare(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
+  while (cag_option_fetch(&cag_context))
+  {
+    char identifier = cag_option_get(&cag_context);
+    switch (identifier)
+    {
+      case 'a':
+        pConfig->SetDmdServerAddr(cag_option_get_value(&cag_context));
+        break;
+
+      case 'p':
+        pPort = cag_option_get_value(&cag_context);
+        break;
+
+      case 'w':
+        opt_wait = true;
+        break;
+
+      case 'h':
+        cout << "Usage: dmdserver [OPTION]..." << endl;
+        cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
+        return 0;
+    }
+  }
+
+  if (pPort)
+  {
+    int port;
+    std::stringstream ssPort(pPort);
+    ssPort >> port;
+    pConfig->SetDmdServerPort(port);
+  }
 
   sockpp::initialize();
 
-  sockpp::tcp_acceptor acc({"localhost", 6789});
+  sockpp::tcp_acceptor acc({pConfig->GetDmdServerAddr(), pConfig->GetDmdServerPort()});
   if (!acc)
   {
     cerr << "Error creating the acceptor: " << acc.last_error_str() << endl;
     return 1;
   }
 
-  while (DMDUtil::DMD::IsFinding()) this_thread::sleep_for(chrono::milliseconds(100));
+  pDmd = new DMDUtil::DMD();
+
+  while (true)
+  {
+    pDmd->FindDisplays();
+    while (DMDUtil::DMD::IsFinding()) this_thread::sleep_for(chrono::milliseconds(100));
+
+    if (pDmd->HasDisplay() || !opt_wait) break;
+
+    this_thread::sleep_for(chrono::milliseconds(1000));
+  }
 
   while (pDmd->HasDisplay())
   {

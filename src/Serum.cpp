@@ -2,7 +2,6 @@
 
 #include <cstring>
 
-#include "DMDUtil/Config.h"
 #include "Logger.h"
 #include "serum-decode.h"
 
@@ -25,27 +24,23 @@ Serum::~Serum()
   m_isLoaded = false;
 }
 
-Serum* Serum::Load(const std::string& romName)
+Serum* Serum::Load(const char* const altColorPath, const char* const romName)
 {
   if (m_isLoaded) return nullptr;
-
-  std::string altColorPath = Config::GetInstance()->GetAltColorPath();
-
-  if (altColorPath.empty()) return nullptr;
 
   int width;
   int height;
   unsigned int numColors;
   unsigned int numTriggers;
 
-  if (!Serum_Load(altColorPath.c_str(), romName.c_str(), &width, &height, &numColors, &numTriggers))
+  if (!Serum_Load(altColorPath, romName, &width, &height, &numColors, &numTriggers))
   {
     Serum_Dispose();
     return nullptr;
   }
 
-  Log("Serum loaded: romName=%s, width=%d, height=%d, numColors=%d, numTriggers=%d", romName.c_str(), width, height,
-      numColors, numTriggers);
+  Log("Serum loaded: romName=%s, width=%d, height=%d, numColors=%d, numTriggers=%d", romName, width, height, numColors,
+      numTriggers);
 
   m_isLoaded = true;
 

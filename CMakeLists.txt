@@ -96,30 +96,30 @@ if(BUILD_SHARED)
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
       if(ARCH STREQUAL "x64")
-         target_link_libraries(dmdutil_shared PUBLIC zedmd64 serum64 libserialport64 sockpp64 ws2_32)
+         target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 libserialport64 sockpp64 ws2_32)
       else()
-        target_link_libraries(dmdutil_shared PUBLIC zedmd serum libserialport sockpp ws2_32)
+        target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum libserialport sockpp ws2_32)
       endif()
    elseif(PLATFORM STREQUAL "macos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum serialport sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp)
    elseif(PLATFORM STREQUAL "linux")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum serialport sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp)
    elseif(PLATFORM STREQUAL "ios" OR PLATFORM STREQUAL "tvos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp)
    elseif(PLATFORM STREQUAL "android")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp)
    endif()
 
    if(PLATFORM STREQUAL "win" AND ARCH STREQUAL "x64")
@@ -158,6 +158,8 @@ if(BUILD_SHARED)
          if(PLATFORM STREQUAL "win")
             if(ARCH STREQUAL "x64")
                add_custom_command(TARGET dmdserver POST_BUILD
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/cargs64.lib" "$<TARGET_FILE_DIR:dmdserver>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/cargs64.dll" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/zedmd64.lib" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/zedmd64.dll" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/serum64.lib" "$<TARGET_FILE_DIR:dmdserver>"
@@ -169,6 +171,8 @@ if(BUILD_SHARED)
                )
             else()
                add_custom_command(TARGET dmdserver POST_BUILD
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/cargs.lib" "$<TARGET_FILE_DIR:dmdserver>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/cargs.dll" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/zedmd.lib" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/zedmd.dll" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/serum.lib" "$<TARGET_FILE_DIR:dmdserver>"
@@ -224,26 +228,28 @@ if(BUILD_STATIC)
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
          if(ARCH STREQUAL "x64")
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd64 serum64 libserialport64 sockpp64 ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 libserialport64 sockpp64 ws2_32)
          else()
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd serum libserialport sockpp ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum libserialport sockpp ws2_32)
          endif()
       elseif(PLATFORM STREQUAL "macos")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd serum serialport sockpp)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp)
       elseif(PLATFORM STREQUAL "linux")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static zedmd serum serialport sockpp)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp)
       endif()
 
       if(POST_BUILD_COPY_EXT_LIBS)
          if(PLATFORM STREQUAL "win")
             if(ARCH STREQUAL "x64")
                add_custom_command(TARGET dmdutil_test_s POST_BUILD
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/cargs64.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/cargs64.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/zedmd64.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/zedmd64.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/serum64.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
@@ -255,6 +261,8 @@ if(BUILD_STATIC)
                )
             else()
                add_custom_command(TARGET dmdutil_test_s POST_BUILD
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/cargs.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/cargs.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/zedmd.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/zedmd.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/serum.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"

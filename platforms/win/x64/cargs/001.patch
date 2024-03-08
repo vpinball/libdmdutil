@@ -1,0 +1,14 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b6f828f..6be0845 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -18,7 +18,7 @@
+ set(CMAKE_C_STANDARD 11)
+ 
+ # setup target and directory names
+-set(LIBRARY_TARGET "cargs64")
++set(LIBRARY_TARGET "cargs")
+ set(INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include")
+ set(SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src")
+ 
+ 

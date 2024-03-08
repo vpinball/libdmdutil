@@ -43,8 +43,24 @@ void test()
 
 ## dmdserver
 
-`dmdserver` provides a server process on top of `libdmdutil`. It listens on port 6789 on localhost and accepts "raw" TCP connections.
-It expects two packages to render a DMD frame. The first one is a DmdStream header followed by the "data".
+`dmdserver` provides a server process on top of `libdmdutil`.
+Per default it listens on port 6789 on localhost and accepts "raw" TCP connections.
+
+`dmdserver` accepts these command line options:
+* -a --addr
+    * IP address or host name
+    * optional
+    * default is `localhost`
+* -p --port
+    * Port
+    * optional
+    * default is `6789`
+* -w --wait-for-displays
+    * Don't terminate if no displays are connected
+    * optional
+    * default is to terminate the server process if no displays could be found
+
+`dmdserver` expects two packages to render a DMD frame. The first one is a DmdStream header followed by the "data".
 
 The DmdStreamHeader is defined as a struct:
 ```
@@ -52,10 +68,12 @@ The DmdStreamHeader is defined as a struct:
   {
     char protocol[10] = "DMDStream"; // \0 terminated string 
     uint8_t version = 1;
-    Mode mode = Mode::Data;  // int
+    Mode mode = Mode::Data;          // int
     uint16_t width = 0;
     uint16_t height = 0;
     uint32_t length = 0;
+    char name[16] = {0};             // \0 terminated string, ROM name 
+    char path[256] = {0};            // \0 terminated string, altcolor path
   };
 
 ```
@@ -69,22 +87,29 @@ At the moment, three data modes are supported (If you don't use C++, you could u
 `Mode::RGB24` is a uint8_t data stream of `StreamHeader.length`.
 Each pixel consist of three uint8_t bytes representening the colors R, G and B.
 `StreamHeader.width` and `StreamHeader.height` have to be provided in the header.
+`StreamHeader.name` and `StreamHeader.path` should be ignored and set to a fixed size of zeros.
 
 `Mode::RGB216` is a uint16_t data stream of `StreamHeader.length`.
 Each pixel consist of one uint16_t having its color encoded in 16bit according to the RGB565 standard.
 `StreamHeader.width` and `StreamHeader.height` have to be provided in the header.
+`StreamHeader.name` and `StreamHeader.path` should be ignored and set to a fixed size of zeros.
 
 `Mode::Data` is a serialized stream of the `DMDUtil::DMD::Update` struct.
 It will be sent from a client which uses libdmdutil itself (for example VPX Standalone or PPUC).
 In case of `Mode::Data`, `StreamHeader.width`, `StreamHeader.height` and `StreamHeader.length` should be set to zero.
+`StreamHeader.name` and `StreamHeader.path` have to be set to the ROM name and the altcolor path if Serum colorization should be used.
 The data itself contains that information and a lot of additional data like instructions to map alphanummeric displays to DMDs or
 colorizations of grayscale content.
 So if you want to write a general purpose client to display images or text, you're adviced to use `Mode::RGB24` or `Mode::RGB216`!
 
-Note:
+### Notes
+
 At the moment, `StreamHeader.length` is a redundant information as it could be calculated from `StreamHeader.width` and
 `StreamHeader.height` in combination with `StreamHeader.mode`.
 But if data compression will be supported in future versions, it will become important.
+
+In case of `Mode::RGB24` and `Mode::RGB216` it seems strange to append 16 + 256 zeros to the end of the header.
+But for effency and maintainability we decided to work with a fixed header size for all modes.
 
 ### Examples
 
@@ -97,6 +122,8 @@ To send a RGB24 image of 4x2 pixels, you have to sent these two packages:
 0x04 0x00                                          // width 4 (if your system is big endian, the byte order needs to be swapped)
 0x02 0x00                                          // height 2 (if your system is big endian, the byte order needs to be swapped)
 0x18 0x00 0x00 0x00                                // length 24 (if your system is big endian, the byte order needs to be swapped)
+0x00 ...                                           // 16 bytes of zeros
+0x00 ...                                           // 256 bytes of zeros
 ```
 
 ```
