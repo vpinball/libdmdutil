@@ -297,10 +297,12 @@ void DMD::QueueUpdate(Update dmdUpdate)
 
         if (m_pDMDServerConnector)
         {
-          StreamHeader header;
-          strcpy(header.name, m_romName);
-          strcpy(header.path, m_altColorPath);
-          m_pDMDServerConnector->write_n(&header, sizeof(StreamHeader));
+          StreamHeader streamHeader;
+          m_pDMDServerConnector->write_n(&streamHeader, sizeof(StreamHeader));
+          AltColorHeader altColorHeader;
+          strcpy(altColorHeader.name, m_romName);
+          strcpy(altColorHeader.path, m_altColorPath);
+          m_pDMDServerConnector->write_n(&altColorHeader, sizeof(AltColorHeader));
           m_pDMDServerConnector->write_n(&dmdUpdate, sizeof(Update));
         }
       })

@@ -97,12 +97,17 @@ class DMDUTILAPI DMD
 
   struct StreamHeader
   {
-    char protocol[10] = "DMDStream";
+    char header[10] = "DMDStream";
     uint8_t version = 1;
     Mode mode = Mode::Data;  // int
     uint16_t width = 0;
     uint16_t height = 0;
     uint32_t length = 0;
+  };
+
+  struct AltColorHeader
+  {
+    char header[9] = "AltColor";
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
     char path[DMDUTIL_MAX_ALTCOLORPATH_SIZE] = {0};
   };

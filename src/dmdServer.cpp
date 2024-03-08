@@ -47,7 +47,7 @@ void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
 void run(sockpp::tcp_socket sock, uint32_t threadId)
 {
   uint8_t buffer[sizeof(DMDUtil::DMD::Update)];
-  DMDUtil::DMD::StreamHeader* pHeader = (DMDUtil::DMD::StreamHeader*)malloc(sizeof(DMDUtil::DMD::StreamHeader));
+  DMDUtil::DMD::StreamHeader* pStreamHeader = (DMDUtil::DMD::StreamHeader*)malloc(sizeof(DMDUtil::DMD::StreamHeader));
   ssize_t n;
 
   while ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader))) > 0)
@@ -56,44 +56,55 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
     {
       // At the moment the server only listens on localhost.
       // Therefore, we don't have to take care about litte vs. big endian and can use memcpy.
-      memcpy(pHeader, buffer, n);
-      if (strcmp(pHeader->protocol, "DMDStream") == 0 && pHeader->version == 1)
+      memcpy(pStreamHeader, buffer, n);
+      if (strcmp(pStreamHeader->header, "DMDStream") == 0 && pStreamHeader->version == 1)
       {
-        switch (pHeader->mode)
+        switch (pStreamHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
-            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
+            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::AltColorHeader))) ==
+                    sizeof(DMDUtil::DMD::AltColorHeader) &&
                 threadId == currentThreadId)
             {
-              DMDUtil::DMD::Update data;
-              memcpy(&data, buffer, n);
+              DMDUtil::DMD::AltColorHeader altColorHeader;
+              memcpy(&altColorHeader, buffer, n);
 
-              if (data.width <= DMDSERVER_MAX_WIDTH && data.height <= DMDSERVER_MAX_HEIGHT)
+              if (strcmp(altColorHeader.header, "AltColor") == 0 &&
+                  (n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
+                  threadId == currentThreadId)
               {
-                pDmd->SetRomName(pHeader->name);
-                pDmd->SetAltColorPath(pHeader->path);
+                DMDUtil::DMD::Update data;
+                memcpy(&data, buffer, n);
 
-                pDmd->QueueUpdate(data);
+                if (data.width <= DMDSERVER_MAX_WIDTH && data.height <= DMDSERVER_MAX_HEIGHT)
+                {
+                  pDmd->SetRomName(altColorHeader.name);
+                  pDmd->SetAltColorPath(altColorHeader.path);
+
+                  pDmd->QueueUpdate(data);
+                }
               }
             }
             break;
 
           case DMDUtil::DMD::Mode::RGB16:
-            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId &&
-                pHeader->width <= DMDSERVER_MAX_WIDTH && pHeader->height <= DMDSERVER_MAX_HEIGHT)
+            if ((n = sock.read_n(buffer, pStreamHeader->length)) == pStreamHeader->length &&
+                threadId == currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
+                pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
               // At the moment the server only listens on localhost.
               // Therefore, we don't have to take care about litte vs. big endian and can use the buffer as uint16_t as
               // it is.
-              pDmd->UpdateRGB16Data((uint16_t*)buffer, pHeader->width, pHeader->height);
+              pDmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height);
             }
             break;
 
           case DMDUtil::DMD::Mode::RGB24:
-            if ((n = sock.read_n(buffer, pHeader->length)) == pHeader->length && threadId == currentThreadId &&
-                pHeader->width <= DMDSERVER_MAX_WIDTH && pHeader->height <= DMDSERVER_MAX_HEIGHT)
+            if ((n = sock.read_n(buffer, pStreamHeader->length)) == pStreamHeader->length &&
+                threadId == currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
+                pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
-              pDmd->UpdateRGB24Data(buffer, pHeader->width, pHeader->height);
+              pDmd->UpdateRGB24Data(buffer, pStreamHeader->width, pStreamHeader->height);
             }
             break;
 
@@ -113,7 +124,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
   currentThreadId = threads.back();
 
-  free(pHeader);
+  free(pStreamHeader);
 }
 
 int main(int argc, char* argv[])
