@@ -8,8 +8,6 @@ LIBSOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
 
-SCRIPT_DIR=$(realpath "$(dirname "$0")")
-
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"

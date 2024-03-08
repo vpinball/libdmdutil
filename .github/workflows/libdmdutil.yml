@@ -69,7 +69,7 @@ jobs:
       - if: (matrix.os == 'macos-latest')
         name: Add autoconf and automake (mac runner)
         run: |
-           brew install autoconf automake coreutils 
+           brew install autoconf automake 
       - if: (!(matrix.platform == 'linux' && matrix.arch == 'aarch64'))
         name: Build libdmdutil-${{ matrix.platform }}-${{ matrix.arch }}
         run: |
@@ -117,24 +117,14 @@ jobs:
           if [[ "${{ matrix.platform }}" == "win" ]]; then
              ARTIFACT_PATH="tmp"
              if [[ "${{ matrix.arch }}" == "x64" ]]; then
-                cp build/Release/dmdutil64.lib tmp
-                cp build/Release/dmdutil64.dll tmp
-                cp build/Release/zedmd64.lib tmp
-                cp build/Release/zedmd64.dll tmp
-                cp build/Release/serum64.lib tmp
-                cp build/Release/serum64.dll tmp
-                cp build/Release/libserialport64.lib tmp
-                cp build/Release/libserialport64.dll tmp
+                cp build/Release/*64.lib tmp
+                cp build/Release/*64.dll tmp
              else
-                cp build/Release/dmdutil.lib tmp
-                cp build/Release/dmdutil.dll tmp
-                cp build/Release/zedmd.lib tmp
-                cp build/Release/zedmd.dll tmp
-                cp build/Release/serum.lib tmp
-                cp build/Release/serum.dll tmp
-                cp build/Release/libserialport.lib tmp
-                cp build/Release/libserialport.dll tmp
+                cp build/Release/*.lib tmp
+                cp build/Release/*.dll tmp
              fi
+             cp build/Release/dmdserver.exe tmp
+             cp build/Release/dmdserver_test.exe tmp
              cp build/Release/dmdutil_static.lib tmp
              cp build/Release/dmdutil_test_s.exe tmp
              cp build/Release/dmdutil_test.exe tmp
@@ -143,22 +133,26 @@ jobs:
             ARTIFACT_PATH="libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
             if [[ "${{ matrix.platform }}" == "macos" ]]; then
                cp build/libdmdutil.a tmp
-               cp -P build/*.dylib tmp
+               cp -a build/*.dylib tmp
+               cp build/dmdserver tmp
+               cp build/dmdserver_test tmp
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
             elif [[ "${{ matrix.platform }}" == "linux" ]]; then
                cp build/libdmdutil.a tmp
-               cp -P build/*.{so,so.*} tmp
+               cp -a build/*.{so,so.*} tmp
+               cp build/dmdserver tmp
+               cp build/dmdserver_test tmp
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
             elif [[ "${{ matrix.platform }}" == "ios" || "${{ matrix.platform }}" == "tvos" ]]; then
                cp build/libdmdutil.a tmp
-               cp -P build/*.dylib tmp
+               cp -a build/*.dylib tmp
             elif [[ "${{ matrix.platform }}" == "android" ]]; then
                cp build/libdmdutil.a tmp
                cp build/libdmdutil.so tmp
             fi
-            cp -r test tmp/
+            cp -r test tmp/ 
             cd tmp
             tar -czvf ../${ARTIFACT_PATH} *
           fi
@@ -185,25 +179,20 @@ jobs:
       - name: Combine macos architectures
         run: |
           mkdir tmp
-          cp -r libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/test tmp/
-          lipo -create -output tmp/libdmdutil-${{ needs.version.outputs.tag }}.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/libdmdutil.${{ needs.version.outputs.tag }}.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/libdmdutil.${{ needs.version.outputs.tag }}.dylib 
-          lipo -create -output tmp/libzedmd.0.6.0.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/libzedmd.0.6.0.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/libzedmd.0.6.0.dylib
-          lipo -create -output tmp/libserum.1.6.2.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/libserum.1.6.2.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/libserum.1.6.2.dylib
-          lipo -create -output tmp/libserialport.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/libserialport.dylib \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/libserialport.dylib
-          lipo -create -output tmp/dmdutil_test \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/dmdutil_test \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/dmdutil_test
-          lipo -create -output tmp/dmdutil_test_s \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/dmdutil_test_s \
-             libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/dmdutil_test_s
+          find "libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64" -name "*.dylib" | while read -r file; do
+            if [ ! -L "$file" ]; then
+              filename=$(basename "$file")
+              lipo -create -output "tmp/$filename" \
+                "libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/$filename" \
+                "libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/$filename"
+            fi
+          done
+          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test; do
+            lipo -create -output "tmp/$filename" \
+               "libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/$filename" \
+               "libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/$filename"
+          done
+          cp -r libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/test tmp
       - name: Prepare artifacts
         run: |
           cd tmp

@@ -8,8 +8,6 @@ LIBSOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
 
-SCRIPT_DIR=$(realpath "$(dirname "$0")")
-
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
@@ -40,8 +38,8 @@ platforms/macos/x64/external.sh
 cmake -DPLATFORM=macos -DARCH=x64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include/
-cp -P third-party/runtime-libs/macos/x64/*.dylib ../../third-party/runtime-libs/macos/x64/
-cp -P build/*.dylib ../../third-party/runtime-libs/macos/x64/
+cp -a third-party/runtime-libs/macos/x64/*.dylib ../../third-party/runtime-libs/macos/x64/
+cp -a build/*.dylib ../../third-party/runtime-libs/macos/x64/
 cp -r test ../../
 cd ..
 
@@ -55,7 +53,7 @@ cd libserum-$LIBSERUM_SHA
 cp src/serum-decode.h ../../third-party/include/
 cmake -DPLATFORM=macos -DARCH=x64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp -P build/*.dylib ../../third-party/runtime-libs/macos/x64/
+cp -a build/*.dylib ../../third-party/runtime-libs/macos/x64/
 cd ..
 
 #
@@ -73,5 +71,5 @@ cmake -DSOCKPP_BUILD_SHARED=ON \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
-cp -P build/*.dylib ../../third-party/runtime-libs/macos/x64/
+cp -a build/*.dylib ../../third-party/runtime-libs/macos/x64/
 cd ..

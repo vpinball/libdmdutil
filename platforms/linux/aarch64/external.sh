@@ -8,8 +8,6 @@ LIBSOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 
 NUM_PROCS=$(nproc)
 
-SCRIPT_DIR=$(realpath "$(dirname "$0")")
-
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
@@ -41,8 +39,8 @@ cmake -DPLATFORM=linux -DARCH=aarch64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMA
 cmake --build build -- -j${NUM_PROCS}
 cp third-party/include/libserialport.h ../../third-party/include/
 ln -s $(ls -v third-party/runtime-libs/linux/aarch64/libserialport.so.* | tail -n 1 | xargs basename) third-party/runtime-libs/linux/aarch64/libserialport.so
-cp -P third-party/runtime-libs/linux/aarch64/libserialport.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
-cp -P build/libzedmd.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
+cp -a third-party/runtime-libs/linux/aarch64/libserialport.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
+cp -a build/libzedmd.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cp -r test ../../
 cd ..
 
@@ -56,7 +54,7 @@ cd libserum-$LIBSERUM_SHA
 cp src/serum-decode.h ../../third-party/include/
 cmake -DPLATFORM=linux -DARCH=aarch64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp -P build/libserum.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
+cp -a build/libserum.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
 
 #
@@ -69,5 +67,5 @@ cd sockpp-$LIBSOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
-cp -P build/libsockpp.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
+cp -a build/libsockpp.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..

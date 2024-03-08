@@ -14,8 +14,6 @@ else
    NUM_PROCS=1
 fi
 
-SCRIPT_DIR=$(realpath "$(dirname "$0")")
-
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
@@ -69,7 +67,7 @@ cd ..
 curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o sockpp.zip
 unzip sockpp.zip
 cd sockpp-$LIBSOCKPP_SHA
-patch -p1 < $SCRIPT_DIR/sockpp/001.patch
+patch -p1 < ../../platforms/android/arm64-v8a/sockpp/001.patch
 cp -r include/sockpp ../../third-party/include/
 cmake -DSOCKPP_BUILD_SHARED=ON \
    -DSOCKPP_BUILD_STATIC=OFF \

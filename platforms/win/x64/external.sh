@@ -6,8 +6,6 @@ LIBZEDMD_SHA=08e98a858eb6e1394b4844bec7dd27c7c0d9a845
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
 LIBSOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 
-SCRIPT_DIR=$(realpath "$(dirname "$0")")
-
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
@@ -65,9 +63,10 @@ cd ..
 curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o sockpp.zip
 unzip sockpp.zip
 cd sockpp-$LIBSOCKPP_SHA
+patch -p1 < ../../platforms/win/x64/sockpp/001.patch
 cp -r include/sockpp ../../third-party/include/
 cmake -G "Visual Studio 17 2022" -B build
 cmake --build build --config ${BUILD_TYPE}
-cp build/${BUILD_TYPE}/sockpp.lib ../../third-party/build-libs/win/x64/
-cp build/${BUILD_TYPE}/sockpp.dll ../../third-party/runtime-libs/win/x64/
+cp build/${BUILD_TYPE}/sockpp64.lib ../../third-party/build-libs/win/x64/
+cp build/${BUILD_TYPE}/sockpp64.dll ../../third-party/runtime-libs/win/x64/
 cd ..
