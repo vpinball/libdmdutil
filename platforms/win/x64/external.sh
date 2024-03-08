@@ -36,8 +36,8 @@ patch -p1 < ../../platforms/win/x64/cargs/001.patch
 cp include/cargs.h ../../third-party/include/
 cmake -G "Visual Studio 17 2022" -DBUILD_SHARED_LIBS=ON -B build
 cmake --build build --config ${BUILD_TYPE}
-cp cargs64.lib ../../third-party/build-libs/win/x64/
-cp cargs64.dll ../../third-party/runtime-libs/win/x64/
+cp build/${BUILD_TYPE}/cargs64.lib ../../third-party/build-libs/win/x64/
+cp build/${BUILD_TYPE}/cargs64.dll ../../third-party/runtime-libs/win/x64/
 cd ..
 
 #

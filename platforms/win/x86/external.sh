@@ -35,8 +35,8 @@ cd cargs-${LIBCARGS_SHA}
 cp include/cargs.h ../../third-party/include/
 cmake -G "Visual Studio 17 2022" -DBUILD_SHARED_LIBS=ON -A Win32 -B build
 cmake --build build --config ${BUILD_TYPE}
-cp cargs.lib ../../third-party/build-libs/win/x86/
-cp cargs.dll ../../third-party/runtime-libs/win/x86/
+cp build/${BUILD_TYPE}/cargs.lib ../../third-party/build-libs/win/x86/
+cp build/${BUILD_TYPE}/cargs.dll ../../third-party/runtime-libs/win/x86/
 cd ..
 
 #
