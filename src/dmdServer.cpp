@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 
   if (pPort)
   {
-    int port;
+    in_port_t port;
     std::stringstream ssPort(pPort);
     ssPort >> port;
     pConfig->SetDmdServerPort(port);
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 
   sockpp::initialize();
 
-  sockpp::tcp_acceptor acc({pConfig->GetDmdServerAddr(), pConfig->GetDmdServerPort()});
+  sockpp::tcp_acceptor acc({pConfig->GetDmdServerAddr(), (in_port_t)pConfig->GetDmdServerPort()});
   if (!acc)
   {
     cerr << "Error creating the acceptor: " << acc.last_error_str() << endl;

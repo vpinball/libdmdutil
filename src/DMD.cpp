@@ -150,7 +150,8 @@ bool DMD::ConnectDMDServer()
   {
     Config* const pConfig = Config::GetInstance();
     sockpp::initialize();
-    m_pDMDServerConnector = new sockpp::tcp_connector({pConfig->GetDmdServerAddr(), pConfig->GetDmdServerPort()});
+    m_pDMDServerConnector =
+        new sockpp::tcp_connector({pConfig->GetDmdServerAddr(), (in_port_t)pConfig->GetDmdServerPort()});
   }
   return (m_pDMDServerConnector);
 }
