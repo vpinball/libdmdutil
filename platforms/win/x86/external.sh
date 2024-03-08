@@ -33,13 +33,11 @@ curl -sL https://github.com/likle/cargs/archive/${LIBCARGS_SHA}.zip -o cargs.zip
 unzip cargs.zip
 cd cargs-${LIBCARGS_SHA}
 cp include/cargs.h ../../third-party/include/
-mkdir build
-cd build
-cmake -G "Visual Studio 17 2022" -DBUILD_SHARED_LIBS=ON ..
-make
-cp cargs64.lib ../../third-party/build-libs/win/x86/
-cp cargs64.dll ../../third-party/runtime-libs/win/x86/
-cd ../..
+cmake -G "Visual Studio 17 2022" -DBUILD_SHARED_LIBS=ON -A Win32 -B build
+cmake --build build --config ${BUILD_TYPE}
+cp cargs.lib ../../third-party/build-libs/win/x86/
+cp cargs.dll ../../third-party/runtime-libs/win/x86/
+cd ..
 
 #
 # build libzedmd and copy to external
