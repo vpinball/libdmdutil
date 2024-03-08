@@ -42,12 +42,17 @@ curl -sL https://github.com/likle/cargs/archive/${LIBCARGS_SHA}.zip -o cargs.zip
 unzip cargs.zip
 cd cargs-${LIBCARGS_SHA}
 cp include/cargs.h ../../third-party/include/
-mkdir build
-cd build
-cmake -DBUILD_SHARED_LIBS=ON ..
-make
-cp -P libcargs.so* ../../../third-party/runtime-libs/android/arm64-v8a/
-cd ../..
+cmake -DBUILD_SHARED_LIBS=ON \
+   -DCMAKE_SYSTEM_NAME=Android \
+   -DCMAKE_SYSTEM_VERSION=30 \
+   -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+   -DCMAKE_BUILD_WITH_INSTALL_RPATH=TRUE \
+   -DCMAKE_INSTALL_RPATH="\$ORIGIN" \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
+cmake --build build -- -j${NUM_PROCS}
+cp build/libcargs.so ../../third-party/runtime-libs/android/arm64-v8a/
+cd ..
 
 #
 # build libzedmd and copy to external
