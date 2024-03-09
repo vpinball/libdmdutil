@@ -15,7 +15,6 @@ Config* Config::GetInstance()
 Config::Config()
 {
   m_altColor = true;
-  m_altColorPath.clear();
   m_framesTimeout = 0;
   m_framesToSkip = 0;
   m_zedmd = true;
@@ -26,6 +25,9 @@ Config::Config()
   m_zedmdSaveSettings = false;
   m_pixelcade = true;
   m_pixelcadeDevice.clear();
+  m_dmdServer = false;
+  m_dmdServerAddr = "localhost";
+  m_dmdServerPort = 6789;
   m_logCallback = nullptr;
 }
 

@@ -22,7 +22,6 @@ class DMDUTILAPI Config
   static Config* GetInstance();
   bool IsAltColor() const { return m_altColor; }
   void SetAltColor(bool altColor) { m_altColor = altColor; }
-  void SetAltColorPath(const char* path) { m_altColorPath = path; }
   void SetIgnoreUnknownFramesTimeout(int framesTimeout) { m_framesTimeout = framesTimeout; }
   void SetMaximumUnknownFramesToSkip(int framesToSkip) { m_framesToSkip = framesToSkip; }
   int GetIgnoreUnknownFramesTimeout() { return m_framesTimeout; }
@@ -43,9 +42,14 @@ class DMDUTILAPI Config
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
+  void SetDMDServer(bool dmdServer) { m_dmdServer = dmdServer; }
+  bool IsDmdServer() { return m_dmdServer; }
+  void SetDMDServerAddr(const char* addr) { m_dmdServerAddr = addr; }
+  const char* GetDMDServerAddr() const { return m_dmdServerAddr.c_str(); }
+  void SetDMDServerPort(int port) { m_dmdServerPort = port; }
+  int GetDMDServerPort() const { return m_dmdServerPort; }
   DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
   void SetLogCallback(DMDUtil_LogCallback callback) { m_logCallback = callback; }
-  const char* GetAltColorPath() const { return m_altColorPath.c_str(); }
 
  private:
   Config();
@@ -53,7 +57,6 @@ class DMDUTILAPI Config
 
   static Config* m_pInstance;
   bool m_altColor;
-  std::string m_altColorPath;
   int m_framesTimeout;
   int m_framesToSkip;
   bool m_zedmd;
@@ -62,6 +65,9 @@ class DMDUTILAPI Config
   int m_zedmdRgbOrder;
   int m_zedmdBrightness;
   bool m_zedmdSaveSettings;
+  bool m_dmdServer;
+  std::string m_dmdServerAddr;
+  int m_dmdServerPort;
   bool m_pixelcade;
   std::string m_pixelcadeDevice;
   DMDUtil_LogCallback m_logCallback;

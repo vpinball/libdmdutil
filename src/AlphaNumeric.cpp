@@ -280,7 +280,7 @@ void AlphaNumeric::DrawPixel(uint8_t* pFrame, const int x, const int y, const ui
   pFrame[y * 128 + x] = colour;
 }
 
-void AlphaNumeric::Clear(uint8_t* pFrame) { memset(pFrame, 0, 128*32); }
+void AlphaNumeric::Clear(uint8_t* pFrame) { memset(pFrame, 0, 128 * 32); }
 
 void AlphaNumeric::Render2x16Alpha(uint8_t* pFrame, const uint16_t* const seg_data)
 {

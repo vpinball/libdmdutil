@@ -9,7 +9,8 @@
 #endif
 
 #define DMDUTIL_FRAME_BUFFER_SIZE 16
-#define DMDUTIL_MAX_NAME_SIZE 32
+#define DMDUTIL_MAX_NAME_SIZE 16
+#define DMDUTIL_MAX_ALTCOLORPATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
 
 #include <atomic>
@@ -20,6 +21,8 @@
 #include <shared_mutex>
 #include <string>
 #include <thread>
+
+#include "sockpp/tcp_connector.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -64,39 +67,19 @@ class DMDUTILAPI DMD
   DMD();
   ~DMD();
 
-  void FindDisplays();
-  static bool IsFinding();
-  bool HasDisplay() const;
-  void DumpDMDTxt();
-  void DumpDMDRaw();
-  LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
-  bool DestroyLevelDMD(LevelDMD* pLevelDMD);
-  RGB24DMD* CreateRGB24DMD(uint16_t width, uint16_t height);
-  bool DestroyRGB24DMD(RGB24DMD* pRGB24DMD);
-  ConsoleDMD* CreateConsoleDMD(bool overwrite, FILE* out = stdout);
-  bool DestroyConsoleDMD(ConsoleDMD* pConsoleDMD);
-  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                  const char* name = nullptr);
-  void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
-                       uint8_t b);
-  void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height);
-  void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height);
-  void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
-                              uint8_t g, uint8_t b, const char* name = nullptr);
-
- private:
-  enum class DMDMode
+  enum class Mode
   {
-    Unknown,
-    Data,
-    RGB24,  // RGB888
-    RGB16,  // RGB565
-    AlphaNumeric
+    Unknown,      // int 0
+    Data,         // int 1
+    RGB24,        // int 2, RGB888
+    RGB16,        // int 3, RGB565
+    AlphaNumeric  // int 4
   };
 
-  struct DMDUpdate
+#pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
+  struct Update
   {
-    DMDMode mode;
+    Mode mode;
     AlphaNumericLayout layout;
     int depth;
     uint8_t data[256 * 64 * 3];
@@ -110,17 +93,58 @@ class DMDUTILAPI DMD
     uint8_t b;
     uint16_t width;
     uint16_t height;
-    char name[DMDUTIL_MAX_NAME_SIZE];
   };
 
-  DMDUpdate* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
+  struct StreamHeader
+  {
+    char header[10] = "DMDStream";
+    uint8_t version = 1;
+    Mode mode = Mode::Data;  // int
+    uint16_t width = 0;
+    uint16_t height = 0;
+    uint32_t length = 0;
+  };
 
+  struct AltColorHeader
+  {
+    char header[9] = "AltColor";
+    char name[DMDUTIL_MAX_NAME_SIZE] = {0};
+    char path[DMDUTIL_MAX_ALTCOLORPATH_SIZE] = {0};
+  };
+#pragma pack(pop)  // Reset to default packing
+
+  void FindDisplays();
+  static bool IsFinding();
+  bool HasDisplay() const;
+  void SetRomName(const char* name);
+  void SetAltColorPath(const char* path);
+  void DumpDMDTxt();
+  void DumpDMDRaw();
+  LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
+  bool DestroyLevelDMD(LevelDMD* pLevelDMD);
+  RGB24DMD* CreateRGB24DMD(uint16_t width, uint16_t height);
+  bool DestroyRGB24DMD(RGB24DMD* pRGB24DMD);
+  ConsoleDMD* CreateConsoleDMD(bool overwrite, FILE* out = stdout);
+  bool DestroyConsoleDMD(ConsoleDMD* pConsoleDMD);
+  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b);
+  void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
+                       uint8_t b);
+  void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height);
+  void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height);
+  void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
+                              uint8_t g, uint8_t b);
+  void QueueUpdate(Update dmdUpdate);
+
+ private:
+  Update* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
+
+  bool ConnectDMDServer();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                  DMDMode mode, const char* name);
+                  Mode mode);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
 
-  void DmdFrameReadyResetThread();
+  void DmdFrameThread();
   void LevelDMDThread();
   void RGB24DMDThread();
   void ConsoleDMDThread();
@@ -129,18 +153,21 @@ class DMDUTILAPI DMD
   void DumpDMDRawThread();
 
   uint8_t m_updateBufferPosition = 0;
+  char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
+  char m_altColorPath[DMDUTIL_MAX_ALTCOLORPATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   Serum* m_pSerum;
   ZeDMD* m_pZeDMD;
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;
+  sockpp::tcp_connector* m_pDMDServerConnector;
 
   std::thread* m_pLevelDMDThread;
   std::thread* m_pRGB24DMDThread;
   std::thread* m_pConsoleDMDThread;
   std::thread* m_pZeDMDThread;
-  std::thread* m_pdmdFrameReadyResetThread;
+  std::thread* m_pDmdFrameThread;
   std::thread* m_pDumpDMDTxtThread;
   std::thread* m_pDumpDMDRawThread;
   std::shared_mutex m_dmdSharedMutex;
