@@ -81,6 +81,7 @@ The DmdStreamHeader is defined as a struct:
     Mode mode = Mode::Data;        // int
     uint16_t width = 0;
     uint16_t height = 0;
+    uint8_t buffered = 0;          // 0 => not buffered, 1 => buffered
     uint32_t length = 0;
   };
 
@@ -111,6 +112,9 @@ The data itself contains a lot of additional data like instructions to map alpha
 grayscale content.
 
 So if you want to write a general purpose client to display images or text, you're adviced to use `Mode::RGB24` or `Mode::RGB216`!
+
+The `buffered` flag set to `1` means that the current data not just gets displayed, but also buffered for later use.
+As soon as some buffered data exists, it will be displayed instead of a black screen if a client disconnects. 
 
 ### Notes
 

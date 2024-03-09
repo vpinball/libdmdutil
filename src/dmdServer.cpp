@@ -72,8 +72,12 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       if (strcmp(pStreamHeader->header, "DMDStream") == 0 && pStreamHeader->version == 1)
       {
         if (opt_verbose)
+        {
           DMDUtil::Log("Received DMDStream header version %d for DMD mode %d", pStreamHeader->version,
                        pStreamHeader->mode);
+          if (pStreamHeader->buffered) DMDUtil::Log("Next data will be buffered");
+        }
+
         switch (pStreamHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
@@ -99,7 +103,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   pDmd->SetRomName(altColorHeader.name);
                   pDmd->SetAltColorPath(altColorHeader.path);
 
-                  pDmd->QueueUpdate(data);
+                  pDmd->QueueUpdate(data, pStreamHeader->buffered == 1);
                 }
                 else
                 {
@@ -121,7 +125,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
               // At the moment the server only listens on localhost.
               // Therefore, we don't have to take care about litte vs. big endian and can use the buffer as uint16_t as
               // it is.
-              pDmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height);
+              pDmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height,
+                                    pStreamHeader->buffered == 1);
             }
             else
             {
@@ -134,7 +139,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 threadId == currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
                 pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
-              pDmd->UpdateRGB24Data(buffer, pStreamHeader->width, pStreamHeader->height);
+              pDmd->UpdateRGB24Data(buffer, pStreamHeader->width, pStreamHeader->height, pStreamHeader->buffered == 1);
             }
             else
             {
@@ -154,10 +159,14 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
     }
   }
 
-  // Clear the DMD by sending a black screen.
-  // Fixed dimension of 128x32 should be OK for all devices.
-  memset(buffer, 0, sizeof(DMDUtil::DMD::Update));
-  pDmd->UpdateRGB24Data(buffer, 128, 32);
+  // Display a buffered frame or clear the display.
+  if (!pDmd->QueueBuffer())
+  {
+    // Clear the DMD by sending a black screen.
+    // Fixed dimension of 128x32 should be OK for all devices.
+    memset(buffer, 0, sizeof(DMDUtil::DMD::Update));
+    pDmd->UpdateRGB24Data(buffer, 128, 32);
+  }
 
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
   currentThreadId = threads.back();

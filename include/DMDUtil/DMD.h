@@ -102,6 +102,7 @@ class DMDUTILAPI DMD
     Mode mode = Mode::Data;  // int
     uint16_t width = 0;
     uint16_t height = 0;
+    uint8_t buffered = 0;  // 0 => unbuffered, 1 => buffered
     uint32_t length = 0;
   };
 
@@ -126,22 +127,25 @@ class DMDUTILAPI DMD
   bool DestroyRGB24DMD(RGB24DMD* pRGB24DMD);
   ConsoleDMD* CreateConsoleDMD(bool overwrite, FILE* out = stdout);
   bool DestroyConsoleDMD(ConsoleDMD* pConsoleDMD);
-  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b);
+  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
+                  bool buffered = false);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
-                       uint8_t b);
-  void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height);
-  void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height);
+                       uint8_t b, bool buffer = false);
+  void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, bool buffered = false);
+  void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered = false);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b);
-  void QueueUpdate(Update dmdUpdate);
+  void QueueUpdate(Update dmdUpdate, bool buffered);
+  bool QueueBuffer();
 
  private:
-  Update* m_updateBuffer[DMDUTIL_FRAME_BUFFER_SIZE];
+  Update* m_pUpdateBufferQueue[DMDUTIL_FRAME_BUFFER_SIZE];
+  Update m_updateBuffered;
 
   bool ConnectDMDServer();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                  Mode mode);
+                  Mode mode, bool buffered = false);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
 
   void DmdFrameThread();
@@ -152,7 +156,7 @@ class DMDUTILAPI DMD
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
 
-  uint8_t m_updateBufferPosition = 0;
+  uint8_t m_updateBufferQueuePosition = 0;
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_ALTCOLORPATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
@@ -175,6 +179,7 @@ class DMDUTILAPI DMD
   std::atomic<bool> m_dmdFrameReady = false;
   std::atomic<bool> m_stopFlag = false;
 
+  bool m_hasUpdateBuffered = false;
   static bool m_finding;
 
 #if !(                                                                                                                \
