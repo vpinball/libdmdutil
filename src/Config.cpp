@@ -26,7 +26,7 @@ Config::Config()
   m_pixelcade = true;
   m_pixelcadeDevice.clear();
   m_dmdServer = false;
-  m_dmdServerAddr.clear();
+  m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;
   m_logCallback = nullptr;
 }

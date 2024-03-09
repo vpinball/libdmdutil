@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "DMDUtil/DMDUtil.h"
+#include "Logger.h"
 #include "cargs.h"
 #include "sockpp/tcp_acceptor.h"
 
@@ -17,6 +18,7 @@ using namespace std;
 DMDUtil::DMD* pDmd;
 uint32_t currentThreadId = 0;
 std::vector<uint32_t> threads;
+bool opt_verbose = false;
 
 static struct cag_option options[] = {
     {.identifier = 'a',
@@ -35,6 +37,16 @@ static struct cag_option options[] = {
      .value_name = NULL,
      .description = "Don't terminate if no displays are connected (optional, default is to terminate the server "
                     "process if no displays could be found)"},
+    {.identifier = 'l',
+     .access_letters = "l",
+     .access_name = "logging",
+     .value_name = NULL,
+     .description = "Enable logging to stderr (optional, default is no logging)"},
+    {.identifier = 'v',
+     .access_letters = "v",
+     .access_name = "verbose-logging",
+     .value_name = NULL,
+     .description = "Enables verbose logging, includes normal logging (optional, default is no logging)"},
     {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
 
 void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
@@ -59,6 +71,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       memcpy(pStreamHeader, buffer, n);
       if (strcmp(pStreamHeader->header, "DMDStream") == 0 && pStreamHeader->version == 1)
       {
+        if (opt_verbose)
+          DMDUtil::Log("Received DMDStream header version %d for DMD mode %d", pStreamHeader->version,
+                       pStreamHeader->mode);
         switch (pStreamHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
@@ -73,6 +88,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   (n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
                   threadId == currentThreadId)
               {
+                if (opt_verbose)
+                  DMDUtil::Log("Received AltColor header: ROM '%s', AltColorPath '%s'", altColorHeader.name,
+                               altColorHeader.path);
                 DMDUtil::DMD::Update data;
                 memcpy(&data, buffer, n);
 
@@ -83,6 +101,14 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
 
                   pDmd->QueueUpdate(data);
                 }
+                else
+                {
+                  DMDUtil::Log("TCP data package is missing or corrupted!");
+                }
+              }
+              else
+              {
+                DMDUtil::Log("AltColor header is missing!");
               }
             }
             break;
@@ -97,6 +123,10 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
               // it is.
               pDmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height);
             }
+            else
+            {
+              DMDUtil::Log("TCP data package is missing or corrupted!");
+            }
             break;
 
           case DMDUtil::DMD::Mode::RGB24:
@@ -106,12 +136,20 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             {
               pDmd->UpdateRGB24Data(buffer, pStreamHeader->width, pStreamHeader->height);
             }
+            else
+            {
+              DMDUtil::Log("TCP data package is missing or corrupted!");
+            }
             break;
 
           default:
             // Other modes aren't supported via network.
             break;
         }
+      }
+      else
+      {
+        DMDUtil::Log("Received unknown TCP package");
       }
     }
   }
@@ -131,10 +169,7 @@ int main(int argc, char* argv[])
 {
   uint32_t threadId = 0;
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
-  pConfig->SetLogCallback(LogCallback);
   pConfig->SetDmdServer(false);  // This is the server. It must not connect to a different server!
-  pConfig->SetDmdServerAddr("localhost");
-  pConfig->SetDmdServerPort(6789);
 
   cag_option_context cag_context;
   bool opt_wait = false;
@@ -158,6 +193,12 @@ int main(int argc, char* argv[])
         opt_wait = true;
         break;
 
+      case 'v':
+        opt_verbose = true;
+      case 'l':
+        pConfig->SetLogCallback(LogCallback);
+        break;
+
       case 'h':
         cout << "Usage: dmdserver [OPTION]..." << endl;
         cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
@@ -174,11 +215,13 @@ int main(int argc, char* argv[])
   }
 
   sockpp::initialize();
-
+  if (opt_verbose)
+    DMDUtil::Log("Opening DMDServer, listining for TCP connections on %s:%d", pConfig->GetDmdServerAddr(),
+                 pConfig->GetDmdServerPort());
   sockpp::tcp_acceptor acc({pConfig->GetDmdServerAddr(), (in_port_t)pConfig->GetDmdServerPort()});
   if (!acc)
   {
-    cerr << "Error creating the acceptor: " << acc.last_error_str() << endl;
+    DMDUtil::Log("Error creating the DMDServer acceptor: %s", acc.last_error_str());
     return 1;
   }
 
@@ -203,10 +246,11 @@ int main(int argc, char* argv[])
 
     if (!sock)
     {
-      cerr << "Error accepting incoming connection: " << acc.last_error_str() << endl;
+      DMDUtil::Log("Error accepting incoming connection: %s", acc.last_error_str());
     }
     else
     {
+      if (opt_verbose) DMDUtil::Log("New DMD client connected");
       currentThreadId = threadId++;
       threads.push_back(currentThreadId);
       // Create a thread and transfer the new stream to it.
@@ -215,6 +259,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  cerr << "No DMD displays found." << endl;
-  return -1;
+  DMDUtil::Log("No DMD displays found.");
+  return 2;
 }

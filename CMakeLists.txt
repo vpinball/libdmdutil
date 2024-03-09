@@ -141,6 +141,7 @@ if(BUILD_SHARED)
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdserver
          src/dmdServer.cpp
+         src/Logger.cpp
       )
       target_link_libraries(dmdserver PUBLIC dmdutil_shared)
 

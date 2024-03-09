@@ -59,6 +59,16 @@ Per default it listens on port 6789 on localhost and accepts "raw" TCP connectio
     * Don't terminate if no displays are connected
     * optional
     * default is to terminate the server process if no displays could be found
+* -l --logging
+    * Enable logging to stderr
+    * optional
+    * default is no logging
+* -v --verbose
+    * Enables verbose logging, includes normal logging
+    * optional
+    * default is no logging
+* -h --help
+    * Show help
 
 `dmdserver` expects two packages to render a DMD frame. The first one is a DmdStream header followed by the "data".
 
