@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
   sockpp::tcp_acceptor acc({pConfig->GetDmdServerAddr(), (in_port_t)pConfig->GetDmdServerPort()});
   if (!acc)
   {
-    DMDUtil::Log("Error creating the DMDServer acceptor: %s", acc.last_error_str());
+    DMDUtil::Log("Error creating the DMDServer acceptor: %s", acc.last_error_str().c_str());
     return 1;
   }
 
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
 
     if (!sock)
     {
-      DMDUtil::Log("Error accepting incoming connection: %s", acc.last_error_str());
+      DMDUtil::Log("Error accepting incoming connection: %s", acc.last_error_str().c_str());
     }
     else
     {
