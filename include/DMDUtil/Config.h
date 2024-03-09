@@ -42,12 +42,12 @@ class DMDUTILAPI Config
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
-  void SetDmdServer(bool dmdServer) { m_dmdServer = dmdServer; }
+  void SetDMDServer(bool dmdServer) { m_dmdServer = dmdServer; }
   bool IsDmdServer() { return m_dmdServer; }
-  void SetDmdServerAddr(const char* addr) { m_dmdServerAddr = addr; }
-  const char* GetDmdServerAddr() const { return m_dmdServerAddr.c_str(); }
-  void SetDmdServerPort(int port) { m_dmdServerPort = port; }
-  int GetDmdServerPort() const { return m_dmdServerPort; }
+  void SetDMDServerAddr(const char* addr) { m_dmdServerAddr = addr; }
+  const char* GetDMDServerAddr() const { return m_dmdServerAddr.c_str(); }
+  void SetDMDServerPort(int port) { m_dmdServerPort = port; }
+  int GetDMDServerPort() const { return m_dmdServerPort; }
   DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
   void SetLogCallback(DMDUtil_LogCallback callback) { m_logCallback = callback; }
 

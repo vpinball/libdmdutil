@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 {
   uint32_t threadId = 0;
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
-  pConfig->SetDmdServer(false);  // This is the server. It must not connect to a different server!
+  pConfig->SetDMDServer(false);  // This is the server. It must not connect to a different server!
 
   cag_option_context cag_context;
   bool opt_wait = false;
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
     switch (identifier)
     {
       case 'a':
-        pConfig->SetDmdServerAddr(cag_option_get_value(&cag_context));
+        pConfig->SetDMDServerAddr(cag_option_get_value(&cag_context));
         break;
 
       case 'p':
@@ -211,14 +211,14 @@ int main(int argc, char* argv[])
     in_port_t port;
     std::stringstream ssPort(pPort);
     ssPort >> port;
-    pConfig->SetDmdServerPort(port);
+    pConfig->SetDMDServerPort(port);
   }
 
   sockpp::initialize();
   if (opt_verbose)
-    DMDUtil::Log("Opening DMDServer, listining for TCP connections on %s:%d", pConfig->GetDmdServerAddr(),
-                 pConfig->GetDmdServerPort());
-  sockpp::tcp_acceptor acc({pConfig->GetDmdServerAddr(), (in_port_t)pConfig->GetDmdServerPort()});
+    DMDUtil::Log("Opening DMDServer, listining for TCP connections on %s:%d", pConfig->GetDMDServerAddr(),
+                 pConfig->GetDMDServerPort());
+  sockpp::tcp_acceptor acc({pConfig->GetDMDServerAddr(), (in_port_t)pConfig->GetDMDServerPort()});
   if (!acc)
   {
     DMDUtil::Log("Error creating the DMDServer acceptor: %s", acc.last_error_str().c_str());

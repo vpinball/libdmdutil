@@ -150,12 +150,12 @@ bool DMD::ConnectDMDServer()
   {
     Config* const pConfig = Config::GetInstance();
     sockpp::initialize();
-    Log("Connecting DMDServer on %s:%d", pConfig->GetDmdServerAddr(), pConfig->GetDmdServerPort());
+    Log("Connecting DMDServer on %s:%d", pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
     m_pDMDServerConnector =
-        new sockpp::tcp_connector({pConfig->GetDmdServerAddr(), (in_port_t)pConfig->GetDmdServerPort()});
+        new sockpp::tcp_connector({pConfig->GetDMDServerAddr(), (in_port_t)pConfig->GetDMDServerPort()});
     if (!m_pDMDServerConnector)
     {
-      Log("DMDServer connection to %s:%d failed!", pConfig->GetDmdServerAddr(), pConfig->GetDmdServerPort());
+      Log("DMDServer connection to %s:%d failed!", pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
     }
   }
   return (m_pDMDServerConnector);
