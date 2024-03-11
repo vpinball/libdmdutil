@@ -27,7 +27,7 @@ static struct cag_option options[] = {
      .access_letters = "c",
      .access_name = "config",
      .value_name = "VALUE",
-     .description = "VPX Standalone config file (optional, default is no config file)"},
+     .description = "Config file (optional, default is no config file)"},
     {.identifier = 'o',
      .access_letters = "o",
      .access_name = "alt-color-path",
@@ -202,18 +202,20 @@ int main(int argc, char* argv[])
     if (identifier == 'c')
     {
       inih::INIReader r{cag_option_get_value(&cag_context)};
-      pConfig->SetAltColor(r.Get<bool>("Standalone", "AltColor"));
-      pConfig->SetAltColorPath(r.Get<string>("Standalone", "AltColorPath").c_str());
-      pConfig->SetZeDMD(r.Get<bool>("Standalone", "ZeDMD"));
-      pConfig->SetZeDMDDevice(r.Get<string>("Standalone", "ZeDMDDevice").c_str());
-      pConfig->SetZeDMDDebug(r.Get<bool>("Standalone", "ZeDMDDebug"));
-      pConfig->SetZeDMDRGBOrder(r.Get<int>("Standalone", "ZeDMDRGBOrder"));
-      pConfig->SetZeDMDBrightness(r.Get<int>("Standalone", "ZeDMDBrightness"));
-      pConfig->SetZeDMDSaveSettings(r.Get<bool>("Standalone", "ZeDMDSaveSettings"));
-      pConfig->SetPixelcade(r.Get<bool>("Standalone", "Pixelcade"));
-      pConfig->SetPixelcadeDevice(r.Get<string>("Standalone", "PixelcadeDevice").c_str());
-      pConfig->SetDMDServerAddr(r.Get<string>("Standalone", "DMDServerAddr").c_str());
-      pConfig->SetDMDServerPort(r.Get<int>("Standalone", "DMDServerPort"));
+      pConfig->SetDMDServerAddr(r.Get<string>("DMDServer", "Addr").c_str());
+      pConfig->SetDMDServerPort(r.Get<int>("DMDServer", "Port"));
+      pConfig->SetAltColor(r.Get<bool>("DMDServer", "AltColor"));
+      pConfig->SetAltColorPath(r.Get<string>("DMDServer", "AltColorPath").c_str());
+      // ZeDMD
+      pConfig->SetZeDMD(r.Get<bool>("ZeDMD", "Enabled"));
+      pConfig->SetZeDMDDevice(r.Get<string>("ZeDMD", "Device").c_str());
+      pConfig->SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug"));
+      pConfig->SetZeDMDRGBOrder(r.Get<int>("ZeDMD", "RGBOrder"));
+      pConfig->SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness"));
+      pConfig->SetZeDMDSaveSettings(r.Get<bool>("DMDServer", "SaveSettings"));
+      // Pixelcade
+      pConfig->SetPixelcade(r.Get<bool>("Pixelcade", "Enabled"));
+      pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device").c_str());
     }
     else if (identifier == 'o')
     {

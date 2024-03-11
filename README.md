@@ -48,7 +48,7 @@ Per default it listens on port 6789 on localhost and accepts "raw" TCP connectio
 
 `dmdserver` accepts these command line options:
 * -c --config
-    * VPX Standalone config file
+    * Config file
     * optional
     * default is no config file
 * -o --alt-color-path
@@ -159,6 +159,28 @@ To send a RGB24 image of 4x2 pixels, you have to sent these two packages:
 That means that the data of the last client that connected get displayed. All previous connections from other cleints are "paused".
 As soon as the last connection gets terminated by the client, the newest previous one becomes active again (if it is still active).
 The "paused" connections aren't really paused. Their data is still accepted but dropped instead of dispalyed.
+
+### Config File
+
+```ini
+[DMDServer]
+Addr=localhost
+Port=6789
+AltColor=
+AltColorPath=
+
+[ZeDMD]
+Enabled=
+Device=
+Debug=
+RGBOrder=
+Brightness=
+SaveSettings=
+
+[Pixelcade]
+Enabled=
+Device=
+```
 
 ## Building:
 
