@@ -15,6 +15,7 @@ Config* Config::GetInstance()
 Config::Config()
 {
   m_altColor = true;
+  m_altColorPath.clear();
   m_framesTimeout = 0;
   m_framesToSkip = 0;
   m_zedmd = true;

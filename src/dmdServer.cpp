@@ -8,6 +8,7 @@
 #include "DMDUtil/DMDUtil.h"
 #include "Logger.h"
 #include "cargs.h"
+#include "ini.h"
 #include "sockpp/tcp_acceptor.h"
 
 #define DMDSERVER_MAX_WIDTH 256
@@ -19,8 +20,19 @@ DMDUtil::DMD* pDmd;
 uint32_t currentThreadId = 0;
 std::vector<uint32_t> threads;
 bool opt_verbose = false;
+bool opt_fixedAltColorPath = false;
 
 static struct cag_option options[] = {
+    {.identifier = 'c',
+     .access_letters = "c",
+     .access_name = "config",
+     .value_name = "VALUE",
+     .description = "VPX Standalone config file (optional, default is no config file)"},
+    {.identifier = 'o',
+     .access_letters = "o",
+     .access_name = "alt-color-path",
+     .value_name = "VALUE",
+     .description = "Fixed alt color path, overwriting paths transmitted by DMDUpdates (optional)"},
     {.identifier = 'a',
      .access_letters = "a",
      .access_name = "addr",
@@ -101,7 +113,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 if (data.width <= DMDSERVER_MAX_WIDTH && data.height <= DMDSERVER_MAX_HEIGHT)
                 {
                   pDmd->SetRomName(altColorHeader.name);
-                  pDmd->SetAltColorPath(altColorHeader.path);
+                  if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(altColorHeader.path);
 
                   pDmd->QueueUpdate(data, pStreamHeader->buffered == 1);
                 }
@@ -182,45 +194,61 @@ int main(int argc, char* argv[])
 
   cag_option_context cag_context;
   bool opt_wait = false;
-  const char* pPort = nullptr;
 
   cag_option_prepare(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
   while (cag_option_fetch(&cag_context))
   {
     char identifier = cag_option_get(&cag_context);
-    switch (identifier)
+    if (identifier == 'c')
     {
-      case 'a':
-        pConfig->SetDMDServerAddr(cag_option_get_value(&cag_context));
-        break;
-
-      case 'p':
-        pPort = cag_option_get_value(&cag_context);
-        break;
-
-      case 'w':
-        opt_wait = true;
-        break;
-
-      case 'v':
-        opt_verbose = true;
-      case 'l':
-        pConfig->SetLogCallback(LogCallback);
-        break;
-
-      case 'h':
-        cout << "Usage: dmdserver [OPTION]..." << endl;
-        cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
-        return 0;
+      inih::INIReader r{cag_option_get_value(&cag_context)};
+      pConfig->SetAltColor(r.Get<bool>("Standalone", "AltColor"));
+      pConfig->SetAltColorPath(r.Get<string>("Standalone", "AltColorPath").c_str());
+      pConfig->SetZeDMD(r.Get<bool>("Standalone", "ZeDMD"));
+      pConfig->SetZeDMDDevice(r.Get<string>("Standalone", "ZeDMDDevice").c_str());
+      pConfig->SetZeDMDDebug(r.Get<bool>("Standalone", "ZeDMDDebug"));
+      pConfig->SetZeDMDRGBOrder(r.Get<int>("Standalone", "ZeDMDRGBOrder"));
+      pConfig->SetZeDMDBrightness(r.Get<int>("Standalone", "ZeDMDBrightness"));
+      pConfig->SetZeDMDSaveSettings(r.Get<bool>("Standalone", "ZeDMDSaveSettings"));
+      pConfig->SetPixelcade(r.Get<bool>("Standalone", "Pixelcade"));
+      pConfig->SetPixelcadeDevice(r.Get<string>("Standalone", "PixelcadeDevice").c_str());
+      pConfig->SetDMDServerAddr(r.Get<string>("Standalone", "DMDServerAddr").c_str());
+      pConfig->SetDMDServerPort(r.Get<int>("Standalone", "DMDServerPort"));
     }
-  }
-
-  if (pPort)
-  {
-    in_port_t port;
-    std::stringstream ssPort(pPort);
-    ssPort >> port;
-    pConfig->SetDMDServerPort(port);
+    else if (identifier == 'o')
+    {
+      pConfig->SetAltColorPath(cag_option_get_value(&cag_context));
+    }
+    else if (identifier == 'a')
+    {
+      pConfig->SetDMDServerAddr(cag_option_get_value(&cag_context));
+    }
+    else if (identifier == 'p')
+    {
+      std::stringstream ssPort(cag_option_get_value(&cag_context));
+      in_port_t port;
+      ssPort >> port;
+      pConfig->SetDMDServerPort(port);
+    }
+    else if (identifier == 'w')
+    {
+      opt_wait = true;
+    }
+    else if (identifier == 'v')
+    {
+      opt_verbose = true;
+      pConfig->SetLogCallback(LogCallback);
+    }
+    else if (identifier == 'l')
+    {
+      pConfig->SetLogCallback(LogCallback);
+    }
+    else if (identifier == 'h')
+    {
+      cout << "Usage: dmdserver [OPTION]..." << endl;
+      cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
+      return 0;
+    }
   }
 
   sockpp::initialize();
@@ -244,6 +272,13 @@ int main(int argc, char* argv[])
     if (pDmd->HasDisplay() || !opt_wait) break;
 
     this_thread::sleep_for(chrono::milliseconds(1000));
+  }
+
+  std::string altColorPath = DMDUtil::Config::GetInstance()->GetAltColorPath();
+  if (altColorPath.empty())
+  {
+    pDmd->SetAltColorPath(altColorPath.c_str());
+    opt_fixedAltColorPath = true;
   }
 
   while (pDmd->HasDisplay())

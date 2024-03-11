@@ -10,7 +10,7 @@
 
 #define DMDUTIL_FRAME_BUFFER_SIZE 16
 #define DMDUTIL_MAX_NAME_SIZE 16
-#define DMDUTIL_MAX_ALTCOLORPATH_SIZE 256
+#define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
 
 #include <atomic>
@@ -110,7 +110,7 @@ class DMDUTILAPI DMD
   {
     char header[9] = "AltColor";
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-    char path[DMDUTIL_MAX_ALTCOLORPATH_SIZE] = {0};
+    char path[DMDUTIL_MAX_PATH_SIZE] = {0};
   };
 #pragma pack(pop)  // Reset to default packing
 
@@ -158,7 +158,7 @@ class DMDUTILAPI DMD
 
   uint8_t m_updateBufferQueuePosition = 0;
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
-  char m_altColorPath[DMDUTIL_MAX_ALTCOLORPATH_SIZE] = {0};
+  char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   Serum* m_pSerum;
   ZeDMD* m_pZeDMD;

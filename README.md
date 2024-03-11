@@ -47,6 +47,13 @@ void test()
 Per default it listens on port 6789 on localhost and accepts "raw" TCP connections.
 
 `dmdserver` accepts these command line options:
+* -c --config
+    * VPX Standalone config file
+    * optional
+    * default is no config file
+* -o --alt-color-path
+    * "Fixed alt color path, overwriting paths transmitted by DMDUpdates
+    * optional
 * -a --addr
     * IP address or host name
     * optional
