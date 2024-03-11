@@ -42,6 +42,8 @@ uint8_t* CreateImageRGB24(int width, int height)
 
 void run(DMDUtil::DMD* pDmd)
 {
+  DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
+
   int width = 128;
   int height = 32;
 
@@ -144,7 +146,7 @@ void run(DMDUtil::DMD* pDmd)
     pDmd->UpdateRGB24Data(pImage24, 128, 32);
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
-    pDmd->UpdateRGB16Data(image16, 128, 32);
+    pDmd->UpdateRGB16Data(image16, 128, 32, pConfig->IsDmdServer());
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 
     ms -= 60;
