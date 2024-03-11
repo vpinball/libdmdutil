@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
   }
 
   std::string altColorPath = DMDUtil::Config::GetInstance()->GetAltColorPath();
-  if (altColorPath.empty())
+  if (!altColorPath.empty())
   {
     pDmd->SetAltColorPath(altColorPath.c_str());
     opt_fixedAltColorPath = true;
