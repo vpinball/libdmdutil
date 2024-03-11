@@ -164,21 +164,33 @@ The "paused" connections aren't really paused. Their data is still accepted but 
 
 ```ini
 [DMDServer]
+# The address (interface) to listen for TCP connections
 Addr=localhost
+# The port to listen for TCP connections
 Port=6789
+# Set to 1 if Serum colorization should be used
 AltColor=
+# Overwrite the AltColorPath sent by the client and set it to a fixed value
 AltColorPath=
 
 [ZeDMD]
+# Set to 1 if ZeDMD is attached
 Enabled=
+# Disable auto-detection and provide a fixed serial port
 Device=
+# Enable ZeDMD debug mode
 Debug=
+# Overwrite ZeDMD internal RGB order setting
 RGBOrder=
+# Overwrite ZeDMD internal brightness setting
 Brightness=
+# Set to 1 to permantenly store the overwritten settings above in ZeDMD internally
 SaveSettings=
 
 [Pixelcade]
+# Set to 1 if Pixelcade is attached
 Enabled=
+# Disable auto-detection and provide a fixed serial port
 Device=
 ```
 
