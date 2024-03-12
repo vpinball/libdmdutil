@@ -2,17 +2,18 @@
 
 set -e
 
-LIBCARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
+CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
 LIBZEDMD_SHA=08e98a858eb6e1394b4844bec7dd27c7c0d9a845
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
-LIBSOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
+SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
 
 echo "Building libraries..."
+echo "  CARGS_SHA: ${CARGS_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
-echo "  LIBSOCKPP_SHA: ${LIBSOCKPP_SHA}"
+echo "  SOCKPP_SHA: ${SOCKPP_SHA}"
 echo ""
 
 if [ -z "${BUILD_TYPE}" ]; then
@@ -28,18 +29,18 @@ mkdir external
 cd external
 
 #
-# libcargs
+# build cargs and copy to external
 #
 
-curl -sL https://github.com/likle/cargs/archive/${LIBCARGS_SHA}.zip -o cargs.zip
+curl -sL https://github.com/likle/cargs/archive/${CARGS_SHA}.zip -o cargs.zip
 unzip cargs.zip
-cd cargs-${LIBCARGS_SHA}
+cd cargs-${CARGS_SHA}
 cp include/cargs.h ../../third-party/include/
 mkdir build
 cd build
 cmake -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=ON ..
 make
-cp -P libcargs*.dylib ../../../third-party/runtime-libs/macos/arm64/
+cp -a libcargs*.dylib ../../../third-party/runtime-libs/macos/arm64/
 cd ../..
 
 #
@@ -73,12 +74,12 @@ cp -a build/*.dylib ../../third-party/runtime-libs/macos/arm64/
 cd ..
 
 #
-# build libsockpp and copy to external
+# build sockpp and copy to external
 #
 
-curl -sL https://github.com/fpagliughi/sockpp/archive/${LIBSOCKPP_SHA}.zip -o sockpp.zip
+curl -sL https://github.com/fpagliughi/sockpp/archive/${SOCKPP_SHA}.zip -o sockpp.zip
 unzip sockpp.zip
-cd sockpp-$LIBSOCKPP_SHA
+cd sockpp-$SOCKPP_SHA
 cp -r include/sockpp ../../third-party/include/
 cmake -DSOCKPP_BUILD_SHARED=ON \
    -DSOCKPP_BUILD_STATIC=OFF \

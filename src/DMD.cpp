@@ -494,6 +494,8 @@ void DMD::DmdFrameThread()
 
       strcpy(name, m_romName);
 
+      if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
+
       m_pSerum =
           (Config::GetInstance()->IsAltColor() && name[0] != '\0') ? Serum::Load(m_altColorPath, m_romName) : nullptr;
       if (m_pSerum)

@@ -22,6 +22,8 @@ class DMDUTILAPI Config
   static Config* GetInstance();
   bool IsAltColor() const { return m_altColor; }
   void SetAltColor(bool altColor) { m_altColor = altColor; }
+  void SetAltColorPath(const char* path) { m_altColorPath = path; }
+  const char* GetAltColorPath() const { return m_altColorPath.c_str(); }
   void SetIgnoreUnknownFramesTimeout(int framesTimeout) { m_framesTimeout = framesTimeout; }
   void SetMaximumUnknownFramesToSkip(int framesToSkip) { m_framesToSkip = framesToSkip; }
   int GetIgnoreUnknownFramesTimeout() { return m_framesTimeout; }
@@ -57,6 +59,7 @@ class DMDUTILAPI Config
 
   static Config* m_pInstance;
   bool m_altColor;
+  std::string m_altColorPath;
   int m_framesTimeout;
   int m_framesToSkip;
   bool m_zedmd;

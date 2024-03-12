@@ -47,6 +47,13 @@ void test()
 Per default it listens on port 6789 on localhost and accepts "raw" TCP connections.
 
 `dmdserver` accepts these command line options:
+* -c --config
+    * Config file
+    * optional
+    * default is no config file
+* -o --alt-color-path
+    * "Fixed alt color path, overwriting paths transmitted by DMDUpdates
+    * optional
 * -a --addr
     * IP address or host name
     * optional
@@ -152,6 +159,40 @@ To send a RGB24 image of 4x2 pixels, you have to sent these two packages:
 That means that the data of the last client that connected get displayed. All previous connections from other cleints are "paused".
 As soon as the last connection gets terminated by the client, the newest previous one becomes active again (if it is still active).
 The "paused" connections aren't really paused. Their data is still accepted but dropped instead of dispalyed.
+
+### Config File
+
+```ini
+[DMDServer]
+# The address (interface) to listen for TCP connections
+Addr=localhost
+# The port to listen for TCP connections
+Port=6789
+# Set to 1 if Serum colorization should be used
+AltColor=
+# Overwrite the AltColorPath sent by the client and set it to a fixed value
+AltColorPath=
+
+[ZeDMD]
+# Set to 1 if ZeDMD is attached
+Enabled=
+# Disable auto-detection and provide a fixed serial port
+Device=
+# Enable ZeDMD debug mode
+Debug=
+# Overwrite ZeDMD internal RGB order setting
+RGBOrder=
+# Overwrite ZeDMD internal brightness setting
+Brightness=
+# Set to 1 to permantenly store the overwritten settings above in ZeDMD internally
+SaveSettings=
+
+[Pixelcade]
+# Set to 1 if Pixelcade is attached
+Enabled=
+# Disable auto-detection and provide a fixed serial port
+Device=
+```
 
 ## Building:
 
