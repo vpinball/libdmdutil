@@ -40,7 +40,7 @@ mkdir build
 cd build
 cmake -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=ON ..
 make
-cp -P libcargs*.dylib ../../../third-party/runtime-libs/macos/arm64/
+cp -a libcargs*.dylib ../../../third-party/runtime-libs/macos/arm64/
 cd ../..
 
 #

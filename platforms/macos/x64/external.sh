@@ -40,7 +40,7 @@ mkdir build
 cd build
 cmake -DBUILD_SHARED_LIBS=ON ..
 make
-cp -P libcargs*.dylib ../../../third-party/runtime-libs/macos/x64/
+cp -a libcargs*.dylib ../../../third-party/runtime-libs/macos/x64/
 cd ../..
 
 #

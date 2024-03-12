@@ -40,7 +40,7 @@ mkdir build
 cd build
 cmake -DBUILD_SHARED_LIBS=ON ..
 make
-cp -P libcargs.so* ../../../third-party/runtime-libs/linux/aarch64/
+cp -a libcargs.so* ../../../third-party/runtime-libs/linux/aarch64/
 cd ../..
 
 #
