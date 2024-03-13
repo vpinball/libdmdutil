@@ -131,15 +131,15 @@ But if data compression will be supported in future versions, it will become imp
 
 ### Examples
 
-To send a RGB24 image of 4x2 pixels, you have to sent these two packages:
+To send a RGB24 image of 4x2 pixels, you have to sent these two packages, a header package and a payload package:
 
 ```
 0x44 0x4d 0x44 0x53 0x74 0x72 0x65 0x61 0x6d 0x00  // "DMDStream"
 0x01                                               // Version 1
-0x02                                               // Mode::RGB24
+0x02 0x00 0x00 0x00                                // Mode::RGB24 (if your system is big endian, the byte order needs to be swapped)
 0x04 0x00                                          // width 4 (if your system is big endian, the byte order needs to be swapped)
 0x02 0x00                                          // height 2 (if your system is big endian, the byte order needs to be swapped)
-0x18 0x00 0x00 0x00                                // length 24 (if your system is big endian, the byte order needs to be swapped)
+0x18 0x00 0x00 0x00                                // payload length 24 (if your system is big endian, the byte order needs to be swapped)
 ```
 
 ```
