@@ -6,7 +6,7 @@ This library is currently used by [Visual Pinball Standalone](https://github.com
 
 ## Usage:
 
-```
+```cpp
 #include "DMDUtil/DMDUtil.h"
 .
 .
@@ -80,7 +80,7 @@ Per default it listens on port 6789 on localhost and accepts "raw" TCP connectio
 `dmdserver` expects two packages to render a DMD frame. The first one is a DmdStream header followed by the "data".
 
 The DmdStreamHeader is defined as a struct:
-```
+```cpp
   struct DMDUtil::DMD::StreamHeader
   {
     char header[10] = "DMDStream"; // \0 terminated string
