@@ -18,6 +18,7 @@ using namespace std;
 
 DMDUtil::DMD* pDmd;
 uint32_t currentThreadId = 0;
+bool disconnectOtherClients = false;
 std::vector<uint32_t> threads;
 bool opt_verbose = false;
 bool opt_fixedAltColorPath = false;
@@ -74,7 +75,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   DMDUtil::DMD::StreamHeader* pStreamHeader = (DMDUtil::DMD::StreamHeader*)malloc(sizeof(DMDUtil::DMD::StreamHeader));
   ssize_t n;
 
-  while ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader))) > 0)
+  while ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader))) > 0 &&
+         (!disconnectOtherClients || threadId == currentThreadId))
   {
     if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
@@ -88,6 +90,13 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
           DMDUtil::Log("Received DMDStream header version %d for DMD mode %d", pStreamHeader->version,
                        pStreamHeader->mode);
           if (pStreamHeader->buffered) DMDUtil::Log("Next data will be buffered");
+        }
+
+        // Only the current (most recent) thread is allowed to disconnect other clients.
+        if (threadId == currentThreadId && pStreamHeader->disconnectOthers)
+        {
+          if (opt_verbose) DMDUtil::Log("Other clients will be disconnected");
+          disconnectOtherClients = true;
         }
 
         switch (pStreamHeader->mode)
@@ -171,8 +180,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
     }
   }
 
-  // Display a buffered frame or clear the display.
-  if (!pDmd->QueueBuffer())
+  // Display a buffered frame or clear the display on disconnect of the current thread.
+  if (threadId == currentThreadId && !pDmd->QueueBuffer())
   {
     // Clear the DMD by sending a black screen.
     // Fixed dimension of 128x32 should be OK for all devices.
@@ -181,7 +190,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   }
 
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
-  currentThreadId = threads.back();
+  if (threads.size() >= 1) currentThreadId = threads.back();
+  if (threads.size() <= 1) disconnectOtherClients = false;
 
   free(pStreamHeader);
 }

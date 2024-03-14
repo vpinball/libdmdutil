@@ -103,6 +103,7 @@ class DMDUTILAPI DMD
     uint16_t width = 0;
     uint16_t height = 0;
     uint8_t buffered = 0;  // 0 => unbuffered, 1 => buffered
+    uint8_t disconnectOthers = 0;  // 0 => no, 1 => yes
     uint32_t length = 0;
   };
 
