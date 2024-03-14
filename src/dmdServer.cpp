@@ -190,7 +190,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   }
 
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
-  if (threads.size() >= 1) currentThreadId = threads.back();
+  currentThreadId = (threads.size() >= 1) ? threads.back() : 0;
   if (threads.size() <= 1) disconnectOtherClients = false;
 
   free(pStreamHeader);
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
     else
     {
       if (opt_verbose) DMDUtil::Log("New DMD client connected");
-      currentThreadId = threadId++;
+      currentThreadId = ++threadId;
       threads.push_back(currentThreadId);
       // Create a thread and transfer the new stream to it.
       thread thr(run, std::move(sock), currentThreadId);
