@@ -89,6 +89,7 @@ The DmdStreamHeader is defined as a struct:
     uint16_t width = 0;
     uint16_t height = 0;
     uint8_t buffered = 0;          // 0 => not buffered, 1 => buffered
+    uint8_t disconnectOthers = 0;  // 0 => no, 1 => yes
     uint32_t length = 0;
   };
 
@@ -121,7 +122,10 @@ grayscale content.
 So if you want to write a general purpose client to display images or text, you're adviced to use `Mode::RGB24` or `Mode::RGB216`!
 
 The `buffered` flag set to `1` means that the current data not just gets displayed, but also buffered for later use.
-As soon as some buffered data exists, it will be displayed instead of a black screen if a client disconnects. 
+As soon as some buffered data exists, it will be displayed instead of a black screen if a client disconnects.
+
+The `disconnectOthers` flag set to `1` means that any other client get disconnected except the most recent one.
+But only the most recent one is allowed to set this flag.
 
 ### Notes
 
@@ -139,6 +143,8 @@ To send a RGB24 image of 4x2 pixels, you have to sent these two packages, a head
 0x02 0x00 0x00 0x00                                // Mode::RGB24 (if your system is big endian, the byte order needs to be swapped)
 0x04 0x00                                          // width 4 (if your system is big endian, the byte order needs to be swapped)
 0x02 0x00                                          // height 2 (if your system is big endian, the byte order needs to be swapped)
+0x00                                               // not buffered
+0x00                                               // don't disconnect others
 0x18 0x00 0x00 0x00                                // payload length 24 (if your system is big endian, the byte order needs to be swapped)
 ```
 
