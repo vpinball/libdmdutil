@@ -153,7 +153,7 @@ void run(DMDUtil::DMD* pDmd)
   }
 
   FILE* fileptr;
-  uint16_t size = width * height * 2;
+  uint16_t size = 256 * 64 * 2;
   uint8_t* buffer = (uint8_t*)malloc(size * sizeof(uint8_t));
   uint16_t* rgb565 = (uint16_t*)malloc(size / 2 * sizeof(uint16_t));
   char filename[28];
@@ -168,8 +168,27 @@ void run(DMDUtil::DMD* pDmd)
     fclose(fileptr);
 
     memcpy(rgb565, buffer, size);
-    pDmd->UpdateRGB16Data(rgb565, 128, 32);
-    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    pDmd->UpdateRGB16Data(rgb565, width, height);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  if (pDmd->HasHDDisplay())
+  {
+    width = 256;
+    height = 64;
+    for (int i = 1; i <= 100; i++)
+    {
+      snprintf(filename, 28, "test/rgb565_%dx%d/%04d.raw", width, height, i);
+      printf("Render raw: %s\n", filename);
+      fileptr = fopen(filename, "rb");
+      if (!fileptr) continue;
+      fread(buffer, size, 1, fileptr);
+      fclose(fileptr);
+
+      memcpy(rgb565, buffer, size);
+      pDmd->UpdateRGB16Data(rgb565, width, height);
+      std::this_thread::sleep_for(std::chrono::milliseconds(240));
+    }
   }
 
   free(buffer);

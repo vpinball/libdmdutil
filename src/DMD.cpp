@@ -174,6 +174,8 @@ bool DMD::HasDisplay() const
 #endif
 }
 
+bool DMD::HasHDDisplay() const { return (m_pZeDMD != nullptr && m_pZeDMD->GetWidth() == 256); }
+
 void DMD::SetRomName(const char* name) { strcpy(m_romName, name ? name : ""); }
 
 void DMD::SetAltColorPath(const char* path) { strcpy(m_altColorPath, path ? path : ""); }
@@ -436,12 +438,11 @@ void DMD::FindDisplays()
             if (pZeDMD->Open())
             {
               if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
-
               if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
-
               if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
-
               if (pConfig->IsZeDMDSaveSettings()) pZeDMD->SaveSettings();
+              pZeDMD->EnablePreDownscaling();
+              pZeDMD->EnablePreUpscaling();
 
               m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
             }
@@ -461,7 +462,8 @@ void DMD::FindDisplays()
 
           if (pConfig->IsPixelcade())
           {
-            pPixelcadeDMD = PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), pConfig->GetPixelcadeMatrix(), 128, 32);
+            pPixelcadeDMD =
+                PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), pConfig->GetPixelcadeMatrix(), 128, 32);
             if (pPixelcadeDMD) m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
           }
 
@@ -569,11 +571,15 @@ void DMD::ZeDMDThread()
 
           AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPosition]->data, rgb24Data, width * height, palette,
                            m_pUpdateBufferQueue[bufferPosition]->depth);
+          m_pZeDMD->DisablePreUpscaling();
           m_pZeDMD->RenderRgb24(rgb24Data);
+          m_pZeDMD->EnablePreUpscaling();
         }
         else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16)
         {
+          m_pZeDMD->DisablePreUpscaling();
           m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
+          m_pZeDMD->EnablePreUpscaling();
         }
         else
         {
