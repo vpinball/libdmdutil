@@ -27,18 +27,19 @@ namespace DMDUtil
 class PixelcadeDMD
 {
  public:
-  PixelcadeDMD(struct sp_port* pSerialPort, int width, int height);
+  PixelcadeDMD(struct sp_port* pSerialPort, int matrix, int width, int height);
   ~PixelcadeDMD();
 
-  static PixelcadeDMD* Connect(const char* pDevice, int width, int height);
+  static PixelcadeDMD* Connect(const char* pDevice, int matrix, int width, int height);
   void Update(uint16_t* pData);
 
  private:
-  static PixelcadeDMD* Open(const char* pDevice, int width, int height);
+  static PixelcadeDMD* Open(const char* pDevice, int matrix, int width, int height);
   void Run();
   void EnableRgbLedMatrix(int shifterLen32, int rows);
 
   struct sp_port* m_pSerialPort;
+  int m_matrix;
   int m_width;
   int m_height;
   int m_length;
