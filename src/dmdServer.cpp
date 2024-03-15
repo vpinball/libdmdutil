@@ -226,6 +226,7 @@ int main(int argc, char* argv[])
       // Pixelcade
       pConfig->SetPixelcade(r.Get<bool>("Pixelcade", "Enabled"));
       pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device").c_str());
+      pConfig->SetPixelcadeMatrix(r.Get<int>("Pixelcade", "Matrix"));
     }
     else if (identifier == 'o')
     {

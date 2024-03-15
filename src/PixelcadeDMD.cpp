@@ -16,11 +16,12 @@
 namespace DMDUtil
 {
 
-PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height)
+PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int matrix, int width, int height)
 {
   m_pSerialPort = pSerialPort;
   m_width = width;
   m_height = height;
+  m_matrix = matrix;
   m_length = width * height;
   m_pThread = nullptr;
   m_running = false;
@@ -46,7 +47,7 @@ PixelcadeDMD::~PixelcadeDMD()
   }
 }
 
-PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int matrix, int width, int height)
 {
   PixelcadeDMD* pPixelcadeDMD = nullptr;
 
@@ -54,7 +55,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
   {
     Log("Connecting to Pixelcade on %s...", pDevice);
 
-    pPixelcadeDMD = Open(pDevice, width, height);
+    pPixelcadeDMD = Open(pDevice, matrix, width, height);
 
     if (!pPixelcadeDMD) Log("Unable to connect to Pixelcade on %s", pDevice);
   }
@@ -68,7 +69,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
     {
       for (int i = 0; ppPorts[i]; i++)
       {
-        pPixelcadeDMD = Open(sp_get_port_name(ppPorts[i]), width, height);
+        pPixelcadeDMD = Open(sp_get_port_name(ppPorts[i]), matrix, width, height);
         if (pPixelcadeDMD) break;
       }
       sp_free_port_list(ppPorts);
@@ -80,7 +81,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
   return pPixelcadeDMD;
 }
 
-PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int matrix, int width, int height)
 {
   struct sp_port* pSerialPort = nullptr;
   enum sp_return result = sp_get_port_by_name(pDevice, &pSerialPort);
@@ -140,7 +141,7 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
   Log("Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s", pDevice, hardwareId, bootloaderId,
       firmware);
 
-  return new PixelcadeDMD(pSerialPort, width, height);
+  return new PixelcadeDMD(pSerialPort, matrix, width, height);
 }
 
 void PixelcadeDMD::Update(uint16_t* pData)
@@ -174,6 +175,7 @@ void PixelcadeDMD::Run()
         EnableRgbLedMatrix(4, 16);
 
         int errors = 0;
+        ColorMatrix colorMatrix = (m_matrix == 0) ? ColorMatrix::Rgb : ColorMatrix::Rbg;
 
         while (m_running)
         {
@@ -198,12 +200,12 @@ void PixelcadeDMD::Run()
           {
             uint8_t planes[128 * 32 * 3 / 2];
             if (m_width == 128 && m_height == 32)
-              FrameUtil::SplitIntoRgbPlanes(pFrame, 128 * 32, 128, 16, (uint8_t*)planes);
+              FrameUtil::SplitIntoRgbPlanes(pFrame, 128 * 32, 128, 16, (uint8_t*)planes, colorMatrix);
             else
             {
               uint16_t scaledFrame[128 * 32];
               FrameUtil::ResizeRgb565Bilinear(pFrame, m_width, m_height, scaledFrame, 128, 32);
-              FrameUtil::SplitIntoRgbPlanes(scaledFrame, 128 * 32, 128, 16, (uint8_t*)planes);
+              FrameUtil::SplitIntoRgbPlanes(scaledFrame, 128 * 32, 128, 16, (uint8_t*)planes, colorMatrix);
             }
 
             static uint8_t command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
