@@ -435,15 +435,30 @@ void DMD::FindDisplays()
             if (pConfig->GetZeDMDDevice() != nullptr && pConfig->GetZeDMDDevice()[0] != '\0')
               pZeDMD->SetDevice(pConfig->GetZeDMDDevice());
 
-            if (pZeDMD->Open())
+            bool open = false;
+            if (open = pZeDMD->Open())
+            {
+              if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
+              if (pConfig->IsZeDMDSaveSettings())
+              {
+                if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
+                pZeDMD->SaveSettings();
+                if (pConfig->GetZeDMDRGBOrder() != -1)
+                {
+                  // Setting the RGBOrder requires a reboot.
+                  pZeDMD->Reset();
+                  std::this_thread::sleep_for(std::chrono::seconds(8));
+                  pZeDMD->Close();
+                  std::this_thread::sleep_for(std::chrono::seconds(1));
+                  open = pZeDMD->Open();
+                }
+              }
+            }
+            if (open)
             {
               if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
-              if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
-              if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
-              if (pConfig->IsZeDMDSaveSettings()) pZeDMD->SaveSettings();
               pZeDMD->EnablePreDownscaling();
               pZeDMD->EnablePreUpscaling();
-
               m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
             }
             else
