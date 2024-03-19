@@ -170,36 +170,41 @@ The "paused" connections aren't really paused. Their data is still accepted but 
 
 ```ini
 [DMDServer]
-# The address (interface) to listen for TCP connections
-Addr=localhost
-# The port to listen for TCP connections
-Port=6789
-# Set to 1 if Serum colorization should be used
-AltColor=
-# Overwrite the AltColorPath sent by the client and set it to a fixed value
-AltColorPath=
+# The address (interface) to listen for TCP connections.
+Addr = localhost
+# The port to listen for TCP connections.
+Port = 6789
+# Set to 1 if Serum colorization should be used, 0 if not.
+AltColor = 1
+# Overwrite the AltColorPath sent by the client and set it to a fixed value.
+AltColorPath =
 
 [ZeDMD]
-# Set to 1 if ZeDMD is attached
-Enabled=
-# Disable auto-detection and provide a fixed serial port
-Device=
-# Enable ZeDMD debug mode
-Debug=
-# Overwrite ZeDMD internal RGB order setting
-RGBOrder=
-# Overwrite ZeDMD internal brightness setting
-Brightness=
-# Set to 1 to permantenly store the overwritten settings above in ZeDMD internally
-SaveSettings=
+# Set to 1 if ZeDMD is attached.
+Enabled = 1
+# Disable auto-detection and provide a fixed serial port.
+Device =
+# Set to 1 to enable ZeDMD debug mode.
+Debug = 0
+# Overwrite ZeDMD internal RGB order setting. Valid values are 0-5. -1 disables the setting.
+# The RGB level could be set at any time, but since ZeDMD version 3.6.0, ZeDMD need to be
+# rebooted to apply this the setting. So it is essential to set SaveSettings to 1 if a new
+# RGBOrder should be applied.
+RGBOrder = -1
+# Overwrite ZeDMD internal brightness setting. Valid values are 0-15. -1 disables the setting.
+# The brightness level could be adjust at runtime, SaveSettings set to 1 will save the setting
+# in ZeDMD, too.
+Brightness = -1
+# Set to 1 to permantenly store the overwritten settings above in ZeDMD internally.
+SaveSettings = 0
 
 [Pixelcade]
 # Set to 1 if Pixelcade is attached
-Enabled=
+Enabled = 1
 # Disable auto-detection and provide a fixed serial port
-Device=
-# Set to 0 if rgb, 1 if rbg
-Matrix=0
+Device =
+# Set to 0 if RGB, 1 if RBG.
+Matrix = 0
 ```
 
 ## Building:

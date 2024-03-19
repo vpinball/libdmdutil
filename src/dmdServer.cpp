@@ -212,21 +212,23 @@ int main(int argc, char* argv[])
     if (identifier == 'c')
     {
       inih::INIReader r{cag_option_get_value(&cag_context)};
-      pConfig->SetDMDServerAddr(r.Get<string>("DMDServer", "Addr").c_str());
-      pConfig->SetDMDServerPort(r.Get<int>("DMDServer", "Port"));
-      pConfig->SetAltColor(r.Get<bool>("DMDServer", "AltColor"));
-      pConfig->SetAltColorPath(r.Get<string>("DMDServer", "AltColorPath").c_str());
+      pConfig->SetDMDServerAddr(r.Get<string>("DMDServer", "Addr", "localhost").c_str());
+      pConfig->SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
+      pConfig->SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
+      pConfig->SetAltColorPath(r.Get<string>("DMDServer", "AltColorPath", "").c_str());
       // ZeDMD
-      pConfig->SetZeDMD(r.Get<bool>("ZeDMD", "Enabled"));
-      pConfig->SetZeDMDDevice(r.Get<string>("ZeDMD", "Device").c_str());
-      pConfig->SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug"));
-      pConfig->SetZeDMDRGBOrder(r.Get<int>("ZeDMD", "RGBOrder"));
-      pConfig->SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness"));
-      pConfig->SetZeDMDSaveSettings(r.Get<bool>("DMDServer", "SaveSettings"));
+      pConfig->SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
+      pConfig->SetZeDMDDevice(r.Get<string>("ZeDMD", "Device", "").c_str());
+      pConfig->SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug", false));
+      pConfig->SetZeDMDRGBOrder(r.Get<int>("ZeDMD", "RGBOrder", -1));
+      pConfig->SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness", -1));
+      pConfig->SetZeDMDSaveSettings(r.Get<bool>("ZeDMD", "SaveSettings", false));
       // Pixelcade
-      pConfig->SetPixelcade(r.Get<bool>("Pixelcade", "Enabled"));
-      pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device").c_str());
-      pConfig->SetPixelcadeMatrix(r.Get<int>("Pixelcade", "Matrix"));
+      pConfig->SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
+      pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device", "").c_str());
+      pConfig->SetPixelcadeMatrix(r.Get<int>("Pixelcade", "Matrix", -1));
+
+      if (opt_verbose) DMDUtil::Log("Loaded config file");
     }
     else if (identifier == 'o')
     {
