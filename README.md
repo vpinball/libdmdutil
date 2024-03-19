@@ -174,7 +174,7 @@ The "paused" connections aren't really paused. Their data is still accepted but 
 Addr = localhost
 # The port to listen for TCP connections.
 Port = 6789
-# Set to 1 if Serum colorization should be used, 0 isf not.
+# Set to 1 if Serum colorization should be used, 0 if not.
 AltColor = 1
 # Overwrite the AltColorPath sent by the client and set it to a fixed value.
 AltColorPath =
