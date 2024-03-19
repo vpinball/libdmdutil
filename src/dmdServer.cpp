@@ -181,8 +181,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   }
 
   // Display a buffered frame or clear the display on disconnect of the current thread.
-  if (threadId == currentThreadId && !pDmd->QueueBuffer())
+  if (threadId == currentThreadId && !pStreamHeader->buffered && !pDmd->QueueBuffer())
   {
+    if (opt_verbose) DMDUtil::Log("Clear screen");
     // Clear the DMD by sending a black screen.
     // Fixed dimension of 128x32 should be OK for all devices.
     memset(buffer, 0, sizeof(DMDUtil::DMD::Update));
