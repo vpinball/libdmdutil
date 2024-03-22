@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -18,8 +19,9 @@ using namespace std;
 
 DMDUtil::DMD* pDmd;
 uint32_t currentThreadId = 0;
+mutex threadMutex;
 bool disconnectOtherClients = false;
-std::vector<uint32_t> threads;
+vector<uint32_t> threads;
 bool opt_verbose = false;
 bool opt_fixedAltColorPath = false;
 
@@ -74,10 +76,17 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   uint8_t buffer[sizeof(DMDUtil::DMD::Update)];
   DMDUtil::DMD::StreamHeader* pStreamHeader = (DMDUtil::DMD::StreamHeader*)malloc(sizeof(DMDUtil::DMD::StreamHeader));
   ssize_t n;
+  // Disconnect others is only allowed once per client.
+  bool handleDisconnectOthers = true;
 
-  while ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader))) > 0 &&
-         (!disconnectOtherClients || threadId == currentThreadId))
+  if (opt_verbose) DMDUtil::Log("New DMD client %d connected", threadId);
+
+  while (threadId == currentThreadId || !disconnectOtherClients)
   {
+    n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader));
+    // If the client disconnects or if a network error ocurres, exit the loop and terminate this thread.
+    if (n <= 0) break;
+
     if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
       // At the moment the server only listens on localhost.
@@ -93,10 +102,11 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
         }
 
         // Only the current (most recent) thread is allowed to disconnect other clients.
-        if (threadId == currentThreadId && pStreamHeader->disconnectOthers)
+        if (handleDisconnectOthers && threadId == currentThreadId && pStreamHeader->disconnectOthers)
         {
-          if (opt_verbose) DMDUtil::Log("Other clients will be disconnected");
           disconnectOtherClients = true;
+          handleDisconnectOthers = false;
+          if (opt_verbose) DMDUtil::Log("Other clients will be disconnected");
         }
 
         switch (pStreamHeader->mode)
@@ -173,7 +183,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             break;
         }
       }
-      else
+      else if (threadId == currentThreadId)
       {
         DMDUtil::Log("Received unknown TCP package");
       }
@@ -190,9 +200,13 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
     pDmd->UpdateRGB24Data(buffer, 128, 32);
   }
 
+  threadMutex.lock();
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
   currentThreadId = (threads.size() >= 1) ? threads.back() : 0;
   if (threads.size() <= 1) disconnectOtherClients = false;
+  threadMutex.unlock();
+
+  if (opt_verbose) DMDUtil::Log("DMD client %d disconnected", threadId);
 
   free(pStreamHeader);
 }
@@ -310,9 +324,10 @@ int main(int argc, char* argv[])
     }
     else
     {
-      if (opt_verbose) DMDUtil::Log("New DMD client connected");
+      threadMutex.lock();
       currentThreadId = ++threadId;
       threads.push_back(currentThreadId);
+      threadMutex.unlock();
       // Create a thread and transfer the new stream to it.
       thread thr(run, std::move(sock), currentThreadId);
       thr.detach();

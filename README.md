@@ -125,7 +125,7 @@ The `buffered` flag set to `1` means that the current data not just gets display
 As soon as some buffered data exists, it will be displayed instead of a black screen if a client disconnects.
 
 The `disconnectOthers` flag set to `1` means that any other client get disconnected except the most recent one.
-But only the most recent one is allowed to set this flag.
+The gets handled only once per connection and only for the most recent one.
 
 ### Notes
 
