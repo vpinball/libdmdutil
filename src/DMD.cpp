@@ -436,7 +436,7 @@ void DMD::FindDisplays()
               pZeDMD->SetDevice(pConfig->GetZeDMDDevice());
 
             bool open = false;
-            if (open = pZeDMD->Open())
+            if ((open = pZeDMD->Open()))
             {
               if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
               if (pConfig->IsZeDMDSaveSettings())
