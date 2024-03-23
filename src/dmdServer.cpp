@@ -79,7 +79,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   // Disconnect others is only allowed once per client.
   bool handleDisconnectOthers = true;
 
-  if (opt_verbose) DMDUtil::Log("New DMD client %d connected", threadId);
+  if (opt_verbose) DMDUtil::Log("%d: New DMD client %d connected", threadId, threadId);
 
   while (threadId == currentThreadId || !disconnectOtherClients)
   {
@@ -96,9 +96,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       {
         if (opt_verbose)
         {
-          DMDUtil::Log("Received DMDStream header version %d for DMD mode %d", pStreamHeader->version,
+          DMDUtil::Log("%d: Received DMDStream header version %d for DMD mode %d", threadId, pStreamHeader->version,
                        pStreamHeader->mode);
-          if (pStreamHeader->buffered) DMDUtil::Log("Next data will be buffered");
+          if (pStreamHeader->buffered) DMDUtil::Log("%d: Next data will be buffered", threadId);
         }
 
         // Only the current (most recent) thread is allowed to disconnect other clients.
@@ -106,7 +106,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
         {
           disconnectOtherClients = true;
           handleDisconnectOthers = false;
-          if (opt_verbose) DMDUtil::Log("Other clients will be disconnected");
+          if (opt_verbose) DMDUtil::Log("%d: Other clients will be disconnected", threadId);
         }
 
         switch (pStreamHeader->mode)
@@ -124,8 +124,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   threadId == currentThreadId)
               {
                 if (opt_verbose)
-                  DMDUtil::Log("Received AltColor header: ROM '%s', AltColorPath '%s'", altColorHeader.name,
-                               altColorHeader.path);
+                  DMDUtil::Log("%d: Received AltColor header: ROM '%s', AltColorPath '%s'", threadId,
+                               altColorHeader.name, altColorHeader.path);
                 DMDUtil::DMD::Update data;
                 memcpy(&data, buffer, n);
 
@@ -138,12 +138,12 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 }
                 else
                 {
-                  DMDUtil::Log("TCP data package is missing or corrupted!");
+                  DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
                 }
               }
               else
               {
-                DMDUtil::Log("AltColor header is missing!");
+                DMDUtil::Log("%d: AltColor header is missing!", threadId);
               }
             }
             break;
@@ -161,7 +161,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             }
             else
             {
-              DMDUtil::Log("TCP data package is missing or corrupted!");
+              DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
             }
             break;
 
@@ -174,7 +174,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             }
             else
             {
-              DMDUtil::Log("TCP data package is missing or corrupted!");
+              DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
             }
             break;
 
@@ -185,7 +185,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       }
       else if (threadId == currentThreadId)
       {
-        DMDUtil::Log("Received unknown TCP package");
+        DMDUtil::Log("%d: Received unknown TCP package", threadId);
       }
     }
   }
@@ -193,7 +193,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   // Display a buffered frame or clear the display on disconnect of the current thread.
   if (threadId == currentThreadId && !pStreamHeader->buffered && !pDmd->QueueBuffer())
   {
-    if (opt_verbose) DMDUtil::Log("Clear screen");
+    if (opt_verbose) DMDUtil::Log("%d: Clear screen on disconnect", threadId);
     // Clear the DMD by sending a black screen.
     // Fixed dimension of 128x32 should be OK for all devices.
     memset(buffer, 0, sizeof(DMDUtil::DMD::Update));
@@ -206,7 +206,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   if (threads.size() <= 1) disconnectOtherClients = false;
   threadMutex.unlock();
 
-  if (opt_verbose) DMDUtil::Log("DMD client %d disconnected", threadId);
+  if (opt_verbose) DMDUtil::Log("%d: DMD client %d disconnected", threadId, threadId);
 
   free(pStreamHeader);
 }
