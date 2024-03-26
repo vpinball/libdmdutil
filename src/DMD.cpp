@@ -503,22 +503,26 @@ void DMD::DmdFrameThread()
 
     if (strcmp(m_romName, name) != 0)
     {
-      if (m_pSerum)
-      {
-        delete (m_pSerum);
-        m_pSerum = nullptr;
-      }
-
       strcpy(name, m_romName);
 
-      if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
-
-      m_pSerum =
-          (Config::GetInstance()->IsAltColor() && name[0] != '\0') ? Serum::Load(m_altColorPath, m_romName) : nullptr;
-      if (m_pSerum)
+      if (Config::GetInstance()->IsAltColor())
       {
-        m_pSerum->SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
-        m_pSerum->SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
+        m_serumMutex.lock();
+        if (m_pSerum)
+        {
+          delete (m_pSerum);
+          m_pSerum = nullptr;
+        }
+
+        if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
+
+        m_pSerum = (name[0] != '\0') ? Serum::Load(m_altColorPath, m_romName) : nullptr;
+        if (m_pSerum)
+        {
+          m_pSerum->SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
+          m_pSerum->SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
+        }
+        m_serumMutex.unlock();
       }
     }
 
@@ -606,20 +610,26 @@ void DMD::ZeDMDThread()
 
             if (m_pSerum)
             {
-              uint8_t rotations[24] = {0};
-              uint32_t triggerID;
-              uint32_t hashcode;
-              int frameID;
-
-              m_pSerum->SetStandardPalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth);
-
-              if (m_pSerum->ColorizeWithMetadata(renderBuffer, width, height, palette, rotations, &triggerID, &hashcode,
-                                                 &frameID))
+              m_serumMutex.lock();
+              //  check again after lock has been acquired. If serum disappeared we skip a frame.
+              if (m_pSerum)
               {
-                m_pZeDMD->RenderColoredGray6(renderBuffer, palette, rotations);
+                uint8_t rotations[24] = {0};
+                uint32_t triggerID;
+                uint32_t hashcode;
+                int frameID;
 
-                // @todo: send DMD PUP Event with triggerID
+                m_pSerum->SetStandardPalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth);
+
+                if (m_pSerum->ColorizeWithMetadata(renderBuffer, width, height, palette, rotations, &triggerID,
+                                                   &hashcode, &frameID))
+                {
+                  m_pZeDMD->RenderColoredGray6(renderBuffer, palette, rotations);
+
+                  // @todo: send DMD PUP Event with triggerID
+                }
               }
+              m_serumMutex.unlock();
             }
             else
             {
@@ -746,9 +756,19 @@ void DMD::PixelcadeDMDThread()
             // attached.
             if (m_pSerum && !m_pZeDMD)
             {
-              update = m_pSerum->Convert((uint8_t*)m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
-                                         m_pUpdateBufferQueue[bufferPosition]->width,
-                                         m_pUpdateBufferQueue[bufferPosition]->height);
+              m_serumMutex.lock();
+              //  check again after lock has been acquired. If serum disappeared we skip a frame.
+              if (m_pSerum)
+              {
+                update = m_pSerum->Convert((uint8_t*)m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
+                                           m_pUpdateBufferQueue[bufferPosition]->width,
+                                           m_pUpdateBufferQueue[bufferPosition]->height);
+              }
+              else
+              {
+                update = false;
+              }
+              m_serumMutex.unlock();
             }
             else
             {
