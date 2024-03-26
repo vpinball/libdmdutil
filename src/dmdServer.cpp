@@ -134,7 +134,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   pDmd->SetRomName(altColorHeader.name);
                   if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(altColorHeader.path);
 
-                  pDmd->QueueUpdate(data, pStreamHeader->buffered == 1);
+                  pDmd->QueueUpdate(data, (pStreamHeader->buffered == 1));
                 }
                 else
                 {
