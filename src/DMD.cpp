@@ -608,28 +608,39 @@ void DMD::ZeDMDThread()
             uint8_t renderBuffer[256 * 64];
             memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, width * height);
 
-            if (m_pSerum)
+            // Checking m_pSerum again after acquiring the lock avoids a rare race condition where DmdFrameThread just
+            // deleted it.
+            if (m_pSerum && m_serumMutex.try_lock() && m_pSerum)
             {
-              m_serumMutex.lock();
-              //  check again after lock has been acquired. If serum disappeared we skip a frame.
-              if (m_pSerum)
+              uint8_t rotations[24] = {0};
+              uint32_t triggerID = 0;
+
+              m_pSerum->SetStandardPalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth);
+
+              // ZeDMD HD?
+              if (m_pZeDMD->GetWidth() == 256)
               {
-                uint8_t rotations[24] = {0};
-                uint32_t triggerID;
+                if (m_pSerum->Convert((uint8_t*)m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
+                                      m_pUpdateBufferQueue[bufferPosition]->width,
+                                      m_pUpdateBufferQueue[bufferPosition]->height, &triggerID))
+                {
+                  m_pZeDMD->RenderColoredGray6(renderBuffer, palette, rotations);
+                }
+              }
+              else
+              {
                 uint32_t hashcode;
                 int frameID;
-
-                m_pSerum->SetStandardPalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth);
 
                 if (m_pSerum->ColorizeWithMetadata(renderBuffer, width, height, palette, rotations, &triggerID,
                                                    &hashcode, &frameID))
                 {
                   m_pZeDMD->RenderColoredGray6(renderBuffer, palette, rotations);
-
-                  // @todo: send DMD PUP Event with triggerID
                 }
               }
               m_serumMutex.unlock();
+
+              if (triggerID > 0) handleTrigger(triggerID);
             }
             else
             {
@@ -754,21 +765,17 @@ void DMD::PixelcadeDMDThread()
           {
             // @todo At the moment libserum only supports one instance. So don't apply colorization if a ZeDMD is
             // attached.
-            if (m_pSerum && !m_pZeDMD)
+            // Checking m_pSerum again after acquiring the lock avoids a rare race condition where DmdFrameThread just
+            // deleted it.
+            if (m_pSerum && !m_pZeDMD && m_serumMutex.try_lock() && m_pSerum)
             {
-              m_serumMutex.lock();
-              //  check again after lock has been acquired. If serum disappeared we skip a frame.
-              if (m_pSerum)
-              {
-                update = m_pSerum->Convert((uint8_t*)m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
-                                           m_pUpdateBufferQueue[bufferPosition]->width,
-                                           m_pUpdateBufferQueue[bufferPosition]->height);
-              }
-              else
-              {
-                update = false;
-              }
+              uint32_t triggerID = 0;
+              update = m_pSerum->Convert((uint8_t*)m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
+                                         m_pUpdateBufferQueue[bufferPosition]->width,
+                                         m_pUpdateBufferQueue[bufferPosition]->height, &triggerID);
               m_serumMutex.unlock();
+
+              if (triggerID > 0) handleTrigger(triggerID);
             }
             else
             {
@@ -914,11 +921,19 @@ void DMD::RGB24DMDThread()
         {
           // @todo At the moment libserum only supports one instance. So don't apply colorization if any hardware DMD is
           // attached.
-          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pSerum && !HasDisplay())
+          // Checking m_pSerum again after acquiring the lock avoids a rare race condition where DmdFrameThread just
+          // deleted it.
+          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pSerum && !HasDisplay() &&
+              m_serumMutex.try_lock() && m_pSerum)
           {
+            uint32_t triggerID = 0;
+
             update = m_pSerum->Convert(m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
                                        m_pUpdateBufferQueue[bufferPosition]->width,
-                                       m_pUpdateBufferQueue[bufferPosition]->height);
+                                       m_pUpdateBufferQueue[bufferPosition]->height, &triggerID);
+            m_serumMutex.unlock();
+
+            if (triggerID > 0) handleTrigger(triggerID);
           }
           else
           {
@@ -1245,6 +1260,11 @@ void DMD::DumpDMDRawThread()
       }
     }
   }
+}
+
+void DMD::handleTrigger(uint32_t id)
+{
+  // @todo
 }
 
 }  // namespace DMDUtil
