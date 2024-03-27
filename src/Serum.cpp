@@ -47,13 +47,12 @@ Serum* Serum::Load(const char* const altColorPath, const char* const romName)
   return new Serum(width, height);
 }
 
-bool Serum::Convert(uint8_t* pFrame, uint8_t* pDstFrame, uint8_t* pDstPalette, uint16_t width, uint16_t height)
+bool Serum::Convert(uint8_t* pFrame, uint8_t* pDstFrame, uint8_t* pDstPalette, uint16_t width, uint16_t height,
+                    uint32_t* triggerID)
 {
   if (pFrame) memcpy(pDstFrame, pFrame, width * height);
 
-  unsigned int triggerId;
-
-  return Serum_ColorizeOrApplyRotations(pDstFrame ? pDstFrame : nullptr, width, height, pDstPalette, &triggerId);
+  return Serum_ColorizeOrApplyRotations(pDstFrame ? pDstFrame : nullptr, width, height, pDstPalette, triggerID);
 };
 
 void Serum::SetStandardPalette(const uint8_t* palette, const int bitDepth)
