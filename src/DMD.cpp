@@ -1320,26 +1320,26 @@ void DMD::PupDMDThread()
             }
           }
         }
+      }
 
-        // @todo scaling/centering 128x16 and 192x64 or check how PUP deals with it.
-        if (m_pPupDMD && m_pUpdateBufferQueue[bufferPosition]->width == 128 &&
-            m_pUpdateBufferQueue[bufferPosition]->height == 32 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
-            m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
+      // @todo scaling/centering 128x16 and 192x64 or check how PUP deals with it.
+      if (m_pPupDMD && m_pUpdateBufferQueue[bufferPosition]->width == 128 &&
+          m_pUpdateBufferQueue[bufferPosition]->height == 32 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
+          m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
+      {
+        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+        UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
+                      m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
+
+        uint8_t frame[128 * 32 * 3];
+        for (int i = 0; i < length; i++)
         {
-          int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
-          UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
-                        m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
-
-          uint8_t frame[128 * 32 * 3];
-          for (int i = 0; i < length; i++)
-          {
-            int pos = m_pUpdateBufferQueue[bufferPosition]->data[i] * 3;
-            memcpy(&frame[i * 3], &palette[pos], 3);
-          }
-          uint16_t triggerID = m_pPupDMD->Match(frame, Config::GetInstance()->IsPupExactColorMatch());
-
-          if (triggerID > 0) handleTrigger(triggerID);
+          int pos = m_pUpdateBufferQueue[bufferPosition]->data[i] * 3;
+          memcpy(&frame[i * 3], &palette[pos], 3);
         }
+        uint16_t triggerID = m_pPupDMD->Match(frame, Config::GetInstance()->IsPupExactColorMatch());
+
+        if (triggerID > 0) handleTrigger(triggerID);
       }
     }
   }
