@@ -97,9 +97,9 @@ cd ..
 # build libpupdmd and copy to external
 #
 
-curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUDMD_SHA}.zip -o libpupdmd.zip
+curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.zip -o libpupdmd.zip
 unzip libpupdmd.zip
-cd libpupdmd-$LIBPUDMD_SHA
+cd libpupdmd-$LIBPUPDMD_SHA
 cp src/pupdmd.h ../../third-party/include/
 cmake -DPLATFORM=macos -DARCH=arm64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
