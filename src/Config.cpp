@@ -16,6 +16,9 @@ Config::Config()
 {
   m_altColor = true;
   m_altColorPath.clear();
+  m_pup = true;
+  m_pupPath.clear();
+  m_pupExactColorMatch = false;
   m_framesTimeout = 0;
   m_framesToSkip = 0;
   m_zedmd = true;

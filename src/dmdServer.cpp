@@ -24,6 +24,7 @@ bool disconnectOtherClients = false;
 vector<uint32_t> threads;
 bool opt_verbose = false;
 bool opt_fixedAltColorPath = false;
+bool opt_fixedPupPath = false;
 
 static struct cag_option options[] = {
     {.identifier = 'c',
@@ -36,6 +37,11 @@ static struct cag_option options[] = {
      .access_name = "alt-color-path",
      .value_name = "VALUE",
      .description = "Fixed alt color path, overwriting paths transmitted by DMDUpdates (optional)"},
+    {.identifier = 'u',
+     .access_letters = "u",
+     .access_name = "pup-path",
+     .value_name = "VALUE",
+     .description = "Fixed pup path, overwriting paths transmitted by DMDUpdates (optional)"},
     {.identifier = 'a',
      .access_letters = "a",
      .access_name = "addr",
@@ -112,27 +118,28 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
         switch (pStreamHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
-            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::AltColorHeader))) ==
-                    sizeof(DMDUtil::DMD::AltColorHeader) &&
+            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::PathsHeader))) ==
+                    sizeof(DMDUtil::DMD::PathsHeader) &&
                 threadId == currentThreadId)
             {
-              DMDUtil::DMD::AltColorHeader altColorHeader;
-              memcpy(&altColorHeader, buffer, n);
+              DMDUtil::DMD::PathsHeader pathsHeader;
+              memcpy(&pathsHeader, buffer, n);
 
-              if (strcmp(altColorHeader.header, "AltColor") == 0 &&
+              if (strcmp(pathsHeader.header, "Paths") == 0 &&
                   (n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
                   threadId == currentThreadId)
               {
                 if (opt_verbose)
-                  DMDUtil::Log("%d: Received AltColor header: ROM '%s', AltColorPath '%s'", threadId,
-                               altColorHeader.name, altColorHeader.path);
+                  DMDUtil::Log("%d: Received AltColor header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
+                               pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupPath);
                 DMDUtil::DMD::Update data;
                 memcpy(&data, buffer, n);
 
                 if (data.width <= DMDSERVER_MAX_WIDTH && data.height <= DMDSERVER_MAX_HEIGHT)
                 {
-                  pDmd->SetRomName(altColorHeader.name);
-                  if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(altColorHeader.path);
+                  pDmd->SetRomName(pathsHeader.name);
+                  if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(pathsHeader.altColorPath);
+                  if (!opt_fixedPupPath) pDmd->SetPupPath(pathsHeader.pupPath);
 
                   pDmd->QueueUpdate(data, (pStreamHeader->buffered == 1));
                 }
@@ -231,6 +238,9 @@ int main(int argc, char* argv[])
       pConfig->SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
       pConfig->SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
       pConfig->SetAltColorPath(r.Get<string>("DMDServer", "AltColorPath", "").c_str());
+      pConfig->SetPup(r.Get<bool>("DMDServer", "Pup", true));
+      pConfig->SetPupPath(r.Get<string>("DMDServer", "PupPath", "").c_str());
+      pConfig->SetPupExactColorMatch(r.Get<bool>("DMDServer", "PupExactColorMatch", false));
       // ZeDMD
       pConfig->SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
       pConfig->SetZeDMDDevice(r.Get<string>("ZeDMD", "Device", "").c_str());
@@ -248,6 +258,10 @@ int main(int argc, char* argv[])
     else if (identifier == 'o')
     {
       pConfig->SetAltColorPath(cag_option_get_value(&cag_context));
+    }
+    else if (identifier == 'u')
+    {
+      pConfig->SetPupPath(cag_option_get_value(&cag_context));
     }
     else if (identifier == 'a')
     {

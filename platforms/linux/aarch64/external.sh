@@ -6,6 +6,7 @@ CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
 LIBZEDMD_SHA=42d95ed6f1fe2065ecbd247502d177d7e5eb7e4c
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
 SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
+LIBPUPDMD_SHA=63cae52ccae975fb509f7f992a5503be43b08456
 
 NUM_PROCS=$(nproc)
 
@@ -14,6 +15,7 @@ echo "  CARGS_SHA: ${CARGS_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  SOCKPP_SHA: ${SOCKPP_SHA}"
+echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
 echo ""
 
 if [ -z "${BUILD_TYPE}" ]; then
@@ -85,4 +87,17 @@ cp -r include/sockpp ../../third-party/include/
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
 cmake --build build -- -j${NUM_PROCS}
 cp -a build/libsockpp.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
+cd ..
+
+#
+# build libpupdmd and copy to external
+#
+
+curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.zip -o libpupdmd.zip
+unzip libpupdmd.zip
+cd libpupdmd-$LIBPUPDMD_SHA
+cp src/pupdmd.h ../../third-party/include/
+cmake -DPLATFORM=linux -DARCH=aarch64 -DBUILD_SHARED=ON -DBUILD_STATIC=OFF -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake --build build -- -j${NUM_PROCS}
+cp -a build/libpupdmd.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
