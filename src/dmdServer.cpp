@@ -39,9 +39,9 @@ static struct cag_option options[] = {
      .description = "Fixed alt color path, overwriting paths transmitted by DMDUpdates (optional)"},
     {.identifier = 'u',
      .access_letters = "u",
-     .access_name = "pup-path",
+     .access_name = "pup-videos-path",
      .value_name = "VALUE",
-     .description = "Fixed pup path, overwriting paths transmitted by DMDUpdates (optional)"},
+     .description = "Fixed PupVideos path, overwriting paths transmitted by DMDUpdates (optional)"},
     {.identifier = 'a',
      .access_letters = "a",
      .access_name = "addr",
@@ -118,8 +118,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
         switch (pStreamHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
-            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::PathsHeader))) ==
-                    sizeof(DMDUtil::DMD::PathsHeader) &&
+            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::PathsHeader))) == sizeof(DMDUtil::DMD::PathsHeader) &&
                 threadId == currentThreadId)
             {
               DMDUtil::DMD::PathsHeader pathsHeader;
@@ -131,7 +130,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
               {
                 if (opt_verbose)
                   DMDUtil::Log("%d: Received AltColor header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
-                               pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupPath);
+                               pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
                 DMDUtil::DMD::Update data;
                 memcpy(&data, buffer, n);
 
@@ -139,7 +138,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 {
                   pDmd->SetRomName(pathsHeader.name);
                   if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(pathsHeader.altColorPath);
-                  if (!opt_fixedPupPath) pDmd->SetPupPath(pathsHeader.pupPath);
+                  if (!opt_fixedPupPath) pDmd->SetPUPVideosPath(pathsHeader.pupVideosPath);
 
                   pDmd->QueueUpdate(data, (pStreamHeader->buffered == 1));
                 }
@@ -238,9 +237,9 @@ int main(int argc, char* argv[])
       pConfig->SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
       pConfig->SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
       pConfig->SetAltColorPath(r.Get<string>("DMDServer", "AltColorPath", "").c_str());
-      pConfig->SetPup(r.Get<bool>("DMDServer", "Pup", true));
-      pConfig->SetPupPath(r.Get<string>("DMDServer", "PupPath", "").c_str());
-      pConfig->SetPupExactColorMatch(r.Get<bool>("DMDServer", "PupExactColorMatch", false));
+      pConfig->SetPUPCapture(r.Get<bool>("DMDServer", "PUPCapture", false));
+      pConfig->SetPUPVideosPath(r.Get<string>("DMDServer", "PUPVideosPath", "").c_str());
+      pConfig->SetPUPExactColorMatch(r.Get<bool>("DMDServer", "PUPExactColorMatch", false));
       // ZeDMD
       pConfig->SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
       pConfig->SetZeDMDDevice(r.Get<string>("ZeDMD", "Device", "").c_str());
@@ -261,7 +260,7 @@ int main(int argc, char* argv[])
     }
     else if (identifier == 'u')
     {
-      pConfig->SetPupPath(cag_option_get_value(&cag_context));
+      pConfig->SetPUPVideosPath(cag_option_get_value(&cag_context));
     }
     else if (identifier == 'a')
     {

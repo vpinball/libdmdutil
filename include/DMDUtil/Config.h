@@ -24,12 +24,12 @@ class DMDUTILAPI Config
   void SetAltColor(bool altColor) { m_altColor = altColor; }
   void SetAltColorPath(const char* path) { m_altColorPath = path; }
   const char* GetAltColorPath() const { return m_altColorPath.c_str(); }
-  bool IsPup() const { return m_pup; }
-  void SetPup(bool pup) { m_pup = pup; }
-  void SetPupPath(const char* path) { m_pupPath = path; }
-  const char* GetPupPath() const { return m_pupPath.c_str(); }
-  bool IsPupExactColorMatch() const { return m_pupExactColorMatch; }
-  void SetPupExactColorMatch(bool exactColorMatch) { m_pupExactColorMatch = exactColorMatch; }
+  bool IsPUPCapture() const { return m_pupCapture; }
+  void SetPUPCapture(bool pupCapture) { m_pupCapture = pupCapture; }
+  void SetPUPVideosPath(const char* path) { m_pupVideosPath = path; }
+  const char* GetPUPVideosPath() const { return m_pupVideosPath.c_str(); }
+  bool IsPUPExactColorMatch() const { return m_pupExactColorMatch; }
+  void SetPUPExactColorMatch(bool exactColorMatch) { m_pupExactColorMatch = exactColorMatch; }
   void SetIgnoreUnknownFramesTimeout(int framesTimeout) { m_framesTimeout = framesTimeout; }
   void SetMaximumUnknownFramesToSkip(int framesToSkip) { m_framesToSkip = framesToSkip; }
   int GetIgnoreUnknownFramesTimeout() { return m_framesTimeout; }
@@ -68,8 +68,8 @@ class DMDUTILAPI Config
   static Config* m_pInstance;
   bool m_altColor;
   std::string m_altColorPath;
-  bool m_pup;
-  std::string m_pupPath;
+  bool m_pupCapture;
+  std::string m_pupVideosPath;
   bool m_pupExactColorMatch;
   int m_framesTimeout;
   int m_framesToSkip;
