@@ -37,13 +37,13 @@ cd external
 curl -sL https://github.com/likle/cargs/archive/${CARGS_SHA}.zip -o cargs.zip
 unzip cargs.zip
 cd cargs-${CARGS_SHA}
+cmake \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
+cmake --build build -- -j${NUM_PROCS}
 cp include/cargs.h ../../third-party/include/
-mkdir build
-cd build
-cmake ..
-make
-cp libcargs.a ../../../third-party/build-libs/ios/arm64/
-cd ../..
+cp build/*.a ../../third-party/build-libs/ios/arm64/
+cd ..
 
 #
 # build libzedmd and copy to external
@@ -52,10 +52,16 @@ cd ../..
 curl -sL https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.zip -o libzedmd.zip
 unzip libzedmd.zip
 cd libzedmd-$LIBZEDMD_SHA
-cp src/ZeDMD.h ../../third-party/include/
 platforms/ios/arm64/external.sh
-cmake -DPLATFORM=ios -DARCH=arm64 -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake \
+   -DPLATFORM=ios \
+   -DARCH=arm64 \
+   -DBUILD_SHARED=OFF \
+   -DBUILD_STATIC=ON \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
 cmake --build build -- -j${NUM_PROCS}
+cp src/ZeDMD.h ../../third-party/include/
 cp build/libzedmd.a ../../third-party/build-libs/ios/arm64/
 cp -r test ../../
 cd ..
@@ -67,9 +73,15 @@ cd ..
 curl -sL https://github.com/zesinger/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
 unzip libserum.zip
 cd libserum-$LIBSERUM_SHA
-cp src/serum-decode.h ../../third-party/include/
-cmake -DPLATFORM=ios -DARCH=arm64 -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake \
+   -DPLATFORM=ios \
+   -DARCH=arm64 \
+   -DBUILD_SHARED=OFF \
+   -DBUILD_STATIC=ON \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
 cmake --build build -- -j${NUM_PROCS}
+cp src/serum-decode.h ../../third-party/include/
 cp build/libserum.a ../../third-party/build-libs/ios/arm64/
 cd ..
 
@@ -80,8 +92,8 @@ cd ..
 curl -sL https://github.com/fpagliughi/sockpp/archive/${SOCKPP_SHA}.zip -o sockpp.zip
 unzip sockpp.zip
 cd sockpp-$SOCKPP_SHA
-cp -r include/sockpp ../../third-party/include/
-cmake -DSOCKPP_BUILD_SHARED=OFF \
+cmake \
+   -DSOCKPP_BUILD_SHARED=OFF \
    -DSOCKPP_BUILD_STATIC=ON \
    -DCMAKE_SYSTEM_NAME=iOS \
    -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
@@ -89,6 +101,7 @@ cmake -DSOCKPP_BUILD_SHARED=OFF \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
+cp -r include/sockpp ../../third-party/include/
 cp build/libsockpp.a ../../third-party/build-libs/ios/arm64/
 cd ..
 
@@ -99,8 +112,14 @@ cd ..
 curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.zip -o libpupdmd.zip
 unzip libpupdmd.zip
 cd libpupdmd-$LIBPUPDMD_SHA
-cp src/pupdmd.h ../../third-party/include/
-cmake -DPLATFORM=ios -DARCH=arm64 -DBUILD_SHARED=OFF -DBUILD_STATIC=ON -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -B build
+cmake \
+   -DPLATFORM=ios \
+   -DARCH=arm64 \
+   -DBUILD_SHARED=OFF \
+   -DBUILD_STATIC=ON \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
 cmake --build build -- -j${NUM_PROCS}
+cp src/pupdmd.h ../../third-party/include/
 cp build/libpupdmd.a ../../third-party/build-libs/ios/arm64/
 cd ..
