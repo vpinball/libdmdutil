@@ -642,7 +642,7 @@ void DMD::ZeDMDThread()
               // ZeDMD HD?
               if (m_pZeDMD->GetWidth() == 256)
               {
-                if (m_pSerum->Convert((uint8_t*)m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
+                if (m_pSerum->Convert(m_pUpdateBufferQueue[bufferPosition]->data, renderBuffer, palette,
                                       m_pUpdateBufferQueue[bufferPosition]->width,
                                       m_pUpdateBufferQueue[bufferPosition]->height, &triggerID))
                 {
@@ -1287,6 +1287,7 @@ void DMD::DumpDMDRawThread()
 void DMD::PupDMDThread()
 {
   int bufferPosition = 0;
+  uint8_t renderBuffer[256 * 64] = {0};
   uint8_t palette[192] = {0};
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
 
@@ -1336,27 +1337,33 @@ void DMD::PupDMDThread()
           m_pUpdateBufferQueue[bufferPosition]->height == 32 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
           m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->depth != 24)
       {
-        uint16_t triggerID = 0;
-        if (Config::GetInstance()->IsPupExactColorMatch())
+        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+        if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length) != 0)
         {
-          int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
-          UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
-                        m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
+          memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
 
-          uint8_t frame[128 * 32 * 3];
-          for (int i = 0; i < length; i++)
+          uint16_t triggerID = 0;
+          if (Config::GetInstance()->IsPupExactColorMatch())
           {
-            int pos = m_pUpdateBufferQueue[bufferPosition]->data[i] * 3;
-            memcpy(&frame[i * 3], &palette[pos], 3);
-          }
-          triggerID = m_pPupDMD->Match(frame, true);
-        }
-        else
-        {
-          triggerID = m_pPupDMD->MatchIndexed(m_pUpdateBufferQueue[bufferPosition]->data);
-        }
+            UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
+                          m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
 
-        if (triggerID > 0) handleTrigger(triggerID);
+            uint8_t* pFrame = (uint8_t*)malloc(length * 3);
+            for (uint16_t i = 0; i < length; i++)
+            {
+              uint16_t pos = renderBuffer[i] * 3;
+              memcpy(&pFrame[i * 3], &palette[pos], 3);
+            }
+            triggerID = m_pPupDMD->Match(pFrame, true);
+            free(pFrame);
+          }
+          else
+          {
+            triggerID = m_pPupDMD->MatchIndexed(renderBuffer);
+          }
+
+          if (triggerID > 0) handleTrigger(triggerID);
+        }
       }
     }
   }
