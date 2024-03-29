@@ -96,30 +96,30 @@ if(BUILD_SHARED)
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
       if(ARCH STREQUAL "x64")
-         target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 libserialport64 sockpp64 ws2_32)
+         target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 libserialport64 sockpp64 pupdmd64 ws2_32)
       else()
-        target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum libserialport sockpp ws2_32)
+        target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum libserialport sockpp pupdmd ws2_32)
       endif()
    elseif(PLATFORM STREQUAL "macos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp pupdmd)
    elseif(PLATFORM STREQUAL "linux")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp pupdmd)
    elseif(PLATFORM STREQUAL "ios" OR PLATFORM STREQUAL "tvos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp pupdmd)
    elseif(PLATFORM STREQUAL "android")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp pupdmd)
    endif()
 
    if(PLATFORM STREQUAL "win" AND ARCH STREQUAL "x64")
@@ -169,6 +169,8 @@ if(BUILD_SHARED)
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport64.dll" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/sockpp64.lib" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/sockpp64.dll" "$<TARGET_FILE_DIR:dmdserver>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/pupdmd64.lib" "$<TARGET_FILE_DIR:dmdserver>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/pupdmd64.dll" "$<TARGET_FILE_DIR:dmdserver>"
                )
             else()
                add_custom_command(TARGET dmdserver POST_BUILD
@@ -182,6 +184,8 @@ if(BUILD_SHARED)
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.dll" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/sockpp.lib" "$<TARGET_FILE_DIR:dmdserver>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/sockpp.dll" "$<TARGET_FILE_DIR:dmdserver>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/pupdmd.lib" "$<TARGET_FILE_DIR:dmdserver>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/pupdmd.dll" "$<TARGET_FILE_DIR:dmdserver>"
                )
             endif()
          elseif(PLATFORM STREQUAL "macos")
@@ -229,20 +233,20 @@ if(BUILD_STATIC)
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
          if(ARCH STREQUAL "x64")
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 libserialport64 sockpp64 ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 libserialport64 sockpp64 pupdmd64 ws2_32)
          else()
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum libserialport sockpp ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum libserialport sockpp pupdmd ws2_32)
          endif()
       elseif(PLATFORM STREQUAL "macos")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp pupdmd)
       elseif(PLATFORM STREQUAL "linux")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp pupdmd)
       endif()
 
       if(POST_BUILD_COPY_EXT_LIBS)
@@ -259,6 +263,8 @@ if(BUILD_STATIC)
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport64.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/sockpp64.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/sockpp64.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/pupdmd64.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/pupdmd64.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                )
             else()
                add_custom_command(TARGET dmdutil_test_s POST_BUILD
@@ -272,6 +278,8 @@ if(BUILD_STATIC)
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/sockpp.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                   COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/sockpp.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/pupdmd.lib" "$<TARGET_FILE_DIR:dmdutil_test_s>"
+                  COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/pupdmd.dll" "$<TARGET_FILE_DIR:dmdutil_test_s>"
                )
             endif()
          elseif(PLATFORM STREQUAL "macos")

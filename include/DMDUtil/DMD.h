@@ -29,6 +29,10 @@
 #endif
 
 class ZeDMD;
+namespace PUPDMD
+{
+class DMD;
+}
 
 namespace DMDUtil
 {
@@ -107,11 +111,12 @@ class DMDUTILAPI DMD
     uint32_t length = 0;
   };
 
-  struct AltColorHeader
+  struct PathsHeader
   {
-    char header[9] = "AltColor";
+    char header[6] = "Paths";
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-    char path[DMDUTIL_MAX_PATH_SIZE] = {0};
+    char altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
+    char pupPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   };
 #pragma pack(pop)  // Reset to default packing
 
@@ -121,6 +126,7 @@ class DMDUTILAPI DMD
   bool HasHDDisplay() const;
   void SetRomName(const char* name);
   void SetAltColorPath(const char* path);
+  void SetPupPath(const char* path);
   void DumpDMDTxt();
   void DumpDMDRaw();
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
@@ -149,7 +155,7 @@ class DMDUTILAPI DMD
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   Mode mode, bool buffered = false);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
-  void handleTrigger(uint32_t id);
+  void handleTrigger(uint16_t id);
 
   void DmdFrameThread();
   void LevelDMDThread();
@@ -158,13 +164,16 @@ class DMDUTILAPI DMD
   void ZeDMDThread();
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
+  void PupDMDThread();
 
   uint8_t m_updateBufferQueuePosition = 0;
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
+  char m_pupPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   Serum* m_pSerum;
   ZeDMD* m_pZeDMD;
+  PUPDMD::DMD* m_pPupDMD;
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;
@@ -177,6 +186,7 @@ class DMDUTILAPI DMD
   std::thread* m_pDmdFrameThread;
   std::thread* m_pDumpDMDTxtThread;
   std::thread* m_pDumpDMDRawThread;
+  std::thread* m_pPupDMDThread;
   std::shared_mutex m_dmdSharedMutex;
   std::condition_variable_any m_dmdCV;
   std::mutex m_serumMutex;
