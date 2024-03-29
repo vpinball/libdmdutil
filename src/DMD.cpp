@@ -25,6 +25,14 @@
 namespace DMDUtil
 {
 
+void PUPDMDCALLBACK PUPDMDLogCallback(const char* format, va_list args, const void* pUserData)
+{
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+
+  Log("%s", buffer);
+}
+
 void ZEDMDCALLBACK ZeDMDLogCallback(const char* format, va_list args, const void* pUserData)
 {
   char buffer[1024];
@@ -1312,6 +1320,7 @@ void DMD::PupDMDThread()
           {
             if (m_pupPath[0] == '\0') strcpy(m_pupPath, Config::GetInstance()->GetPupPath());
             m_pPupDMD = new PUPDMD::DMD();
+            m_pPupDMD->SetLogCallback(PUPDMDLogCallback, nullptr);
 
             if (!m_pPupDMD->Load(m_pupPath, m_romName))
             {
