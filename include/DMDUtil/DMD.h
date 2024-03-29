@@ -116,7 +116,7 @@ class DMDUTILAPI DMD
     char header[6] = "Paths";
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
     char altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
-    char pupPath[DMDUTIL_MAX_PATH_SIZE] = {0};
+    char pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   };
 #pragma pack(pop)  // Reset to default packing
 
@@ -126,7 +126,7 @@ class DMDUTILAPI DMD
   bool HasHDDisplay() const;
   void SetRomName(const char* name);
   void SetAltColorPath(const char* path);
-  void SetPupPath(const char* path);
+  void SetPUPVideosPath(const char* path);
   void DumpDMDTxt();
   void DumpDMDRaw();
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
@@ -169,11 +169,11 @@ class DMDUTILAPI DMD
   uint8_t m_updateBufferQueuePosition = 0;
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
-  char m_pupPath[DMDUTIL_MAX_PATH_SIZE] = {0};
+  char m_pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   Serum* m_pSerum;
   ZeDMD* m_pZeDMD;
-  PUPDMD::DMD* m_pPupDMD;
+  PUPDMD::DMD* m_pPUPDMD;
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;

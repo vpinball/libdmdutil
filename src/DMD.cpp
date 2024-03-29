@@ -52,7 +52,7 @@ DMD::DMD()
   m_pAlphaNumeric = new AlphaNumeric();
   m_pSerum = nullptr;
   m_pZeDMD = nullptr;
-  m_pPupDMD = nullptr;
+  m_pPUPDMD = nullptr;
   m_pZeDMDThread = nullptr;
   m_pLevelDMDThread = nullptr;
   m_pRGB24DMDThread = nullptr;
@@ -144,7 +144,7 @@ DMD::~DMD()
   delete m_pAlphaNumeric;
   delete m_pSerum;
   delete m_pZeDMD;
-  delete m_pPupDMD;
+  delete m_pPUPDMD;
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -199,7 +199,7 @@ void DMD::SetRomName(const char* name) { strcpy(m_romName, name ? name : ""); }
 
 void DMD::SetAltColorPath(const char* path) { strcpy(m_altColorPath, path ? path : ""); }
 
-void DMD::SetPupPath(const char* path) { strcpy(m_pupPath, path ? path : ""); }
+void DMD::SetPUPVideosPath(const char* path) { strcpy(m_pupVideosPath, path ? path : ""); }
 
 void DMD::DumpDMDTxt() { m_pDumpDMDTxtThread = new std::thread(&DMD::DumpDMDTxtThread, this); }
 
@@ -337,7 +337,7 @@ void DMD::QueueUpdate(Update dmdUpdate, bool buffered)
           PathsHeader pathsHeader;
           strcpy(pathsHeader.name, m_romName);
           strcpy(pathsHeader.altColorPath, m_altColorPath);
-          strcpy(pathsHeader.pupPath, m_pupPath);
+          strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
           m_pDMDServerConnector->write_n(&pathsHeader, sizeof(PathsHeader));
           m_pDMDServerConnector->write_n(&dmdUpdate, sizeof(Update));
         }
@@ -1309,31 +1309,31 @@ void DMD::PupDMDThread()
       {
         strcpy(name, m_romName);
 
-        if (Config::GetInstance()->IsPup())
+        if (Config::GetInstance()->IsPUPCapture())
         {
-          if (m_pPupDMD)
+          if (m_pPUPDMD)
           {
-            delete (m_pPupDMD);
-            m_pPupDMD = nullptr;
+            delete (m_pPUPDMD);
+            m_pPUPDMD = nullptr;
           }
 
           if (name[0] != '\0')
           {
-            if (m_pupPath[0] == '\0') strcpy(m_pupPath, Config::GetInstance()->GetPupPath());
-            m_pPupDMD = new PUPDMD::DMD();
-            m_pPupDMD->SetLogCallback(PUPDMDLogCallback, nullptr);
+            if (m_pupVideosPath[0] == '\0') strcpy(m_pupVideosPath, Config::GetInstance()->GetPUPVideosPath());
+            m_pPUPDMD = new PUPDMD::DMD();
+            m_pPUPDMD->SetLogCallback(PUPDMDLogCallback, nullptr);
 
-            if (!m_pPupDMD->Load(m_pupPath, m_romName))
+            if (!m_pPUPDMD->Load(m_pupVideosPath, m_romName))
             {
-              delete (m_pPupDMD);
-              m_pPupDMD = nullptr;
+              delete (m_pPUPDMD);
+              m_pPUPDMD = nullptr;
             }
           }
         }
       }
 
       // @todo scaling/centering 128x16 and 192x64 or check how PUP deals with it.
-      if (m_pPupDMD && m_pUpdateBufferQueue[bufferPosition]->width == 128 &&
+      if (m_pPUPDMD && m_pUpdateBufferQueue[bufferPosition]->width == 128 &&
           m_pUpdateBufferQueue[bufferPosition]->height == 32 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
           m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->depth != 24)
       {
@@ -1343,7 +1343,7 @@ void DMD::PupDMDThread()
           memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
 
           uint16_t triggerID = 0;
-          if (Config::GetInstance()->IsPupExactColorMatch())
+          if (Config::GetInstance()->IsPUPExactColorMatch())
           {
             UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
                           m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
@@ -1354,12 +1354,12 @@ void DMD::PupDMDThread()
               uint16_t pos = renderBuffer[i] * 3;
               memcpy(&pFrame[i * 3], &palette[pos], 3);
             }
-            triggerID = m_pPupDMD->Match(pFrame, true);
+            triggerID = m_pPUPDMD->Match(pFrame, true);
             free(pFrame);
           }
           else
           {
-            triggerID = m_pPupDMD->MatchIndexed(renderBuffer);
+            triggerID = m_pPUPDMD->MatchIndexed(renderBuffer);
           }
 
           if (triggerID > 0) handleTrigger(triggerID);
@@ -1371,7 +1371,7 @@ void DMD::PupDMDThread()
 
 void DMD::handleTrigger(uint16_t id)
 {
-  Log("PUP Trigger D%d\n", id);
+  Log("PUP Trigger D%d", id);
   // @todo
 }
 
