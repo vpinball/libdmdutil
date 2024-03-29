@@ -44,13 +44,13 @@ DMD::DMD()
   m_pAlphaNumeric = new AlphaNumeric();
   m_pSerum = nullptr;
   m_pZeDMD = nullptr;
+  m_pPupDMD = nullptr;
   m_pZeDMDThread = nullptr;
   m_pLevelDMDThread = nullptr;
   m_pRGB24DMDThread = nullptr;
   m_pConsoleDMDThread = nullptr;
   m_pDumpDMDTxtThread = nullptr;
   m_pDumpDMDRawThread = nullptr;
-  m_pPupDMDThread = nullptr;
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -1325,19 +1325,27 @@ void DMD::PupDMDThread()
       // @todo scaling/centering 128x16 and 192x64 or check how PUP deals with it.
       if (m_pPupDMD && m_pUpdateBufferQueue[bufferPosition]->width == 128 &&
           m_pUpdateBufferQueue[bufferPosition]->height == 32 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
-          m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
+          m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->depth != 24)
       {
-        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
-        UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
-                      m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
-
-        uint8_t frame[128 * 32 * 3];
-        for (int i = 0; i < length; i++)
+        uint16_t triggerID = 0;
+        if (Config::GetInstance()->IsPupExactColorMatch())
         {
-          int pos = m_pUpdateBufferQueue[bufferPosition]->data[i] * 3;
-          memcpy(&frame[i * 3], &palette[pos], 3);
+          int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+          UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
+                        m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
+
+          uint8_t frame[128 * 32 * 3];
+          for (int i = 0; i < length; i++)
+          {
+            int pos = m_pUpdateBufferQueue[bufferPosition]->data[i] * 3;
+            memcpy(&frame[i * 3], &palette[pos], 3);
+          }
+          triggerID = m_pPupDMD->Match(frame, true);
         }
-        uint16_t triggerID = m_pPupDMD->Match(frame, Config::GetInstance()->IsPupExactColorMatch());
+        else
+        {
+          triggerID = m_pPupDMD->MatchIndexed(m_pUpdateBufferQueue[bufferPosition]->data);
+        }
 
         if (triggerID > 0) handleTrigger(triggerID);
       }
