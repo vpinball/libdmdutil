@@ -18,7 +18,7 @@ Config::Config()
   m_altColorPath.clear();
   m_pupCapture = false;
   m_pupVideosPath.clear();
-  m_pupExactColorMatch = false;
+  m_pupExactColorMatch = true;
   m_framesTimeout = 0;
   m_framesToSkip = 0;
   m_zedmd = true;

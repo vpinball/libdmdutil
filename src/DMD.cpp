@@ -1323,7 +1323,7 @@ void DMD::PupDMDThread()
             m_pPUPDMD = new PUPDMD::DMD();
             m_pPUPDMD->SetLogCallback(PUPDMDLogCallback, nullptr);
 
-            if (!m_pPUPDMD->Load(m_pupVideosPath, m_romName))
+            if (!m_pPUPDMD->Load(m_pupVideosPath, m_romName, m_pUpdateBufferQueue[bufferPosition]->depth))
             {
               delete (m_pPUPDMD);
               m_pPUPDMD = nullptr;
@@ -1345,6 +1345,10 @@ void DMD::PupDMDThread()
           uint16_t triggerID = 0;
           if (Config::GetInstance()->IsPUPExactColorMatch())
           {
+            triggerID = m_pPUPDMD->MatchIndexed(renderBuffer);
+          }
+          else
+          {
             UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
                           m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
 
@@ -1354,12 +1358,8 @@ void DMD::PupDMDThread()
               uint16_t pos = renderBuffer[i] * 3;
               memcpy(&pFrame[i * 3], &palette[pos], 3);
             }
-            triggerID = m_pPUPDMD->Match(pFrame, true);
+            triggerID = m_pPUPDMD->Match(pFrame, false);
             free(pFrame);
-          }
-          else
-          {
-            triggerID = m_pPUPDMD->MatchIndexed(renderBuffer);
           }
 
           if (triggerID > 0) handleTrigger(triggerID);
