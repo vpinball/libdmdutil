@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 
 namespace DMDUtil
 {
@@ -228,6 +229,129 @@ std::string FrameUtil::HexDump(const uint8_t* data, size_t size)
   }
 
   return ss.str();
+}
+
+void FrameUtil::ScaleDownIndexed(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                                 const uint8_t* pSrcFrame, const uint16_t srcWidth, const uint8_t srcHeight)
+{
+  memset(pDestFrame, 0, destWidth * destHeight);
+  uint8_t xOffset = (destWidth - (srcWidth / 2)) / 2;
+  uint8_t yOffset = (destHeight - (srcHeight / 2)) / 2;
+
+  // for half scaling we take the 4 points and look if there is one color repeated
+  for (uint8_t y = 0; y < srcHeight; y += 2)
+  {
+    std::vector<uint8_t> row;
+    row.reserve(srcWidth / 2);
+
+    for (uint16_t x = 0; x < srcWidth; x += 2)
+    {
+      uint8_t upper_left = pSrcFrame[y * srcWidth + x];
+      uint8_t upper_right = pSrcFrame[y * srcWidth + x + 1];
+      uint8_t lower_left = pSrcFrame[(y + 1) * srcWidth + x];
+      uint8_t lower_right = pSrcFrame[(y + 1) * srcWidth + x + 1];
+
+      if (x < srcWidth / 2)
+      {
+        if (y < srcHeight / 2)
+        {
+          if (upper_left == upper_right || upper_left == lower_left || upper_left == lower_right)
+            row.push_back(upper_left);
+          else if (upper_right == lower_left || upper_right == lower_right)
+            row.push_back(upper_right);
+          else if (lower_left == lower_right)
+            row.push_back(lower_left);
+          else
+            row.push_back(upper_left);
+        }
+        else
+        {
+          if (lower_left == lower_right || lower_left == upper_left || lower_left == upper_right)
+            row.push_back(lower_right);
+          else if (lower_right == upper_left || lower_right == upper_right)
+            row.push_back(lower_right);
+          else if (upper_left == upper_right)
+            row.push_back(upper_left);
+          else
+            row.push_back(lower_left);
+        }
+      }
+      else
+      {
+        if (y < srcHeight / 2)
+        {
+          if (upper_right == upper_left || upper_right == lower_right || upper_right == lower_left)
+            row.push_back(upper_right);
+          else if (upper_left == lower_right || upper_left == lower_left)
+            row.push_back(upper_left);
+          else if (lower_right == lower_left)
+            row.push_back(lower_right);
+          else
+            row.push_back(upper_right);
+        }
+        else
+        {
+          if (lower_right == lower_left || lower_right == upper_right || lower_right == upper_left)
+            row.push_back(lower_right);
+          else if (lower_left == upper_right || lower_left == upper_left)
+            row.push_back(lower_left);
+          else if (upper_right == upper_left)
+            row.push_back(upper_right);
+          else
+            row.push_back(lower_right);
+        }
+      }
+    }
+
+    memcpy(&pDestFrame[(yOffset + (y / 2)) * destWidth + xOffset], row.data(), srcWidth / 2);
+  }
+}
+
+void FrameUtil::ScaleDownPUP(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                             const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight)
+{
+  memset(pDestFrame, 0, destWidth * destHeight);
+  uint8_t xOffset = (destWidth - (srcWidth / 2)) / 2;
+  uint8_t yOffset = (destHeight - (srcHeight / 2)) / 2;
+
+  // for half scaling we take the 4 points and look if there is one color repeated
+  for (uint8_t y = 0; y < srcHeight; y += 2)
+  {
+    std::vector<uint8_t> row;
+    row.reserve(srcWidth / 2);
+
+    for (uint8_t x = 0; x < srcWidth; x += 2)
+    {
+      uint8_t pixel1 = pSrcFrame[y * srcWidth + x];
+      uint8_t pixel2 = pSrcFrame[y * srcWidth + x + 1];
+      uint8_t pixel3 = pSrcFrame[(y + 1) * srcWidth + x];
+      uint8_t pixel4 = pSrcFrame[(y + 1) * srcWidth + x + 1];
+
+      if (pixel1 == pixel2 || pixel1 == pixel3 || pixel1 == pixel4)
+        row.push_back(pixel1);
+      else if (pixel2 == pixel3 || pixel2 == pixel4)
+        row.push_back(pixel2);
+      else if (pixel3 == pixel4)
+        row.push_back(pixel3);
+      else
+        row.push_back(pixel1);
+    }
+
+    memcpy(&pDestFrame[(yOffset + (y / 2)) * destWidth + xOffset], row.data(), srcWidth / 2);
+  }
+}
+
+void FrameUtil::CenterIndexed(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                              const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight)
+{
+  memset(pDestFrame, 0, destWidth * destHeight);
+  uint8_t xOffset = (destWidth - srcWidth) / 2;
+  uint8_t yOffset = (destHeight - srcHeight) / 2;
+
+  for (uint8_t y = 0; y < srcHeight; y++)
+  {
+    memcpy(&pDestFrame[(yOffset + y) * destWidth + xOffset], &pSrcFrame[y * srcWidth], srcWidth);
+  }
 }
 
 }  // namespace DMDUtil

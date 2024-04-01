@@ -745,11 +745,13 @@ void DMD::PixelcadeDMDThread()
     {
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
-      // @todo scaling
-      if (m_pUpdateBufferQueue[bufferPosition]->width == 128 && m_pUpdateBufferQueue[bufferPosition]->height == 32 &&
-          (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData))
+      if (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData)
       {
-        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+        uint16_t width = m_pUpdateBufferQueue[bufferPosition]->width;
+        uint8_t height = m_pUpdateBufferQueue[bufferPosition]->height;
+        int length = width * height;
+        uint8_t depth = m_pUpdateBufferQueue[bufferPosition]->depth;
+
         bool update = false;
         if (m_pUpdateBufferQueue[bufferPosition]->depth != 24)
         {
@@ -758,7 +760,8 @@ void DMD::PixelcadeDMDThread()
                                  m_pUpdateBufferQueue[bufferPosition]->b);
         }
 
-        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24)
+        // @todo scaling / centering
+        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24 && width == 128 && height == 32)
         {
           uint8_t rgb24Data[128 * 32 * 3];
           AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPosition]->data, rgb24Data, length, palette,
@@ -774,14 +777,16 @@ void DMD::PixelcadeDMDThread()
           }
           update = true;
         }
-        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16)
+        // @todo scaling / centering
+        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16 && width == 128 && height == 32)
         {
           memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * sizeof(uint16_t));
           update = true;
         }
-        else
+        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data ||
+                 m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
         {
-          uint8_t renderBuffer[128 * 32];
+          uint8_t renderBuffer[256 * 64];
 
           if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
           {
@@ -804,6 +809,23 @@ void DMD::PixelcadeDMDThread()
               memcpy(renderBuffer, (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->data,
                      m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height);
               update = true;
+            }
+
+            if (update)
+            {
+              uint8_t scaledBuffer[128 * 32];
+              if (width == 128 && height == 32)
+                memcpy(scaledBuffer, renderBuffer, 128 * 32);
+              else if (width == 128 && height == 16)
+                FrameUtil::CenterIndexed(scaledBuffer, 128, 32, renderBuffer, 128, 16);
+              else if (width == 192 && height == 64)
+                FrameUtil::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 192, 64);
+              else if (width == 256 && height == 64)
+                FrameUtil::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 256, 64);
+              else
+                continue;
+
+              memcpy(renderBuffer, scaledBuffer, 128 * 32);
             }
           }
           else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
@@ -1332,33 +1354,45 @@ void DMD::PupDMDThread()
         }
       }
 
-      // @todo scaling/centering 128x16 and 192x64 or check how PUP deals with it.
-      if (m_pPUPDMD && m_pUpdateBufferQueue[bufferPosition]->width == 128 &&
-          m_pUpdateBufferQueue[bufferPosition]->height == 32 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
+      if (m_pPUPDMD && m_pUpdateBufferQueue[bufferPosition]->hasData &&
           m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->depth != 24)
       {
-        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+        uint16_t width = m_pUpdateBufferQueue[bufferPosition]->width;
+        uint8_t height = m_pUpdateBufferQueue[bufferPosition]->height;
+        int length = width * height;
+
         if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length) != 0)
         {
           memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
+          uint8_t depth = m_pUpdateBufferQueue[bufferPosition]->depth;
+
+          uint8_t scaledBuffer[128 * 32];
+          if (width == 128 && height == 32)
+            memcpy(scaledBuffer, renderBuffer, 128 * 32);
+          else if (width == 128 && height == 16)
+            FrameUtil::CenterIndexed(scaledBuffer, 128, 32, renderBuffer, 128, 16);
+          else if (width == 192 && height == 64)
+            FrameUtil::ScaleDownPUP(scaledBuffer, 128, 32, renderBuffer, 192, 64);
+          else
+            return;
 
           uint16_t triggerID = 0;
           if (Config::GetInstance()->IsPUPExactColorMatch())
           {
-            triggerID = m_pPUPDMD->MatchIndexed(renderBuffer);
+            triggerID = m_pPUPDMD->MatchIndexed(scaledBuffer, width, height);
           }
           else
           {
-            UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth, m_pUpdateBufferQueue[bufferPosition]->r,
-                          m_pUpdateBufferQueue[bufferPosition]->g, m_pUpdateBufferQueue[bufferPosition]->b);
+            // apply a standard orange palette
+            UpdatePalette(palette, depth, 255, 69, 0);
 
             uint8_t* pFrame = (uint8_t*)malloc(length * 3);
             for (uint16_t i = 0; i < length; i++)
             {
-              uint16_t pos = renderBuffer[i] * 3;
+              uint16_t pos = scaledBuffer[i] * 3;
               memcpy(&pFrame[i * 3], &palette[pos], 3);
             }
-            triggerID = m_pPUPDMD->Match(pFrame, false);
+            triggerID = m_pPUPDMD->Match(pFrame, width, height, false);
             free(pFrame);
           }
 

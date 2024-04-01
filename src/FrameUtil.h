@@ -31,6 +31,12 @@ class FrameUtil
                                    int destHeight);
   static float CalcBrightness(float x);
   static std::string HexDump(const uint8_t* data, size_t size);
+  static void ScaleDownIndexed(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                               const uint8_t* pSrcFrame, const uint16_t srcWidth, const uint8_t srcHeight);
+  static void ScaleDownPUP(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                           const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight);
+  static void CenterIndexed(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                            const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight);
 };
 
 }  // namespace DMDUtil
