@@ -35,8 +35,12 @@ class FrameUtil
                                const uint8_t* pSrcFrame, const uint16_t srcWidth, const uint8_t srcHeight);
   static void ScaleDownPUP(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
                            const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight);
+  static void ScaleDown(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                        const uint8_t* pSrcFrame, const uint16_t srcWidth, const uint8_t srcHeight, uint8_t bits);
   static void CenterIndexed(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
                             const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight);
+  static void Center(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight, const uint8_t* pSrcFrame,
+                     const uint8_t srcWidth, const uint8_t srcHeight, uint8_t bits);
 };
 
 }  // namespace DMDUtil
