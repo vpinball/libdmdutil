@@ -760,31 +760,55 @@ void DMD::PixelcadeDMDThread()
                                  m_pUpdateBufferQueue[bufferPosition]->b);
         }
 
-        // @todo scaling / centering
-        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24 && width == 128 && height == 32)
+        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24)
         {
-          uint8_t rgb24Data[128 * 32 * 3];
+          uint8_t rgb24Data[256 * 64 * 3];
           AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPosition]->data, rgb24Data, length, palette,
                            m_pUpdateBufferQueue[bufferPosition]->depth);
+
+          uint8_t scaledBuffer[128 * 32 * 3];
+          if (width == 128 && height == 32)
+            memcpy(scaledBuffer, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * 3);
+          else if (width == 128 && height == 16)
+            FrameUtil::Center(scaledBuffer, 128, 32, rgb24Data, 128, 16, 24);
+          else if (width == 192 && height == 64)
+            FrameUtil::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 192, 64, 24);
+          else if (width == 256 && height == 64)
+            FrameUtil::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 256, 64, 24);
+          else
+            continue;
+
           for (int i = 0; i < length; i++)
           {
             int pos = i * 3;
-            uint32_t r = rgb24Data[pos];
-            uint32_t g = rgb24Data[pos + 1];
-            uint32_t b = rgb24Data[pos + 2];
+            uint32_t r = scaledBuffer[pos];
+            uint32_t g = scaledBuffer[pos + 1];
+            uint32_t b = scaledBuffer[pos + 2];
 
             rgb565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
           }
           update = true;
         }
         // @todo scaling / centering
-        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16 && width == 128 && height == 32)
+        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16)
         {
-          memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * sizeof(uint16_t));
+          if (width == 128 && height == 32)
+            memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * 2);
+          else if (width == 128 && height == 16)
+            FrameUtil::Center((uint8_t*)rgb565Data, 128, 32, (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData,
+                              128, 16, 16);
+          else if (width == 192 && height == 64)
+            FrameUtil::ScaleDown((uint8_t*)rgb565Data, 128, 32, (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData,
+                                 192, 64, 16);
+          else if (width == 256 && height == 64)
+            FrameUtil::ScaleDown((uint8_t*)rgb565Data, 128, 32, (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData,
+                                 256, 64, 16);
+          else
+            continue;
+
           update = true;
         }
-        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data ||
-                 m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
+        else
         {
           uint8_t renderBuffer[256 * 64];
 

@@ -341,17 +341,110 @@ void FrameUtil::ScaleDownPUP(uint8_t* pDestFrame, const uint8_t destWidth, const
   }
 }
 
-void FrameUtil::CenterIndexed(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
-                              const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight)
+void FrameUtil::ScaleDown(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                          const uint8_t* pSrcFrame, const uint16_t srcWidth, const uint8_t srcHeight, uint8_t bits)
 {
   memset(pDestFrame, 0, destWidth * destHeight);
+  uint8_t xOffset = (destWidth - (srcWidth / 2)) / 2;
+  uint8_t yOffset = (destHeight - (srcHeight / 2)) / 2;
+  uint8_t bytes = bits / 8;  // RGB24 (3 byte) or RGB16 (2 byte)
+
+  for (uint8_t y = 0; y < srcHeight; y += 2)
+  {
+    for (uint16_t x = 0; x < srcWidth; x += 2)
+    {
+      uint16_t upper_left = y * srcWidth * bytes + x * bytes;
+      uint16_t upper_right = upper_left + bytes;
+      uint16_t lower_left = upper_left + srcWidth * bytes;
+      uint16_t lower_right = lower_left + bytes;
+      uint16_t target = (xOffset + (x / 2) + (y / 2) * destHeight) * bytes;
+
+      if (x < srcWidth / 2)
+      {
+        if (y < srcHeight / 2)
+        {
+          if (memcmp(&pSrcFrame[upper_left], &pSrcFrame[upper_right], bytes) == 0 ||
+              memcmp(&pSrcFrame[upper_left], &pSrcFrame[lower_left], bytes) == 0 ||
+              memcmp(&pSrcFrame[upper_left], &pSrcFrame[lower_right], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_left], bytes);
+          else if (memcmp(&pSrcFrame[upper_right], &pSrcFrame[lower_left], bytes) == 0 ||
+                   memcmp(&pSrcFrame[upper_right], &pSrcFrame[lower_right], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_right], bytes);
+          else if (memcmp(&pSrcFrame[lower_left], &pSrcFrame[lower_right], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_left], bytes);
+          else
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_left], bytes);
+        }
+        else
+        {
+          if (memcmp(&pSrcFrame[lower_left], &pSrcFrame[lower_right], bytes) == 0 ||
+              memcmp(&pSrcFrame[lower_left], &pSrcFrame[upper_left], bytes) == 0 ||
+              memcmp(&pSrcFrame[lower_left], &pSrcFrame[upper_right], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_left], bytes);
+          else if (memcmp(&pSrcFrame[lower_right], &pSrcFrame[upper_left], bytes) == 0 ||
+                   memcmp(&pSrcFrame[lower_right], &pSrcFrame[upper_right], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_right], bytes);
+          else if (memcmp(&pSrcFrame[upper_left], &pSrcFrame[upper_right], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_left], bytes);
+          else
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_left], bytes);
+        }
+      }
+      else
+      {
+        if (y < srcHeight / 2)
+        {
+          if (memcmp(&pSrcFrame[upper_right], &pSrcFrame[upper_left], bytes) == 0 ||
+              memcmp(&pSrcFrame[upper_right], &pSrcFrame[lower_right], bytes) == 0 ||
+              memcmp(&pSrcFrame[upper_right], &pSrcFrame[lower_left], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_right], bytes);
+          else if (memcmp(&pSrcFrame[upper_left], &pSrcFrame[lower_right], bytes) == 0 ||
+                   memcmp(&pSrcFrame[upper_left], &pSrcFrame[lower_left], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_left], bytes);
+          else if (memcmp(&pSrcFrame[lower_right], &pSrcFrame[lower_left], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_right], bytes);
+          else
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_right], bytes);
+        }
+        else
+        {
+          if (memcmp(&pSrcFrame[lower_right], &pSrcFrame[lower_left], bytes) == 0 ||
+              memcmp(&pSrcFrame[lower_right], &pSrcFrame[upper_right], bytes) == 0 ||
+              memcmp(&pSrcFrame[lower_right], &pSrcFrame[upper_left], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_right], bytes);
+          else if (memcmp(&pSrcFrame[lower_left], &pSrcFrame[upper_right], bytes) == 0 ||
+                   memcmp(&pSrcFrame[lower_left], &pSrcFrame[upper_left], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_left], bytes);
+          else if (memcmp(&pSrcFrame[upper_right], &pSrcFrame[upper_left], bytes) == 0)
+            memcpy(&pDestFrame[target], &pSrcFrame[upper_right], bytes);
+          else
+            memcpy(&pDestFrame[target], &pSrcFrame[lower_right], bytes);
+        }
+      }
+    }
+  }
+}
+
+void FrameUtil::Center(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight, const uint8_t* pSrcFrame,
+                       const uint8_t srcWidth, const uint8_t srcHeight, uint8_t bits)
+{
+  uint8_t bytes = bits / 8;  // RGB24 (3 byte) or RGB16 (2 byte)
+
+  memset(pDestFrame, 0, destWidth * destHeight * bytes);
   uint8_t xOffset = (destWidth - srcWidth) / 2;
   uint8_t yOffset = (destHeight - srcHeight) / 2;
 
   for (uint8_t y = 0; y < srcHeight; y++)
   {
-    memcpy(&pDestFrame[(yOffset + y) * destWidth + xOffset], &pSrcFrame[y * srcWidth], srcWidth);
+    memcpy(&pDestFrame[((yOffset + y) * destWidth + xOffset) * bytes], &pSrcFrame[y * srcWidth * bytes],
+           srcWidth * bytes);
   }
+}
+
+void FrameUtil::CenterIndexed(uint8_t* pDestFrame, const uint8_t destWidth, const uint8_t destHeight,
+                              const uint8_t* pSrcFrame, const uint8_t srcWidth, const uint8_t srcHeight)
+{
+  Center(pDestFrame, destWidth, destHeight, pSrcFrame, srcWidth, srcHeight, 8);
 }
 
 }  // namespace DMDUtil
