@@ -770,11 +770,11 @@ void DMD::PixelcadeDMDThread()
           if (width == 128 && height == 32)
             memcpy(scaledBuffer, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * 3);
           else if (width == 128 && height == 16)
-            FrameUtil::Center(scaledBuffer, 128, 32, rgb24Data, 128, 16, 24);
+            FrameUtil::Helper::Center(scaledBuffer, 128, 32, rgb24Data, 128, 16, 24);
           else if (width == 192 && height == 64)
-            FrameUtil::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 192, 64, 24);
+            FrameUtil::Helper::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 192, 64, 24);
           else if (width == 256 && height == 64)
-            FrameUtil::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 256, 64, 24);
+            FrameUtil::Helper::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 256, 64, 24);
           else
             continue;
 
@@ -794,14 +794,14 @@ void DMD::PixelcadeDMDThread()
           if (width == 128 && height == 32)
             memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * 2);
           else if (width == 128 && height == 16)
-            FrameUtil::Center((uint8_t*)rgb565Data, 128, 32, (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData,
-                              128, 16, 16);
+            FrameUtil::Helper::Center((uint8_t*)rgb565Data, 128, 32,
+                                      (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData, 128, 16, 16);
           else if (width == 192 && height == 64)
-            FrameUtil::ScaleDown((uint8_t*)rgb565Data, 128, 32, (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData,
-                                 192, 64, 16);
+            FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, 128, 32,
+                                         (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData, 192, 64, 16);
           else if (width == 256 && height == 64)
-            FrameUtil::ScaleDown((uint8_t*)rgb565Data, 128, 32, (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData,
-                                 256, 64, 16);
+            FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, 128, 32,
+                                         (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData, 256, 64, 16);
           else
             continue;
 
@@ -840,11 +840,11 @@ void DMD::PixelcadeDMDThread()
               if (width == 128 && height == 32)
                 memcpy(scaledBuffer, renderBuffer, 128 * 32);
               else if (width == 128 && height == 16)
-                FrameUtil::CenterIndexed(scaledBuffer, 128, 32, renderBuffer, 128, 16);
+                FrameUtil::Helper::CenterIndexed(scaledBuffer, 128, 32, renderBuffer, 128, 16);
               else if (width == 192 && height == 64)
-                FrameUtil::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 192, 64);
+                FrameUtil::Helper::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 192, 64);
               else if (width == 256 && height == 64)
-                FrameUtil::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 256, 64);
+                FrameUtil::Helper::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 256, 64);
               else
                 continue;
 
@@ -1113,7 +1113,7 @@ bool DMD::UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, 
 
   for (uint8_t i = 0; i < colors; i++)
   {
-    float perc = FrameUtil::CalcBrightness((float)i / (float)(colors - 1));
+    float perc = FrameUtil::Helper::CalcBrightness((float)i / (float)(colors - 1));
     pPalette[pos++] = (uint8_t)((float)r * perc);
     pPalette[pos++] = (uint8_t)((float)g * perc);
     pPalette[pos++] = (uint8_t)((float)b * perc);
@@ -1393,9 +1393,9 @@ void DMD::PupDMDThread()
           if (width == 128 && height == 32)
             memcpy(scaledBuffer, renderBuffer, 128 * 32);
           else if (width == 128 && height == 16)
-            FrameUtil::CenterIndexed(scaledBuffer, 128, 32, renderBuffer, 128, 16);
+            FrameUtil::Helper::CenterIndexed(scaledBuffer, 128, 32, renderBuffer, 128, 16);
           else if (width == 192 && height == 64)
-            FrameUtil::ScaleDownPUP(scaledBuffer, 128, 32, renderBuffer, 192, 64);
+            FrameUtil::Helper::ScaleDownPUP(scaledBuffer, 128, 32, renderBuffer, 192, 64);
           else
             return;
 

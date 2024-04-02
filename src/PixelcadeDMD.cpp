@@ -175,7 +175,8 @@ void PixelcadeDMD::Run()
         EnableRgbLedMatrix(4, 16);
 
         int errors = 0;
-        ColorMatrix colorMatrix = (m_matrix == 0) ? ColorMatrix::Rgb : ColorMatrix::Rbg;
+        FrameUtil::ColorMatrix colorMatrix =
+            (m_matrix == 0) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
 
         while (m_running)
         {
@@ -199,14 +200,7 @@ void PixelcadeDMD::Run()
           if (pFrame)
           {
             uint8_t planes[128 * 32 * 3 / 2];
-            if (m_width == 128 && m_height == 32)
-              FrameUtil::SplitIntoRgbPlanes(pFrame, 128 * 32, 128, 16, (uint8_t*)planes, colorMatrix);
-            else
-            {
-              uint16_t scaledFrame[128 * 32];
-              FrameUtil::ResizeRgb565Bilinear(pFrame, m_width, m_height, scaledFrame, 128, 32);
-              FrameUtil::SplitIntoRgbPlanes(scaledFrame, 128 * 32, 128, 16, (uint8_t*)planes, colorMatrix);
-            }
+            FrameUtil::Helper::SplitIntoRgbPlanes(pFrame, 128 * 32, 128, 16, (uint8_t*)planes, colorMatrix);
 
             static uint8_t command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
             sp_blocking_write(m_pSerialPort, &command, 1, PIXELCADE_COMMAND_WRITE_TIMEOUT);
