@@ -66,7 +66,6 @@ cmake \
 cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
 cp third-party/include/libserialport.h ../../third-party/include/
-cp third-party/include/FrameUtil.h ../../third-party/include/
 cp -a third-party/runtime-libs/macos/x64/*.dylib ../../third-party/runtime-libs/macos/x64/
 cp -a build/*.dylib ../../third-party/runtime-libs/macos/x64/
 cp -r test ../../

@@ -64,7 +64,6 @@ cmake \
 cmake --build build --config ${BUILD_TYPE}
 cp src/ZeDMD.h ../../third-party/include/
 cp third-party/include/libserialport.h ../../third-party/include/
-cp third-party/include/FrameUtil.h ../../third-party/include/
 cp third-party/build-libs/win/x86/libserialport.lib ../../third-party/build-libs/win/x86/
 cp third-party/runtime-libs/win/x86/libserialport.dll ../../third-party/runtime-libs/win/x86/
 cp build/${BUILD_TYPE}/zedmd.lib ../../third-party/build-libs/win/x86/
