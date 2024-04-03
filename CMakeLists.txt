@@ -70,7 +70,6 @@ set(DMDUTIL_SOURCES
    src/ConsoleDMD.cpp
    src/Logger.cpp
    src/AlphaNumeric.cpp
-   src/FrameUtil.cpp
    src/Serum.cpp
 )
 

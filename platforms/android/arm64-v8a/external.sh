@@ -3,10 +3,11 @@
 set -e
 
 CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
-LIBZEDMD_SHA=42d95ed6f1fe2065ecbd247502d177d7e5eb7e4c
+LIBZEDMD_SHA=984ac9b14824d3924455c64f36c512e5b35852b7
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
 SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
-LIBPUPDMD_SHA=8dedc8c81ded2f6b8ca4614752d395aae0332c6c
+LIBPUPDMD_SHA=c640ea2cec94097e8baefee9dab39266970e4405
+LIBFRAMEUTIL_SHA=d9bde3069786f1a33d2021afe19566d812e873f5
 
 if [[ $(uname) == "Linux" ]]; then
    NUM_PROCS=$(nproc)
@@ -22,6 +23,8 @@ echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  SOCKPP_SHA: ${SOCKPP_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+echo "  LIBFRAMEUTIL_SHA: ${LIBFRAMEUTIL_SHA}"
+echo "  NUM_PROCS: ${NUM_PROCS}"
 echo ""
 
 if [ -z "${BUILD_TYPE}" ]; then
@@ -136,4 +139,14 @@ cmake -DPLATFORM=android \
 cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
 cp build/libpupdmd.so ../../third-party/runtime-libs/android/arm64-v8a/
+cd ..
+
+#
+# copy libframeutil
+#
+
+curl -sL https://github.com/ppuc/libframeutil/archive/${LIBFRAMEUTIL_SHA}.zip -o libframeutil.zip
+unzip libframeutil.zip
+cd libframeutil-$LIBFRAMEUTIL_SHA
+cp include/* ../../third-party/include
 cd ..

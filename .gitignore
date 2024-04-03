@@ -8,5 +8,11 @@ external.sh
 external
 third-party/runtime-libs
 third-party/build-libs
-third-party/include
+third-party/include/sockpp
+third-party/include/cargs.h
+third-party/include/*.hpp
+third-party/include/libserialport.h
+third-party/include/pupdmd.h
+third-party/include/serum-decode.h
+third-party/include/ZeDMD.h
 .DS_Store

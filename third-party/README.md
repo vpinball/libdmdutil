@@ -26,3 +26,12 @@
 - Upstream: https://github.com/zesinger/libserum
 - License: GPL-2.0 license
 
+## libpupdmd
+
+- Upstream: https://github.com/ppuc/libpupdmd
+- License: GPL-3.0 license
+
+## libframeutil
+
+- Upstream: https://github.com/PPUC/libframeutil
+- License: GPL-3.0 license
