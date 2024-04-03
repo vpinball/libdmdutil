@@ -7,6 +7,7 @@ LIBZEDMD_SHA=62ac355f1ab34b6a3520c6907eecc80a85fe04fd
 LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
 SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 LIBPUPDMD_SHA=8dedc8c81ded2f6b8ca4614752d395aae0332c6c
+LIBFRAMEUTIL_SHA=d9bde3069786f1a33d2021afe19566d812e873f5
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
 
@@ -16,6 +17,7 @@ echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  SOCKPP_SHA: ${SOCKPP_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+echo "  LIBFRAMEUTIL_SHA: ${LIBFRAMEUTIL_SHA}"
 echo ""
 
 if [ -z "${BUILD_TYPE}" ]; then
@@ -122,4 +124,14 @@ cmake \
 cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
 cp build/libpupdmd.a ../../third-party/build-libs/tvos/arm64/
+cd ..
+
+#
+# copy libframeutil
+#
+
+curl -sL https://github.com/ppuc/libframeutil/archive/${LIBFRAMEUTIL_SHA}.zip -o libframeutil.zip
+unzip libframeutil.zip
+cd libframeutil-$LIBFRAMEUTIL_SHA
+cp include/* ../../third-party/include
 cd ..
