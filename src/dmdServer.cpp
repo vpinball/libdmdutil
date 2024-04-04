@@ -110,7 +110,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
         // Only the current (most recent) thread is allowed to disconnect other clients.
         if (handleDisconnectOthers && threadId == currentThreadId && pStreamHeader->disconnectOthers)
         {
+          threadMutex.lock();
           disconnectOtherClients = true;
+          threadMutex.unlock();
           handleDisconnectOthers = false;
           if (opt_verbose) DMDUtil::Log("%d: Other clients will be disconnected", threadId);
         }
@@ -208,8 +210,29 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
 
   threadMutex.lock();
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
-  currentThreadId = (threads.size() >= 1) ? threads.back() : 0;
-  if (threads.size() <= 1) disconnectOtherClients = false;
+  if (threadId == currentThreadId)
+  {
+    if (disconnectOtherClients)
+    {
+      // Wait until all other threads ended or a new client connnects in between.
+      while (threads.size() >= 1 && currentThreadId == threadId)
+      {
+        threadMutex.unlock();
+        // Let other threads terminate.
+        this_thread::sleep_for(chrono::milliseconds(10));
+        threadMutex.lock();
+      }
+
+      currentThreadId = 0;
+      disconnectOtherClients = false;
+    }
+    else
+    {
+      currentThreadId = (threads.size() >= 1) ? threads.back() : 0;
+    }
+
+    if (opt_verbose) DMDUtil::Log("%d: DMD client %d set as current", currentThreadId, currentThreadId);
+  }
   threadMutex.unlock();
 
   if (opt_verbose) DMDUtil::Log("%d: DMD client %d disconnected", threadId, threadId);
