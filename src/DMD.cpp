@@ -333,6 +333,7 @@ void DMD::QueueUpdate(Update dmdUpdate, bool buffered)
         {
           StreamHeader streamHeader;
           streamHeader.buffered = (uint8_t)buffered;
+          streamHeader.disconnectOthers = (uint8_t)m_dmdServerDisconnectOthers;
           m_pDMDServerConnector->write_n(&streamHeader, sizeof(StreamHeader));
           PathsHeader pathsHeader;
           strcpy(pathsHeader.name, m_romName);
@@ -340,6 +341,8 @@ void DMD::QueueUpdate(Update dmdUpdate, bool buffered)
           strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
           m_pDMDServerConnector->write_n(&pathsHeader, sizeof(PathsHeader));
           m_pDMDServerConnector->write_n(&dmdUpdate, sizeof(Update));
+
+          if (streamHeader.disconnectOthers != 0) m_dmdServerDisconnectOthers = false;
         }
       })
       .detach();
@@ -526,6 +529,9 @@ void DMD::DmdFrameThread()
     if (strcmp(m_romName, name) != 0)
     {
       strcpy(name, m_romName);
+
+      // In case of a new ROM, try to disconnect the other clients.
+      if (m_pDMDServerConnector) m_dmdServerDisconnectOthers = true;
 
       if (Config::GetInstance()->IsAltColor())
       {

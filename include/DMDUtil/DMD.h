@@ -178,6 +178,7 @@ class DMDUTILAPI DMD
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;
   sockpp::tcp_connector* m_pDMDServerConnector;
+  bool m_dmdServerDisconnectOthers = false;
 
   std::thread* m_pLevelDMDThread;
   std::thread* m_pRGB24DMDThread;

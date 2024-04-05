@@ -20,7 +20,7 @@ using namespace std;
 DMDUtil::DMD* pDmd;
 uint32_t currentThreadId = 0;
 mutex threadMutex;
-bool disconnectOtherClients = false;
+uint32_t disconnectOtherClients = 0;
 vector<uint32_t> threads;
 bool opt_verbose = false;
 bool opt_fixedAltColorPath = false;
@@ -87,7 +87,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
 
   if (opt_verbose) DMDUtil::Log("%d: New DMD client %d connected", threadId, threadId);
 
-  while (threadId == currentThreadId || !disconnectOtherClients)
+  while (threadId == currentThreadId || disconnectOtherClients == 0 || disconnectOtherClients <= threadId)
   {
     n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader));
     // If the client disconnects or if a network error ocurres, exit the loop and terminate this thread.
@@ -104,14 +104,15 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
         {
           DMDUtil::Log("%d: Received DMDStream header version %d for DMD mode %d", threadId, pStreamHeader->version,
                        pStreamHeader->mode);
-          if (pStreamHeader->buffered) DMDUtil::Log("%d: Next data will be buffered", threadId);
+          if (pStreamHeader->buffered && threadId == currentThreadId)
+            DMDUtil::Log("%d: Next data will be buffered", threadId);
         }
 
         // Only the current (most recent) thread is allowed to disconnect other clients.
         if (handleDisconnectOthers && threadId == currentThreadId && pStreamHeader->disconnectOthers)
         {
           threadMutex.lock();
-          disconnectOtherClients = true;
+          disconnectOtherClients = threadId;
           threadMutex.unlock();
           handleDisconnectOthers = false;
           if (opt_verbose) DMDUtil::Log("%d: Other clients will be disconnected", threadId);
@@ -120,8 +121,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
         switch (pStreamHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
-            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::PathsHeader))) == sizeof(DMDUtil::DMD::PathsHeader) &&
-                threadId == currentThreadId)
+            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::PathsHeader))) == sizeof(DMDUtil::DMD::PathsHeader))
             {
               DMDUtil::DMD::PathsHeader pathsHeader;
               memcpy(&pathsHeader, buffer, n);
@@ -131,7 +131,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   threadId == currentThreadId)
               {
                 if (opt_verbose)
-                  DMDUtil::Log("%d: Received AltColor header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
+                  DMDUtil::Log("%d: Received paths header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
                                pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
                 DMDUtil::DMD::Update data;
                 memcpy(&data, buffer, n);
@@ -149,9 +149,13 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
                 }
               }
+              else if (threadId != currentThreadId)
+              {
+                DMDUtil::Log("%d: Client %d blocks the DMD", threadId, currentThreadId);
+              }
               else
               {
-                DMDUtil::Log("%d: AltColor header is missing!", threadId);
+                DMDUtil::Log("%d: Paths header is missing!", threadId);
               }
             }
             break;
@@ -167,6 +171,10 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
               pDmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height,
                                     pStreamHeader->buffered == 1);
             }
+            else if (threadId != currentThreadId)
+            {
+              DMDUtil::Log("%d: Client %d blocks the DMD", threadId, currentThreadId);
+            }
             else
             {
               DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
@@ -179,6 +187,10 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
               pDmd->UpdateRGB24Data(buffer, pStreamHeader->width, pStreamHeader->height, pStreamHeader->buffered == 1);
+            }
+            else if (threadId != currentThreadId)
+            {
+              DMDUtil::Log("%d: Client %d blocks the DMD", threadId, currentThreadId);
             }
             else
             {
@@ -198,6 +210,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
     }
   }
 
+  if (opt_verbose && disconnectOtherClients != 0 && disconnectOtherClients > threadId)
+    DMDUtil::Log("%d: Client %d requested disconnect", threadId, disconnectOtherClients);
+
   // Display a buffered frame or clear the display on disconnect of the current thread.
   if (threadId == currentThreadId && !pStreamHeader->buffered && !pDmd->QueueBuffer())
   {
@@ -212,7 +227,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   threads.erase(remove(threads.begin(), threads.end(), threadId), threads.end());
   if (threadId == currentThreadId)
   {
-    if (disconnectOtherClients)
+    if (disconnectOtherClients == threadId)
     {
       // Wait until all other threads ended or a new client connnects in between.
       while (threads.size() >= 1 && currentThreadId == threadId)
@@ -224,14 +239,14 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       }
 
       currentThreadId = 0;
-      disconnectOtherClients = false;
+      disconnectOtherClients = 0;
     }
     else
     {
       currentThreadId = (threads.size() >= 1) ? threads.back() : 0;
     }
 
-    if (opt_verbose) DMDUtil::Log("%d: DMD client %d set as current", currentThreadId, currentThreadId);
+    if (opt_verbose) DMDUtil::Log("%d: DMD client %d set as current", threadId, currentThreadId);
   }
   threadMutex.unlock();
 
@@ -364,6 +379,7 @@ int main(int argc, char* argv[])
       currentThreadId = ++threadId;
       threads.push_back(currentThreadId);
       threadMutex.unlock();
+      if (opt_verbose) DMDUtil::Log("%d: DMD client %d set as current", threadId, currentThreadId);
       // Create a thread and transfer the new stream to it.
       thread thr(run, std::move(sock), currentThreadId);
       thr.detach();
