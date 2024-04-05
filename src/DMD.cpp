@@ -30,7 +30,7 @@ void PUPDMDCALLBACK PUPDMDLogCallback(const char* format, va_list args, const vo
   char buffer[1024];
   vsnprintf(buffer, sizeof(buffer), format, args);
 
-  Log("%s", buffer);
+  Log(DMDUtil_LogLevel_INFO, "%s", buffer);
 }
 
 void ZEDMDCALLBACK ZeDMDLogCallback(const char* format, va_list args, const void* pUserData)
@@ -38,7 +38,7 @@ void ZEDMDCALLBACK ZeDMDLogCallback(const char* format, va_list args, const void
   char buffer[1024];
   vsnprintf(buffer, sizeof(buffer), format, args);
 
-  Log("%s", buffer);
+  Log(DMDUtil_LogLevel_INFO, "%s", buffer);
 }
 
 bool DMD::m_finding = false;
@@ -169,12 +169,14 @@ bool DMD::ConnectDMDServer()
   {
     Config* const pConfig = Config::GetInstance();
     sockpp::initialize();
-    Log("Connecting DMDServer on %s:%d", pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
+    Log(DMDUtil_LogLevel_INFO, "Connecting DMDServer on %s:%d", pConfig->GetDMDServerAddr(),
+        pConfig->GetDMDServerPort());
     m_pDMDServerConnector =
         new sockpp::tcp_connector({pConfig->GetDMDServerAddr(), (in_port_t)pConfig->GetDMDServerPort()});
     if (!m_pDMDServerConnector)
     {
-      Log("DMDServer connection to %s:%d failed!", pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
+      Log(DMDUtil_LogLevel_INFO, "DMDServer connection to %s:%d failed!", pConfig->GetDMDServerAddr(),
+          pConfig->GetDMDServerPort());
     }
   }
   return (m_pDMDServerConnector);
@@ -668,7 +670,7 @@ void DMD::ZeDMDThread()
               }
               m_serumMutex.unlock();
 
-              if (triggerID > 0) handleTrigger(triggerID);
+              if (triggerID > 0) HandleTrigger(triggerID);
             }
             else
             {
@@ -831,7 +833,7 @@ void DMD::PixelcadeDMDThread()
                                          m_pUpdateBufferQueue[bufferPosition]->height, &triggerID);
               m_serumMutex.unlock();
 
-              if (triggerID > 0) handleTrigger(triggerID);
+              if (triggerID > 0) HandleTrigger(triggerID);
             }
             else
             {
@@ -1006,7 +1008,7 @@ void DMD::RGB24DMDThread()
                                        m_pUpdateBufferQueue[bufferPosition]->height, &triggerID);
             m_serumMutex.unlock();
 
-            if (triggerID > 0) handleTrigger(triggerID);
+            if (triggerID > 0) HandleTrigger(triggerID);
           }
           else
           {
@@ -1425,17 +1427,24 @@ void DMD::PupDMDThread()
             free(pFrame);
           }
 
-          if (triggerID > 0) handleTrigger(triggerID);
+          if (triggerID > 0) HandleTrigger(triggerID);
         }
       }
     }
   }
 }
 
-void DMD::handleTrigger(uint16_t id)
+void DMD::HandleTrigger(uint16_t id)
 {
-  Log("PUP Trigger D%d", id);
-  // @todo
+  static Config* pConfig = Config::GetInstance();
+
+  Log(DMDUtil_LogLevel_DEBUG, "HandleTrigger: id=D%d", id);
+
+  DMDUtil_PUPTriggerCallbackContext callbackContext = pConfig->GetPUPTriggerCallbackContext();
+  if (callbackContext.callback != nullptr)
+  {
+    (*callbackContext.callback)(id, callbackContext.pUserData);
+  }
 }
 
 }  // namespace DMDUtil

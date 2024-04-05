@@ -155,7 +155,7 @@ class DMDUTILAPI DMD
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   Mode mode, bool buffered = false);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
-  void handleTrigger(uint16_t id);
+  void HandleTrigger(uint16_t id);
 
   void DmdFrameThread();
   void LevelDMDThread();

@@ -1,5 +1,7 @@
 #include "DMDUtil/Config.h"
 
+#include <cstring>
+
 namespace DMDUtil
 {
 
@@ -33,7 +35,9 @@ Config::Config()
   m_dmdServer = false;
   m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;
+  m_logLevel = DMDUtil_LogLevel_INFO;
   m_logCallback = nullptr;
+  memset(&m_pupTriggerCallbackContext, 0, sizeof(m_pupTriggerCallbackContext));
 }
 
 }  // namespace DMDUtil

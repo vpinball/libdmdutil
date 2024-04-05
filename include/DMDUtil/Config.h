@@ -11,7 +11,22 @@
 #include <cstdarg>
 #include <string>
 
-typedef void(DMDUTILCALLBACK* DMDUtil_LogCallback)(const char* format, va_list args);
+typedef enum
+{
+  DMDUtil_LogLevel_INFO,
+  DMDUtil_LogLevel_ERROR,
+  DMDUtil_LogLevel_DEBUG
+} DMDUtil_LogLevel;
+
+typedef void(DMDUTILCALLBACK* DMDUtil_LogCallback)(DMDUtil_LogLevel logLevel, const char* format, va_list args);
+
+typedef void(DMDUTILCALLBACK* DMDUtil_PUPTriggerCallback)(uint16_t id, void* userData);
+
+struct DMDUtil_PUPTriggerCallbackContext
+{
+  DMDUtil_PUPTriggerCallback callback;
+  void* pUserData;
+};
 
 namespace DMDUtil
 {
@@ -58,8 +73,16 @@ class DMDUTILAPI Config
   const char* GetDMDServerAddr() const { return m_dmdServerAddr.c_str(); }
   void SetDMDServerPort(int port) { m_dmdServerPort = port; }
   int GetDMDServerPort() const { return m_dmdServerPort; }
+  DMDUtil_LogLevel GetLogLevel() const { return m_logLevel; }
+  void SetLogLevel(DMDUtil_LogLevel logLevel) { m_logLevel = logLevel; }
   DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
   void SetLogCallback(DMDUtil_LogCallback callback) { m_logCallback = callback; }
+  DMDUtil_PUPTriggerCallbackContext GetPUPTriggerCallbackContext() const { return m_pupTriggerCallbackContext; }
+  void SetPUPTriggerCallback(DMDUtil_PUPTriggerCallback callback, void* pUserData)
+  {
+    m_pupTriggerCallbackContext.callback = callback;
+    m_pupTriggerCallbackContext.pUserData = pUserData;
+  }
 
  private:
   Config();
@@ -85,7 +108,9 @@ class DMDUTILAPI Config
   bool m_pixelcade;
   std::string m_pixelcadeDevice;
   int m_pixelcadeMatrix;
+  DMDUtil_LogLevel m_logLevel;
   DMDUtil_LogCallback m_logCallback;
+  DMDUtil_PUPTriggerCallbackContext m_pupTriggerCallbackContext;
 };
 
 }  // namespace DMDUtil

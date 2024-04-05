@@ -4,7 +4,7 @@
 
 #include "DMDUtil/DMDUtil.h"
 
-void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
+void DMDUTILCALLBACK LogCallback(DMDUtil_LogLevel logLevel, const char* format, va_list args)
 {
   char buffer[1024];
   vsnprintf(buffer, sizeof(buffer), format, args);
