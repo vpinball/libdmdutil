@@ -5,15 +5,17 @@
 namespace DMDUtil
 {
 
-void Log(const char *format, ...)
+void Log(DMDUtil_LogLevel logLevel, const char* format, ...)
 {
-  DMDUtil_LogCallback logCallback = Config::GetInstance()->GetLogCallback();
+  static Config* pConfig = pConfig->GetInstance();
 
-  if (!logCallback) return;
+  DMDUtil_LogCallback logCallback = pConfig->GetLogCallback();
+
+  if (!logCallback || logLevel < pConfig->GetLogLevel()) return;
 
   va_list args;
   va_start(args, format);
-  (*(logCallback))(format, args);
+  (*(logCallback))(logLevel, format, args);
   va_end(args);
 }
 

@@ -39,8 +39,8 @@ Serum* Serum::Load(const char* const altColorPath, const char* const romName)
     return nullptr;
   }
 
-  Log("Serum loaded: romName=%s, width=%d, height=%d, numColors=%d, numTriggers=%d", romName, width, height, numColors,
-      numTriggers);
+  Log(DMDUtil_LogLevel_INFO, "Serum loaded: romName=%s, width=%d, height=%d, numColors=%d, numTriggers=%d", romName,
+      width, height, numColors, numTriggers);
 
   m_isLoaded = true;
 

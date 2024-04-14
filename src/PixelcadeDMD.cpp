@@ -53,15 +53,15 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int matrix, int width, 
 
   if (pDevice && *pDevice != 0)
   {
-    Log("Connecting to Pixelcade on %s...", pDevice);
+    Log(DMDUtil_LogLevel_INFO, "Connecting to Pixelcade on %s...", pDevice);
 
     pPixelcadeDMD = Open(pDevice, matrix, width, height);
 
-    if (!pPixelcadeDMD) Log("Unable to connect to Pixelcade on %s", pDevice);
+    if (!pPixelcadeDMD) Log(DMDUtil_LogLevel_INFO, "Unable to connect to Pixelcade on %s", pDevice);
   }
   else
   {
-    Log("Searching for Pixelcade...");
+    Log(DMDUtil_LogLevel_INFO, "Searching for Pixelcade...");
 
     struct sp_port** ppPorts;
     enum sp_return result = sp_list_ports(&ppPorts);
@@ -75,7 +75,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int matrix, int width, 
       sp_free_port_list(ppPorts);
     }
 
-    if (!pPixelcadeDMD) Log("Unable to find Pixelcade");
+    if (!pPixelcadeDMD) Log(DMDUtil_LogLevel_INFO, "Unable to find Pixelcade");
   }
 
   return pPixelcadeDMD;
@@ -116,7 +116,7 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int matrix, int width, int
   {
     sp_close(pSerialPort);
     sp_free_port(pSerialPort);
-    // Log("Pixelcade expected new connection to return 0x0, but got 0x%02d", response[0]);
+    // Log(DMDUtil_LogLevel_INFO, "Pixelcade expected new connection to return 0x0, but got 0x%02d", response[0]);
     return nullptr;
   }
 
@@ -124,8 +124,8 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int matrix, int width, int
   {
     sp_close(pSerialPort);
     sp_free_port(pSerialPort);
-    // Log("Pixelcade expected magic code to equal IOIO but got %c%c%c%c", response[1], response[2], response[3],
-    // response[4]);
+    // Log(DMDUtil_LogLevel_INFO, "Pixelcade expected magic code to equal IOIO but got %c%c%c%c", response[1],
+    // response[2], response[3], response[4]);
     return nullptr;
   }
 
@@ -138,8 +138,8 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int matrix, int width, int
   char firmware[9] = {0};
   memcpy(firmware, response + 21, 8);
 
-  Log("Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s", pDevice, hardwareId, bootloaderId,
-      firmware);
+  Log(DMDUtil_LogLevel_INFO, "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s", pDevice,
+      hardwareId, bootloaderId, firmware);
 
   return new PixelcadeDMD(pSerialPort, matrix, width, height);
 }
@@ -171,7 +171,7 @@ void PixelcadeDMD::Run()
   m_pThread = new std::thread(
       [this]()
       {
-        Log("PixelcadeDMD run thread starting");
+        Log(DMDUtil_LogLevel_INFO, "PixelcadeDMD run thread starting");
         EnableRgbLedMatrix(4, 16);
 
         int errors = 0;
@@ -212,7 +212,7 @@ void PixelcadeDMD::Run()
             {
               if (errors > 0)
               {
-                Log("Communication to Pixelcade restored after %d frames", errors);
+                Log(DMDUtil_LogLevel_INFO, "Communication to Pixelcade restored after %d frames", errors);
                 errors = 0;
               }
             }
@@ -220,7 +220,7 @@ void PixelcadeDMD::Run()
             {
               if (errors++ > PIXELCADE_MAX_NO_RESPONSE)
               {
-                Log("Error while transmitting to Pixelcade: no response for the past %d frames",
+                Log(DMDUtil_LogLevel_INFO, "Error while transmitting to Pixelcade: no response for the past %d frames",
                     PIXELCADE_MAX_NO_RESPONSE);
                 m_running = false;
               }
@@ -228,7 +228,7 @@ void PixelcadeDMD::Run()
             else if (response == SP_ERR_FAIL)
             {
               char* pMessage = sp_last_error_message();
-              Log("Error while transmitting to Pixelcade: %s", pMessage);
+              Log(DMDUtil_LogLevel_INFO, "Error while transmitting to Pixelcade: %s", pMessage);
               sp_free_error_message(pMessage);
               m_running = false;
             }
@@ -251,7 +251,7 @@ void PixelcadeDMD::Run()
 
         m_pSerialPort = nullptr;
 
-        Log("PixelcadeDMD run thread finished");
+        Log(DMDUtil_LogLevel_INFO, "PixelcadeDMD run thread finished");
       });
 }
 

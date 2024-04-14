@@ -70,7 +70,7 @@ static struct cag_option options[] = {
      .description = "Enables verbose logging, includes normal logging (optional, default is no logging)"},
     {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
 
-void DMDUTILCALLBACK LogCallback(const char* format, va_list args)
+void DMDUTILCALLBACK LogCallback(DMDUtil_LogLevel logLevel, const char* format, va_list args)
 {
   char buffer[1024];
   vsnprintf(buffer, sizeof(buffer), format, args);
@@ -85,7 +85,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
   // Disconnect others is only allowed once per client.
   bool handleDisconnectOthers = true;
 
-  if (opt_verbose) DMDUtil::Log("%d: New DMD client %d connected", threadId, threadId);
+  if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: New DMD client %d connected", threadId, threadId);
 
   while (threadId == currentThreadId || disconnectOtherClients == 0 || disconnectOtherClients <= threadId)
   {
@@ -102,10 +102,10 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       {
         if (opt_verbose)
         {
-          DMDUtil::Log("%d: Received DMDStream header version %d for DMD mode %d", threadId, pStreamHeader->version,
-                       pStreamHeader->mode);
+          DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Received DMDStream header version %d for DMD mode %d", threadId,
+                       pStreamHeader->version, pStreamHeader->mode);
           if (pStreamHeader->buffered && threadId == currentThreadId)
-            DMDUtil::Log("%d: Next data will be buffered", threadId);
+            DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Next data will be buffered", threadId);
         }
 
         // Only the current (most recent) thread is allowed to disconnect other clients.
@@ -115,7 +115,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
           disconnectOtherClients = threadId;
           threadMutex.unlock();
           handleDisconnectOthers = false;
-          if (opt_verbose) DMDUtil::Log("%d: Other clients will be disconnected", threadId);
+          if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Other clients will be disconnected", threadId);
         }
 
         switch (pStreamHeader->mode)
@@ -131,7 +131,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   threadId == currentThreadId)
               {
                 if (opt_verbose)
-                  DMDUtil::Log("%d: Received paths header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
+                  DMDUtil::Log(DMDUtil_LogLevel_INFO,
+                               "%d: Received paths header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
                                pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
                 DMDUtil::DMD::Update data;
                 memcpy(&data, buffer, n);
@@ -146,16 +147,16 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 }
                 else
                 {
-                  DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
+                  DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: TCP data package is missing or corrupted!", threadId);
                 }
               }
               else if (threadId != currentThreadId)
               {
-                DMDUtil::Log("%d: Client %d blocks the DMD", threadId, currentThreadId);
+                DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, currentThreadId);
               }
               else
               {
-                DMDUtil::Log("%d: Paths header is missing!", threadId);
+                DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Paths header is missing!", threadId);
               }
             }
             break;
@@ -173,11 +174,11 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             }
             else if (threadId != currentThreadId)
             {
-              DMDUtil::Log("%d: Client %d blocks the DMD", threadId, currentThreadId);
+              DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, currentThreadId);
             }
             else
             {
-              DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
+              DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: TCP data package is missing or corrupted!", threadId);
             }
             break;
 
@@ -190,11 +191,11 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             }
             else if (threadId != currentThreadId)
             {
-              DMDUtil::Log("%d: Client %d blocks the DMD", threadId, currentThreadId);
+              DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, currentThreadId);
             }
             else
             {
-              DMDUtil::Log("%d: TCP data package is missing or corrupted!", threadId);
+              DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: TCP data package is missing or corrupted!", threadId);
             }
             break;
 
@@ -205,18 +206,18 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       }
       else if (threadId == currentThreadId)
       {
-        DMDUtil::Log("%d: Received unknown TCP package", threadId);
+        DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Received unknown TCP package", threadId);
       }
     }
   }
 
   if (opt_verbose && disconnectOtherClients != 0 && disconnectOtherClients > threadId)
-    DMDUtil::Log("%d: Client %d requested disconnect", threadId, disconnectOtherClients);
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d requested disconnect", threadId, disconnectOtherClients);
 
   // Display a buffered frame or clear the display on disconnect of the current thread.
   if (threadId == currentThreadId && !pStreamHeader->buffered && !pDmd->QueueBuffer())
   {
-    if (opt_verbose) DMDUtil::Log("%d: Clear screen on disconnect", threadId);
+    if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Clear screen on disconnect", threadId);
     // Clear the DMD by sending a black screen.
     // Fixed dimension of 128x32 should be OK for all devices.
     memset(buffer, 0, sizeof(DMDUtil::DMD::Update));
@@ -246,11 +247,11 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
       currentThreadId = (threads.size() >= 1) ? threads.back() : 0;
     }
 
-    if (opt_verbose) DMDUtil::Log("%d: DMD client %d set as current", threadId, currentThreadId);
+    if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: DMD client %d set as current", threadId, currentThreadId);
   }
   threadMutex.unlock();
 
-  if (opt_verbose) DMDUtil::Log("%d: DMD client %d disconnected", threadId, threadId);
+  if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: DMD client %d disconnected", threadId, threadId);
 
   free(pStreamHeader);
 }
@@ -290,7 +291,7 @@ int main(int argc, char* argv[])
       pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device", "").c_str());
       pConfig->SetPixelcadeMatrix(r.Get<int>("Pixelcade", "Matrix", -1));
 
-      if (opt_verbose) DMDUtil::Log("Loaded config file");
+      if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "Loaded config file");
     }
     else if (identifier == 'o')
     {
@@ -334,12 +335,12 @@ int main(int argc, char* argv[])
 
   sockpp::initialize();
   if (opt_verbose)
-    DMDUtil::Log("Opening DMDServer, listining for TCP connections on %s:%d", pConfig->GetDMDServerAddr(),
-                 pConfig->GetDMDServerPort());
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "Opening DMDServer, listining for TCP connections on %s:%d",
+                 pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
   sockpp::tcp_acceptor acc({pConfig->GetDMDServerAddr(), (in_port_t)pConfig->GetDMDServerPort()});
   if (!acc)
   {
-    DMDUtil::Log("Error creating the DMDServer acceptor: %s", acc.last_error_str().c_str());
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "Error creating the DMDServer acceptor: %s", acc.last_error_str().c_str());
     return 1;
   }
 
@@ -371,7 +372,7 @@ int main(int argc, char* argv[])
 
     if (!sock)
     {
-      DMDUtil::Log("Error accepting incoming connection: %s", acc.last_error_str().c_str());
+      DMDUtil::Log(DMDUtil_LogLevel_INFO, "Error accepting incoming connection: %s", acc.last_error_str().c_str());
     }
     else
     {
@@ -379,13 +380,14 @@ int main(int argc, char* argv[])
       currentThreadId = ++threadId;
       threads.push_back(currentThreadId);
       threadMutex.unlock();
-      if (opt_verbose) DMDUtil::Log("%d: DMD client %d set as current", threadId, currentThreadId);
+      if (opt_verbose)
+        DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: DMD client %d set as current", threadId, currentThreadId);
       // Create a thread and transfer the new stream to it.
       thread thr(run, std::move(sock), currentThreadId);
       thr.detach();
     }
   }
 
-  DMDUtil::Log("No DMD displays found.");
+  DMDUtil::Log(DMDUtil_LogLevel_INFO, "No DMD displays found.");
   return 2;
 }
