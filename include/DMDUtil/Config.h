@@ -9,6 +9,7 @@
 #endif
 
 #include <cstdarg>
+#include <cstdint>
 #include <string>
 
 typedef enum
