@@ -31,7 +31,6 @@ Config::Config()
   m_zedmdSaveSettings = false;
   m_pixelcade = true;
   m_pixelcadeDevice.clear();
-  m_pixelcadeMatrix = 0;
   m_dmdServer = false;
   m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;

@@ -505,7 +505,7 @@ void DMD::FindDisplays()
           if (pConfig->IsPixelcade())
           {
             pPixelcadeDMD =
-                PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), pConfig->GetPixelcadeMatrix(), 128, 32);
+                PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), 128, 32);
             if (pPixelcadeDMD) m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
           }
 
