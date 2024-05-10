@@ -289,7 +289,6 @@ int main(int argc, char* argv[])
       // Pixelcade
       pConfig->SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
       pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device", "").c_str());
-      pConfig->SetPixelcadeMatrix(r.Get<int>("Pixelcade", "Matrix", -1));
 
       if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "Loaded config file");
     }

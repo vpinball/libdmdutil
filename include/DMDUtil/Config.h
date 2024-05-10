@@ -66,8 +66,6 @@ class DMDUTILAPI Config
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
-  int GetPixelcadeMatrix() const { return m_pixelcadeMatrix; }
-  void SetPixelcadeMatrix(int matrix) { m_pixelcadeMatrix = matrix; }
   void SetDMDServer(bool dmdServer) { m_dmdServer = dmdServer; }
   bool IsDmdServer() { return m_dmdServer; }
   void SetDMDServerAddr(const char* addr) { m_dmdServerAddr = addr; }
@@ -108,7 +106,6 @@ class DMDUTILAPI Config
   int m_dmdServerPort;
   bool m_pixelcade;
   std::string m_pixelcadeDevice;
-  int m_pixelcadeMatrix;
   DMDUtil_LogLevel m_logLevel;
   DMDUtil_LogCallback m_logCallback;
   DMDUtil_PUPTriggerCallbackContext m_pupTriggerCallbackContext;

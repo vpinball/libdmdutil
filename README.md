@@ -209,8 +209,6 @@ SaveSettings = 0
 Enabled = 1
 # Disable auto-detection and provide a fixed serial port
 Device =
-# Set to 0 if RGB, 1 if RBG.
-Matrix = 0
 ```
 
 ## Building:
