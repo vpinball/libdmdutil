@@ -77,6 +77,21 @@ void DMDUTILCALLBACK LogCallback(DMDUtil_LogLevel logLevel, const char* format, 
   fprintf(stderr, "%s\n", buffer);
 }
 
+void convertFromNetwork(DMDUtil::DMD::Update* o) {
+  // use case ?
+}
+
+void convertFromNetwork(DMDUtil::DMD::StreamHeader* o) {
+  o->mode   = (DMDUtil::DMD::Mode) ntohl((uint32_t)o->mode);
+  o->width  = ntohs(o->width);
+  o->height = ntohs(o->height);
+  o->length = ntohl(o->length);
+}
+
+void convertFromNetwork(DMDUtil::DMD::PathsHeader* o) {
+  // nothing to do
+}
+
 void run(sockpp::tcp_socket sock, uint32_t threadId)
 {
   uint8_t buffer[sizeof(DMDUtil::DMD::Update)];
@@ -95,9 +110,9 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
 
     if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
-      // At the moment the server only listens on localhost.
-      // Therefore, we don't have to take care about litte vs. big endian and can use memcpy.
       memcpy(pStreamHeader, buffer, n);
+      convertFromNetwork(pStreamHeader);
+
       if (strcmp(pStreamHeader->header, "DMDStream") == 0 && pStreamHeader->version == 1)
       {
         if (opt_verbose)
@@ -125,6 +140,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             {
               DMDUtil::DMD::PathsHeader pathsHeader;
               memcpy(&pathsHeader, buffer, n);
+              convertFromNetwork(&pathsHeader);
 
               if (strcmp(pathsHeader.header, "Paths") == 0 &&
                   (n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
@@ -136,6 +152,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                                pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
                 DMDUtil::DMD::Update data;
                 memcpy(&data, buffer, n);
+		convertFromNetwork(&data);
 
                 if (data.width <= DMDSERVER_MAX_WIDTH && data.height <= DMDSERVER_MAX_HEIGHT)
                 {
@@ -166,9 +183,6 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 threadId == currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
                 pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
-              // At the moment the server only listens on localhost.
-              // Therefore, we don't have to take care about litte vs. big endian and can use the buffer as uint16_t as
-              // it is.
               pDmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height,
                                     pStreamHeader->buffered == 1);
             }
