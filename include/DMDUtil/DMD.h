@@ -23,6 +23,7 @@
 #include <thread>
 
 #include "sockpp/tcp_connector.h"
+#include "serum.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -77,8 +78,34 @@ class DMDUTILAPI DMD
     Data,         // int 1
     RGB24,        // int 2, RGB888
     RGB16,        // int 3, RGB565
-    AlphaNumeric  // int 4
+    AlphaNumeric, // int 4
+    SerumV1,      // int 5
+    SerumV2_32,    // int 6
+    SerumV2_32_64, // int 7
+    SerumV2_64,    // int 8
+    SerumV2_64_32, // int 9
   };
+
+  bool IsSerumMode(Mode mode)
+  {
+    return (
+      mode == Mode::SerumV1 ||  
+      mode == Mode::SerumV2_32 ||  
+      mode == Mode::SerumV2_32_64 ||  
+      mode == Mode::SerumV2_64 ||  
+      mode == Mode::SerumV2_64_32
+    );
+  }  
+
+  bool IsSerumV2Mode(Mode mode)
+  {
+    return (
+      mode == Mode::SerumV2_32 ||  
+      mode == Mode::SerumV2_32_64 ||  
+      mode == Mode::SerumV2_64 ||  
+      mode == Mode::SerumV2_64_32
+    );
+  }  
 
 #pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
   struct Update
@@ -87,7 +114,7 @@ class DMDUTILAPI DMD
     AlphaNumericLayout layout;
     int depth;
     uint8_t data[256 * 64 * 3];
-    uint16_t segData[256 * 64];  // RGB16 or segment data
+    uint16_t segData[256 * 64];  // RGB16 or segment data or SerumV1 palette
     uint16_t segData2[128];
     bool hasData;
     bool hasSegData;
@@ -165,13 +192,14 @@ class DMDUTILAPI DMD
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
   void PupDMDThread();
+  void SerumThread();
 
   uint8_t m_updateBufferQueuePosition = 0;
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   char m_pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
-  Serum* m_pSerum;
+  Serum_Frame_Struc* m_pSerum;
   ZeDMD* m_pZeDMD;
   PUPDMD::DMD* m_pPUPDMD;
   std::vector<LevelDMD*> m_levelDMDs;
@@ -188,9 +216,9 @@ class DMDUTILAPI DMD
   std::thread* m_pDumpDMDTxtThread;
   std::thread* m_pDumpDMDRawThread;
   std::thread* m_pPupDMDThread;
+  std::thread* m_pSerumThread;
   std::shared_mutex m_dmdSharedMutex;
   std::condition_variable_any m_dmdCV;
-  std::mutex m_serumMutex;
   std::atomic<bool> m_dmdFrameReady = false;
   std::atomic<bool> m_stopFlag = false;
 

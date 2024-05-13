@@ -10,11 +10,10 @@ namespace DMDUtil
 
 bool Serum::m_isLoaded = false;
 
-Serum::Serum(int width, int height)
+Serum::Serum(unsigned int width32, unsigned int width64)
 {
-  m_width = width;
-  m_height = height;
-  m_length = width * height;
+  m_width32 = (uint8_t)width32;
+  m_width64 = (uint16_t)width64;
 }
 
 Serum::~Serum()
@@ -28,21 +27,23 @@ Serum* Serum::Load(const char* const altColorPath, const char* const romName)
 {
   if (m_isLoaded) return nullptr;
 
-  int width;
-  int height;
+  unsigned int width32;
+  unsigned int width64;
   unsigned int numColors;
   unsigned int numTriggers;
+  uint8_t isNewFormat;
 
-  if (!Serum_Load(altColorPath, romName, &width, &height, &numColors, &numTriggers))
+  if (Serum_Load(altColorPath, romName, &numColors, &numTriggers, FLAG_REQUEST_32P_FRAMES | FLAG_REQUEST_64P_FRAMES, &width32, &width64, &isNewFormat))
   {
     Serum_Dispose();
     return nullptr;
   }
 
-  Log(DMDUtil_LogLevel_INFO, "Serum loaded: romName=%s, width=%d, height=%d, numColors=%d, numTriggers=%d", romName,
-      width, height, numColors, numTriggers);
+  Log(DMDUtil_LogLevel_INFO, "Serum loaded: romName=%s, width32=%d, width64=%d, numColors=%d, numTriggers=%d, isNewFormat=%d", romName, width32, width64, numColors,
+      numTriggers, isNewFormat);
 
   m_isLoaded = true;
+  m_isNewFormat = (bool) isNewFormat;
 
   return new Serum(width, height);
 }

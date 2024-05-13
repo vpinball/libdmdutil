@@ -20,13 +20,14 @@ class Serum
   void SetMaximumUnknownFramesToSkip(int maximum);
 
  private:
-  Serum(int width, int height);
+  Serum(unsigned int width32, unsigned int width64);
 
-  int m_width;
-  int m_height;
+  uint8_t m_width32;
+  uint16_t m_width64;
   int m_length;
 
   static bool m_isLoaded;
+  static bool m_isNewFormat;
 };
 
 }  // namespace DMDUtil
