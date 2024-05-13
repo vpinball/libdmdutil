@@ -8,7 +8,8 @@
 #define DMDUTILCALLBACK
 #endif
 
-#define DMDUTIL_FRAME_BUFFER_SIZE 16
+#define DMDUTIL_FRAME_BUFFER_SIZE 32
+#define DMDUTIL_MAX_FRAME_BUFFER_SIZE (128 * DMDUTIL_FRAME_BUFFER_SIZE)
 #define DMDUTIL_MAX_NAME_SIZE 16
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
@@ -22,8 +23,8 @@
 #include <string>
 #include <thread>
 
-#include "sockpp/tcp_connector.h"
 #include "serum.h"
+#include "sockpp/tcp_connector.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -74,38 +75,29 @@ class DMDUTILAPI DMD
 
   enum class Mode
   {
-    Unknown,      // int 0
-    Data,         // int 1
-    RGB24,        // int 2, RGB888
-    RGB16,        // int 3, RGB565
-    AlphaNumeric, // int 4
-    SerumV1,      // int 5
-    SerumV2_32,    // int 6
-    SerumV2_32_64, // int 7
-    SerumV2_64,    // int 8
-    SerumV2_64_32, // int 9
+    Unknown,        // int 0
+    Data,           // int 1
+    RGB24,          // int 2, RGB888
+    RGB16,          // int 3, RGB565
+    AlphaNumeric,   // int 4
+    SerumV1,        // int 5
+    SerumV2_32,     // int 6
+    SerumV2_32_64,  // int 7
+    SerumV2_64,     // int 8
+    SerumV2_64_32,  // int 9
   };
 
   bool IsSerumMode(Mode mode)
   {
-    return (
-      mode == Mode::SerumV1 ||  
-      mode == Mode::SerumV2_32 ||  
-      mode == Mode::SerumV2_32_64 ||  
-      mode == Mode::SerumV2_64 ||  
-      mode == Mode::SerumV2_64_32
-    );
-  }  
+    return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
+            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32);
+  }
 
   bool IsSerumV2Mode(Mode mode)
   {
-    return (
-      mode == Mode::SerumV2_32 ||  
-      mode == Mode::SerumV2_32_64 ||  
-      mode == Mode::SerumV2_64 ||  
-      mode == Mode::SerumV2_64_32
-    );
-  }  
+    return (mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 || mode == Mode::SerumV2_64 ||
+            mode == Mode::SerumV2_64_32);
+  }
 
 #pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
   struct Update
