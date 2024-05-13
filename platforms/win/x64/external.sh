@@ -87,7 +87,9 @@ cmake \
    -DBUILD_STATIC=OFF \
    -B build
 cmake --build build --config ${BUILD_TYPE}
-cp src/*.h ../../third-party/include/
+cp src/serum.h ../../third-party/include/
+cp src/serum-decode.h ../../third-party/include/
+
 cp build/${BUILD_TYPE}/serum64.lib ../../third-party/build-libs/win/x64/
 cp build/${BUILD_TYPE}/serum64.dll ../../third-party/runtime-libs/win/x64/
 cd ..
