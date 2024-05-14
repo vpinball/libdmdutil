@@ -169,6 +169,7 @@ class DMDUTILAPI DMD
   Update* m_pUpdateBufferQueue[DMDUTIL_FRAME_BUFFER_SIZE];
   Update m_updateBuffered;
 
+  int GetNextBufferQueuePosition(int bufferPosition);
   bool ConnectDMDServer();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
