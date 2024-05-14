@@ -514,7 +514,7 @@ void DMD::FindDisplays()
           if (pConfig->IsPixelcade())
           {
             pPixelcadeDMD =
-                PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), pConfig->GetPixelcadeMatrix(), 128, 32);
+                PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), 128, 32);
             if (pPixelcadeDMD) m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
           }
 
@@ -870,7 +870,7 @@ void DMD::PixelcadeDMDThread()
           m_pUpdateBufferQueue[currentBufferPosition]->hasSegData)
       {
         uint16_t width = m_pUpdateBufferQueue[currentBufferPosition]->width;
-        uint8_t height = m_pUpdateBufferQueue[currentBufferPosition]->height;
+        uint16_t height = m_pUpdateBufferQueue[currentBufferPosition]->height;
         int length = width * height;
         uint8_t depth = m_pUpdateBufferQueue[currentBufferPosition]->depth;
 
@@ -891,17 +891,15 @@ void DMD::PixelcadeDMDThread()
 
           uint8_t scaledBuffer[128 * 32 * 3];
           if (width == 128 && height == 32)
-            memcpy(scaledBuffer, m_pUpdateBufferQueue[currentBufferPosition]->segData, 128 * 32 * 3);
+            memcpy(scaledBuffer, rgb24Data, 128 * 32 * 3);
           else if (width == 128 && height == 16)
             FrameUtil::Helper::Center(scaledBuffer, 128, 32, rgb24Data, 128, 16, 24);
-          else if (width == 192 && height == 64)
-            FrameUtil::Helper::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 192, 64, 24);
-          else if (width == 256 && height == 64)
-            FrameUtil::Helper::ScaleDown(scaledBuffer, 128, 32, rgb24Data, 256, 64, 24);
+          else if (height == 64)
+            FrameUtil::Helper::ScaleDown(scaledBuffer, 128, 32, rgb24Data, width, 64, 24);
           else
             continue;
 
-          for (int i = 0; i < length; i++)
+          for (int i = 0; i < 128 * 32; i++)
           {
             int pos = i * 3;
             uint32_t r = scaledBuffer[pos];
@@ -1526,7 +1524,7 @@ void DMD::PupDMDThread()
           m_pUpdateBufferQueue[currentBufferPosition]->depth != 24)
       {
         uint16_t width = m_pUpdateBufferQueue[currentBufferPosition]->width;
-        uint8_t height = m_pUpdateBufferQueue[currentBufferPosition]->height;
+        uint16_t height = m_pUpdateBufferQueue[currentBufferPosition]->height;
         int length = width * height;
 
         if (memcmp(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length) != 0)

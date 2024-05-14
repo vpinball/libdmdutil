@@ -16,12 +16,12 @@
 namespace DMDUtil
 {
 
-PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int matrix, int width, int height)
+PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap)
 {
   m_pSerialPort = pSerialPort;
   m_width = width;
   m_height = height;
-  m_matrix = matrix;
+  m_colorSwap = colorSwap;
   m_length = width * height;
   m_pThread = nullptr;
   m_running = false;
@@ -47,7 +47,7 @@ PixelcadeDMD::~PixelcadeDMD()
   }
 }
 
-PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int matrix, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
 {
   PixelcadeDMD* pPixelcadeDMD = nullptr;
 
@@ -55,7 +55,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int matrix, int width, 
   {
     Log(DMDUtil_LogLevel_INFO, "Connecting to Pixelcade on %s...", pDevice);
 
-    pPixelcadeDMD = Open(pDevice, matrix, width, height);
+    pPixelcadeDMD = Open(pDevice, width, height);
 
     if (!pPixelcadeDMD) Log(DMDUtil_LogLevel_INFO, "Unable to connect to Pixelcade on %s", pDevice);
   }
@@ -69,7 +69,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int matrix, int width, 
     {
       for (int i = 0; ppPorts[i]; i++)
       {
-        pPixelcadeDMD = Open(sp_get_port_name(ppPorts[i]), matrix, width, height);
+        pPixelcadeDMD = Open(sp_get_port_name(ppPorts[i]), width, height);
         if (pPixelcadeDMD) break;
       }
       sp_free_port_list(ppPorts);
@@ -81,7 +81,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int matrix, int width, 
   return pPixelcadeDMD;
 }
 
-PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int matrix, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
 {
   struct sp_port* pSerialPort = nullptr;
   enum sp_return result = sp_get_port_by_name(pDevice, &pSerialPort);
@@ -141,7 +141,7 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int matrix, int width, int
   Log(DMDUtil_LogLevel_INFO, "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s", pDevice,
       hardwareId, bootloaderId, firmware);
 
-  return new PixelcadeDMD(pSerialPort, matrix, width, height);
+  return new PixelcadeDMD(pSerialPort, width, height, (firmware[4] == 'C'));
 }
 
 void PixelcadeDMD::Update(uint16_t* pData)
@@ -176,7 +176,7 @@ void PixelcadeDMD::Run()
 
         int errors = 0;
         FrameUtil::ColorMatrix colorMatrix =
-            (m_matrix == 0) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
+            (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
 
         while (m_running)
         {
