@@ -20,6 +20,7 @@
 #include "Logger.h"
 #include "ZeDMD.h"
 #include "pupdmd.h"
+#include "serum.h"
 #include "serum-decode.h"
 
 namespace DMDUtil

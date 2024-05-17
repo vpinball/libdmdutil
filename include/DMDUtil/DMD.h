@@ -23,7 +23,6 @@
 #include <string>
 #include <thread>
 
-#include "serum.h"
 #include "sockpp/tcp_connector.h"
 
 #if defined(__APPLE__)
@@ -31,6 +30,10 @@
 #endif
 
 class ZeDMD;
+
+struct _Serum_Frame_Struc;
+typedef _Serum_Frame_Struc SerumFrameStruct;
+
 namespace PUPDMD
 {
 class DMD;
@@ -192,7 +195,7 @@ class DMDUTILAPI DMD
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   char m_pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
-  Serum_Frame_Struc* m_pSerum;
+  SerumFrameStruct* m_pSerum;
   ZeDMD* m_pZeDMD;
   PUPDMD::DMD* m_pPUPDMD;
   std::vector<LevelDMD*> m_levelDMDs;
