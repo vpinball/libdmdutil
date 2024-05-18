@@ -763,7 +763,7 @@ void DMD::SerumThread()
 
         if (m_pSerum && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
         {
-          uint8_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
+          uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
 
           if (result != 0xffffffff)
           {
@@ -828,7 +828,7 @@ void DMD::SerumThread()
               // @todo rotation timer
             }
 
-            if (m_pSerum->triggerID > 0 && m_pSerum->triggerID != prevTriggerId)
+            if (m_pSerum->triggerID < 0xffffffff & m_pSerum->triggerID != prevTriggerId)
             {
               HandleTrigger(m_pSerum->triggerID);
               prevTriggerId = m_pSerum->triggerID;
