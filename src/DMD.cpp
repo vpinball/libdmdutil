@@ -724,6 +724,7 @@ void DMD::SerumThread()
     uint32_t prevTriggerId = 0;
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
     std::atomic<uint32_t> nextRotation = 0;
+    Update* lastDmdUpdate = nullptr;
 
     while (true)
     {
@@ -755,6 +756,7 @@ void DMD::SerumThread()
           {
             delete (m_pSerum);
             m_pSerum = nullptr;
+            lastDmdUpdate = nullptr;
           }
 
           if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
@@ -775,7 +777,8 @@ void DMD::SerumThread()
 
           if (result != IDENTIFY_NO_FRAME)
           {
-            QueueSerumFrames(currentBufferPosition);
+            lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
+            QueueSerumFrames(lastDmdUpdate);
 
             if (result > 0 && result < 1024)
               nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -794,7 +797,7 @@ void DMD::SerumThread()
         }
       }
 
-      if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 &&
+      if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate &&
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
                   .count() > nextRotation)
       {
@@ -802,7 +805,7 @@ void DMD::SerumThread()
 
         if (result != IDENTIFY_NO_FRAME)
         {
-          QueueSerumFrames(currentBufferPosition);
+          QueueSerumFrames(lastDmdUpdate);
 
           if (result > 0 && result < 1024)
             nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -817,61 +820,60 @@ void DMD::SerumThread()
   }
 }
 
-void DMD::QueueSerumFrames(int currentBufferPosition)
+void DMD::QueueSerumFrames(Update* dmdUpdate)
 {
-  Update dmdUpdate = Update();
-  dmdUpdate.hasData = true;
-  dmdUpdate.hasSegData = false;
-  dmdUpdate.hasSegData2 = false;
+  Update serumUpdate = Update();
+  serumUpdate.hasData = true;
+  serumUpdate.hasSegData = false;
+  serumUpdate.hasSegData2 = false;
 
   if (m_pSerum->flags == 0)
   {
-    dmdUpdate.mode = Mode::SerumV1;
-    dmdUpdate.depth = 6;
-    dmdUpdate.width = m_pUpdateBufferQueue[currentBufferPosition]->width;
-    dmdUpdate.height = m_pUpdateBufferQueue[currentBufferPosition]->height;
-    memcpy(dmdUpdate.data, m_pSerum->frame,
-           m_pUpdateBufferQueue[currentBufferPosition]->width * m_pUpdateBufferQueue[currentBufferPosition]->height);
-    memcpy(dmdUpdate.segData, m_pSerum->palette, PALETTE_SIZE);
+    serumUpdate.mode = Mode::SerumV1;
+    serumUpdate.depth = 6;
+    serumUpdate.width = dmdUpdate->width;
+    serumUpdate.height = dmdUpdate->height;
+    memcpy(serumUpdate.data, m_pSerum->frame, dmdUpdate->width * dmdUpdate->height);
+    memcpy(serumUpdate.segData, m_pSerum->palette, PALETTE_SIZE);
 
-    QueueUpdate(dmdUpdate, false);
+    QueueUpdate(serumUpdate, false);
   }
   else if ((m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && !(m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
   {
-    dmdUpdate.mode = Mode::SerumV2_32;
-    dmdUpdate.depth = 24;
-    dmdUpdate.width = m_pSerum->width32;
-    dmdUpdate.height = 32;
-    memcpy(dmdUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+    serumUpdate.mode = Mode::SerumV2_32;
+    serumUpdate.depth = 24;
+    serumUpdate.width = m_pSerum->width32;
+    serumUpdate.height = 32;
+    memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
-    QueueUpdate(dmdUpdate, false);
+    QueueUpdate(serumUpdate, false);
   }
   else if (!(m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && (m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
   {
-    dmdUpdate.mode = Mode::SerumV2_64;
-    dmdUpdate.depth = 24;
-    dmdUpdate.width = m_pSerum->width64;
-    dmdUpdate.height = 64;
-    memcpy(dmdUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+    serumUpdate.mode = Mode::SerumV2_64;
+    serumUpdate.depth = 24;
+    serumUpdate.width = m_pSerum->width64;
+    serumUpdate.height = 64;
+    memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
-    QueueUpdate(dmdUpdate, false);
+    QueueUpdate(serumUpdate, false);
   }
   else if ((m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && (m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
   {
-    dmdUpdate.mode = Mode::SerumV2_32_64;
-    dmdUpdate.depth = 24;
-    dmdUpdate.width = m_pSerum->width32;
-    dmdUpdate.height = 32;
-    memcpy(dmdUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+    serumUpdate.mode = Mode::SerumV2_32_64;
+    serumUpdate.depth = 24;
+    serumUpdate.width = m_pSerum->width32;
+    serumUpdate.height = 32;
+    memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
-    QueueUpdate(dmdUpdate, false);
+    QueueUpdate(serumUpdate, false);
 
-    dmdUpdate.mode = Mode::SerumV2_64_32;
-    dmdUpdate.width = m_pSerum->width64;
-    dmdUpdate.height = 64;
-    memcpy(dmdUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+    serumUpdate.mode = Mode::SerumV2_64_32;
+    serumUpdate.width = m_pSerum->width64;
+    serumUpdate.height = 64;
+    memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
-    QueueUpdate(dmdUpdate, false);
+    QueueUpdate(serumUpdate, false);
   }
 }
 
