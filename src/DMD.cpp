@@ -734,30 +734,12 @@ void DMD::SerumThread()
                      return m_dmdFrameReady || m_stopFlag ||
                             (nextRotation > 0 && std::chrono::duration_cast<std::chrono::milliseconds>(
                                                      std::chrono::system_clock::now().time_since_epoch())
-                                                         .count() < nextRotation);
+                                                         .count() > nextRotation);
                    });
       sl.unlock();
       if (m_stopFlag)
       {
         return;
-      }
-
-      if (!m_dmdFrameReady && nextRotation > 0 && m_pSerum && m_pSerum->rotationtimer > 0)
-      {
-        uint32_t result = Serum_Rotate();
-
-        if (result != IDENTIFY_NO_FRAME)
-        {
-          QueueSerumFrames(currentBufferPosition);
-
-          if (result > 0)
-            nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
-                               std::chrono::system_clock::now().time_since_epoch())
-                               .count() +
-                           m_pSerum->rotationtimer;
-          else
-            nextRotation = 0;
-        }
       }
 
       while (!m_stopFlag && bufferPosition != m_updateBufferQueuePosition)
@@ -789,13 +771,13 @@ void DMD::SerumThread()
 
         if (m_pSerum && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
         {
-          uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
+          uint16_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
 
           if (result != IDENTIFY_NO_FRAME)
           {
             QueueSerumFrames(currentBufferPosition);
 
-            if (result > 0)
+            if (result > 0 && result < 1024)
               nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::system_clock::now().time_since_epoch())
                                  .count() +
@@ -809,6 +791,26 @@ void DMD::SerumThread()
               prevTriggerId = m_pSerum->triggerID;
             }
           }
+        }
+      }
+
+      if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 &&
+          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+                  .count() > nextRotation)
+      {
+        uint16_t result = Serum_Rotate();
+
+        if (result != IDENTIFY_NO_FRAME)
+        {
+          QueueSerumFrames(currentBufferPosition);
+
+          if (result > 0 && result < 1024)
+            nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::system_clock::now().time_since_epoch())
+                               .count() +
+                           m_pSerum->rotationtimer;
+          else
+            nextRotation = 0;
         }
       }
     }
