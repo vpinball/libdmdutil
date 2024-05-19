@@ -772,7 +772,7 @@ void DMD::SerumThread()
             dmdUpdate.hasSegData = false;
             dmdUpdate.hasSegData2 = false;
 
-            if (m_pSerum->flags & 4)
+            if (m_pSerum->flags == 0)
             {
               dmdUpdate.mode = Mode::SerumV1;
               dmdUpdate.depth = 6;
@@ -785,7 +785,7 @@ void DMD::SerumThread()
 
               QueueUpdate(dmdUpdate, false);
             }
-            else if ((m_pSerum->flags & 1) && !(m_pSerum->flags & 2))
+            else if ((m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && !(m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
             {
               dmdUpdate.mode = Mode::SerumV2_32;
               dmdUpdate.depth = 24;
@@ -795,7 +795,7 @@ void DMD::SerumThread()
 
               QueueUpdate(dmdUpdate, false);
             }
-            else if (!(m_pSerum->flags & 1) && (m_pSerum->flags & 2))
+            else if (!(m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && (m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
             {
               dmdUpdate.mode = Mode::SerumV2_64;
               dmdUpdate.depth = 24;
@@ -805,7 +805,7 @@ void DMD::SerumThread()
 
               QueueUpdate(dmdUpdate, false);
             }
-            else if ((m_pSerum->flags & 1) && (m_pSerum->flags & 2))
+            else if ((m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && (m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
             {
               dmdUpdate.mode = Mode::SerumV2_32_64;
               dmdUpdate.depth = 24;
