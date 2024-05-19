@@ -781,7 +781,7 @@ void DMD::SerumThread()
               memcpy(dmdUpdate.data, m_pSerum->frame,
                      m_pUpdateBufferQueue[currentBufferPosition]->width *
                          m_pUpdateBufferQueue[currentBufferPosition]->height);
-              memcpy(dmdUpdate.segData2, m_pSerum->palette, PALETTE_SIZE);
+              memcpy(dmdUpdate.segData, m_pSerum->palette, PALETTE_SIZE);
 
               QueueUpdate(dmdUpdate, false);
             }
