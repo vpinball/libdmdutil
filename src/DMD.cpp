@@ -773,9 +773,10 @@ void DMD::SerumThread()
 
         if (m_pSerum && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
         {
+          // We only need the "low byte" of the result, not the status codes in the high byte.
           uint16_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
 
-          if (result != IDENTIFY_NO_FRAME)
+          if (result != 0xffff)
           {
             lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
             QueueSerumFrames(lastDmdUpdate);
@@ -801,9 +802,10 @@ void DMD::SerumThread()
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
                   .count() > nextRotation)
       {
+        // We only need the "low byte" of the result, not the status codes in the high byte.
         uint16_t result = Serum_Rotate();
 
-        if (result != IDENTIFY_NO_FRAME)
+        if (result != 0xffff)
         {
           QueueSerumFrames(lastDmdUpdate);
 
