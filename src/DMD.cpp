@@ -564,7 +564,7 @@ void DMD::DmdFrameThread()
       if (m_pDMDServerConnector) m_dmdServerDisconnectOthers = true;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
     std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
     m_dmdFrameReady = false;
@@ -732,9 +732,9 @@ void DMD::SerumThread()
                    [&]()
                    {
                      return m_dmdFrameReady || m_stopFlag ||
-                            (nextRotation && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                 std::chrono::system_clock::now().time_since_epoch())
-                                                     .count() < nextRotation);
+                            (nextRotation > 0 && std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                     std::chrono::system_clock::now().time_since_epoch())
+                                                         .count() < nextRotation);
                    });
       sl.unlock();
       if (m_stopFlag)
@@ -742,7 +742,7 @@ void DMD::SerumThread()
         return;
       }
 
-      if (!m_dmdFrameReady && m_pSerum && m_pSerum->rotationtimer > 0)
+      if (!m_dmdFrameReady && nextRotation > 0 && m_pSerum && m_pSerum->rotationtimer > 0)
       {
         uint32_t result = Serum_Rotate();
 
@@ -758,8 +758,6 @@ void DMD::SerumThread()
           else
             nextRotation = 0;
         }
-
-        continue;
       }
 
       while (!m_stopFlag && bufferPosition != m_updateBufferQueuePosition)
