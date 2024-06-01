@@ -773,10 +773,9 @@ void DMD::SerumThread()
 
         if (m_pSerum && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
         {
-          // We only need the "low byte" of the result, not the status codes in the high byte.
-          uint16_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
+          uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
 
-          if (result != 0xffff)
+          if (result != IDENTIFY_NO_FRAME)
           {
             lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
             QueueSerumFrames(lastDmdUpdate);
@@ -842,7 +841,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate)
   }
   else if (m_pSerum->SerumVersion == SERUM_V2)
   {
-    if ((m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && !(m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
+    if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
     {
       serumUpdate.mode = Mode::SerumV2_32;
       serumUpdate.depth = 24;
@@ -852,7 +851,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate)
 
       QueueUpdate(serumUpdate, false);
     }
-    else if (!(m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && (m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
+    else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
     {
       serumUpdate.mode = Mode::SerumV2_64;
       serumUpdate.depth = 24;
@@ -862,7 +861,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate)
 
       QueueUpdate(serumUpdate, false);
     }
-    else if ((m_pSerum->flags & FLAG_RETURNED_32P_FRAME_OK) && (m_pSerum->flags & FLAG_RETURNED_64P_FRAME_OK))
+    else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
     {
       serumUpdate.mode = Mode::SerumV2_32_64;
       serumUpdate.depth = 24;
@@ -871,7 +870,6 @@ void DMD::QueueSerumFrames(Update* dmdUpdate)
       memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
       QueueUpdate(serumUpdate, false);
-
       serumUpdate.mode = Mode::SerumV2_64_32;
       serumUpdate.width = m_pSerum->width64;
       serumUpdate.height = 64;
