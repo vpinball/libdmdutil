@@ -781,7 +781,7 @@ void DMD::SerumThread()
             lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
             QueueSerumFrames(lastDmdUpdate);
 
-            if (result > 0 && result < 0xffff)
+            if (result > 0)
               nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::system_clock::now().time_since_epoch())
                                  .count() +
