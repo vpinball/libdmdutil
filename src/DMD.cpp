@@ -332,6 +332,9 @@ void DMD::QueueUpdate(Update dmdUpdate, bool buffered)
                sizeof(Update));
         m_dmdFrameReady = true;
 
+        Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", m_updateBufferQueuePosition,
+            dmdUpdate.mode, dmdUpdate.depth);
+
         if (buffered)
         {
           memcpy(&m_updateBuffered, &dmdUpdate, sizeof(Update));
