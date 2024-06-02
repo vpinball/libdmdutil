@@ -654,6 +654,7 @@ void DMD::ZeDMDThread()
           }
           else
           {
+            // Note that uint16_t segData is used to transport the uint8_t palette data to keep the dmdserver protocol stable.
             memcpy(palette, m_pUpdateBufferQueue[currentBufferPosition]->segData, PALETTE_SIZE);
             m_pZeDMD->RenderColoredGray6(m_pUpdateBufferQueue[currentBufferPosition]->data, palette, nullptr);
           }
@@ -780,7 +781,7 @@ void DMD::SerumThread()
             lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
             QueueSerumFrames(lastDmdUpdate);
 
-            if (result > 0 && result < 1024)
+            if (result > 0 && result < 0xffff)
               nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::system_clock::now().time_since_epoch())
                                  .count() +
@@ -801,12 +802,11 @@ void DMD::SerumThread()
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
                   .count() > nextRotation)
       {
-        // We only need the "low byte" of the result, not the status codes in the high byte.
-        uint16_t result = Serum_Rotate();
+        uint32_t result = Serum_Rotate();
 
-        if (result != 0xffff)
+        if (result > 0)
         {
-          QueueSerumFrames(lastDmdUpdate);
+          QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
 
           if (result > 0 && result < 1024)
             nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -821,7 +821,7 @@ void DMD::SerumThread()
   }
 }
 
-void DMD::QueueSerumFrames(Update* dmdUpdate)
+void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
 {
   Update serumUpdate = Update();
   serumUpdate.hasData = true;
@@ -843,39 +843,52 @@ void DMD::QueueSerumFrames(Update* dmdUpdate)
   {
     if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
     {
-      serumUpdate.mode = Mode::SerumV2_32;
-      serumUpdate.depth = 24;
-      serumUpdate.width = m_pSerum->width32;
-      serumUpdate.height = 32;
-      memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+      if (render32)
+      {
+        serumUpdate.mode = Mode::SerumV2_32;
+        serumUpdate.depth = 24;
+        serumUpdate.width = m_pSerum->width32;
+        serumUpdate.height = 32;
+        memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
-      QueueUpdate(serumUpdate, false);
+        QueueUpdate(serumUpdate, false);
+      }
     }
     else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
     {
-      serumUpdate.mode = Mode::SerumV2_64;
-      serumUpdate.depth = 24;
-      serumUpdate.width = m_pSerum->width64;
-      serumUpdate.height = 64;
-      memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+      if (render64)
+      {
+        serumUpdate.mode = Mode::SerumV2_64;
+        serumUpdate.depth = 24;
+        serumUpdate.width = m_pSerum->width64;
+        serumUpdate.height = 64;
+        memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
-      QueueUpdate(serumUpdate, false);
+        QueueUpdate(serumUpdate, false);
+      }
     }
     else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
     {
-      serumUpdate.mode = Mode::SerumV2_32_64;
-      serumUpdate.depth = 24;
-      serumUpdate.width = m_pSerum->width32;
-      serumUpdate.height = 32;
-      memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+      if (render32)
+      {
+        serumUpdate.mode = Mode::SerumV2_32_64;
+        serumUpdate.depth = 24;
+        serumUpdate.width = m_pSerum->width32;
+        serumUpdate.height = 32;
+        memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
-      QueueUpdate(serumUpdate, false);
-      serumUpdate.mode = Mode::SerumV2_64_32;
-      serumUpdate.width = m_pSerum->width64;
-      serumUpdate.height = 64;
-      memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+        QueueUpdate(serumUpdate, false);
+      }
 
-      QueueUpdate(serumUpdate, false);
+      if (render64)
+      {
+        serumUpdate.mode = Mode::SerumV2_64_32;
+        serumUpdate.width = m_pSerum->width64;
+        serumUpdate.height = 64;
+        memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+
+        QueueUpdate(serumUpdate, false);
+      }
     }
   }
 }

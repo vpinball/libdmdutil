@@ -179,7 +179,7 @@ class DMDUTILAPI DMD
                   Mode mode, bool buffered = false);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
   void HandleTrigger(uint16_t id);
-  void QueueSerumFrames(Update* dmdUpdate);
+  void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true);
 
   void DmdFrameThread();
   void LevelDMDThread();
