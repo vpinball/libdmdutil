@@ -747,74 +747,77 @@ void DMD::SerumThread()
 
       while (!m_stopFlag && bufferPosition != m_updateBufferQueuePosition)
       {
-        bufferPosition = GetNextBufferQueuePosition(bufferPosition);
+        if (++bufferPosition >= DMDUTIL_MAX_FRAME_BUFFER_SIZE) bufferPosition = 0;
         currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-        if (strcmp(m_romName, name) != 0)
+        if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
         {
-          strcpy(name, m_romName);
-
-          if (m_pSerum)
+          if (strcmp(m_romName, name) != 0)
           {
-            delete (m_pSerum);
-            m_pSerum = nullptr;
-            lastDmdUpdate = nullptr;
-          }
+            strcpy(name, m_romName);
 
-          if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
-
-          m_pSerum = (name[0] != '\0')
-                         ? Serum_Load(m_altColorPath, m_romName, FLAG_REQUEST_32P_FRAMES | FLAG_REQUEST_64P_FRAMES)
-                         : nullptr;
-          if (m_pSerum)
-          {
-            Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
-            Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
-          }
-        }
-
-        if (m_pSerum && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
-        {
-          uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
-
-          if (result != IDENTIFY_NO_FRAME)
-          {
-            lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
-            QueueSerumFrames(lastDmdUpdate);
-
-            if (result > 0)
-              nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::system_clock::now().time_since_epoch())
-                                 .count() +
-                             m_pSerum->rotationtimer;
-            else
-              nextRotation = 0;
-
-            if (m_pSerum->triggerID < 0xffffffff & m_pSerum->triggerID != prevTriggerId)
+            if (m_pSerum)
             {
-              HandleTrigger(m_pSerum->triggerID);
-              prevTriggerId = m_pSerum->triggerID;
+              delete (m_pSerum);
+              m_pSerum = nullptr;
+              lastDmdUpdate = nullptr;
+            }
+
+            if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
+
+            m_pSerum = (name[0] != '\0')
+                           ? Serum_Load(m_altColorPath, m_romName, FLAG_REQUEST_32P_FRAMES | FLAG_REQUEST_64P_FRAMES)
+                           : nullptr;
+            if (m_pSerum)
+            {
+              Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
+              Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
+            }
+          }
+
+          if (m_pSerum)
+          {
+            uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
+
+            if (result != IDENTIFY_NO_FRAME)
+            {
+              lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
+              QueueSerumFrames(lastDmdUpdate);
+
+              if (result > 0)
+                nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::system_clock::now().time_since_epoch())
+                                   .count() +
+                               m_pSerum->rotationtimer;
+              else
+                nextRotation = 0;
+
+              if (m_pSerum->triggerID < 0xffffffff & m_pSerum->triggerID != prevTriggerId)
+              {
+                HandleTrigger(m_pSerum->triggerID);
+                prevTriggerId = m_pSerum->triggerID;
+              }
             }
           }
         }
+      }
 
-        if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate &&
-            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-                    .count() > nextRotation)
+      if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate &&
+          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+                  .count() > nextRotation)
+      {
+        uint32_t result = Serum_Rotate();
+
+        if (result > 0)
         {
-          uint32_t result = Serum_Rotate();
-
-          if (result > 0)
-          {
-            QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
-            nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
-                               std::chrono::system_clock::now().time_since_epoch())
-                               .count() +
-                           m_pSerum->rotationtimer;
-          }
-          else
-            nextRotation = 0;
+          QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
+          nextRotation =
+              std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+                  .count() +
+              m_pSerum->rotationtimer;
         }
+        else
+          nextRotation = 0;
       }
     }
   }
