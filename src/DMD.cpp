@@ -654,7 +654,8 @@ void DMD::ZeDMDThread()
           }
           else
           {
-            // Note that uint16_t segData is used to transport the uint8_t palette data to keep the dmdserver protocol stable.
+            // Note that uint16_t segData is used to transport the uint8_t palette data to keep the dmdserver protocol
+            // stable.
             memcpy(palette, m_pUpdateBufferQueue[currentBufferPosition]->segData, PALETTE_SIZE);
             m_pZeDMD->RenderColoredGray6(m_pUpdateBufferQueue[currentBufferPosition]->data, palette, nullptr);
           }
@@ -796,23 +797,21 @@ void DMD::SerumThread()
             }
           }
         }
-      }
 
-      if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate &&
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-                  .count() > nextRotation)
-      {
-        uint32_t result = Serum_Rotate();
-
-        if (result > 0)
+        if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate &&
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+                    .count() > nextRotation)
         {
-          QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
+          uint32_t result = Serum_Rotate();
 
-          if (result > 0 && result < 1024)
+          if (result > 0)
+          {
+            QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
             nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
                                std::chrono::system_clock::now().time_since_epoch())
                                .count() +
                            m_pSerum->rotationtimer;
+          }
           else
             nextRotation = 0;
         }
@@ -828,7 +827,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
   serumUpdate.hasSegData = false;
   serumUpdate.hasSegData2 = false;
 
-  if (m_pSerum->SerumVersion == SERUM_V1)
+  if (m_pSerum->SerumVersion == SERUM_V1 && render32)
   {
     serumUpdate.mode = Mode::SerumV1;
     serumUpdate.depth = 6;
