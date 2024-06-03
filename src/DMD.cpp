@@ -728,20 +728,17 @@ void DMD::SerumThread()
     int currentBufferPosition = 0;
     uint32_t prevTriggerId = 0;
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-    std::atomic<uint32_t> nextRotation = 0;
+    uint32_t nextRotation = 0;
     Update* lastDmdUpdate = nullptr;
 
     while (true)
     {
+      uint32_t now =
+          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+              .count();
+
       std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-      m_dmdCV.wait(sl,
-                   [&]()
-                   {
-                     return m_dmdFrameReady || m_stopFlag ||
-                            (nextRotation > 0 && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                     std::chrono::system_clock::now().time_since_epoch())
-                                                         .count() > nextRotation);
-                   });
+      m_dmdCV.wait(sl, [&]() { return m_dmdFrameReady || m_stopFlag || (nextRotation > 0 && now > nextRotation); });
       sl.unlock();
       if (m_stopFlag)
       {
@@ -782,19 +779,16 @@ void DMD::SerumThread()
           {
             uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
 
-            Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID, m_pSerum->rotationtimer,
-                m_pSerum->flags);
+            Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID,
+                m_pSerum->rotationtimer, m_pSerum->flags);
 
             if (result != IDENTIFY_NO_FRAME)
             {
               lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
               QueueSerumFrames(lastDmdUpdate);
 
-              if (result > 0)
-                nextRotation = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::system_clock::now().time_since_epoch())
-                                   .count() +
-                               m_pSerum->rotationtimer;
+              if (result > 0 && ((result & 0xffff) < 2048))
+                nextRotation = now + m_pSerum->rotationtimer;
               else
                 nextRotation = 0;
 
@@ -809,20 +803,16 @@ void DMD::SerumThread()
       }
 
       if (!m_stopFlag && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate &&
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-                  .count() > nextRotation)
+          now > nextRotation)
       {
         uint32_t result = Serum_Rotate();
 
-        Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags%lu", m_pSerum->rotationtimer, result & 0xfffff0000);
+        Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result & 0xfffff0000);
 
-        if (result > 0)
+        if (result > 0 && ((result & 0xffff) < 2048))
         {
           QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
-          nextRotation =
-              std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-                  .count() +
-              m_pSerum->rotationtimer;
+          nextRotation = now + m_pSerum->rotationtimer;
         }
         else
           nextRotation = 0;
