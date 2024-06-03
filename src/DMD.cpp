@@ -782,7 +782,7 @@ void DMD::SerumThread()
           {
             uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
 
-            Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%d, rotation=%d, flags=%d", result, m_pSerum->rotationtimer,
+            Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID, m_pSerum->rotationtimer,
                 m_pSerum->flags);
 
             if (result != IDENTIFY_NO_FRAME)
@@ -814,7 +814,7 @@ void DMD::SerumThread()
       {
         uint32_t result = Serum_Rotate();
 
-        Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%d, flags=%d", m_pSerum->rotationtimer, result & 0xfffff0000);
+        Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags%lu", m_pSerum->rotationtimer, result & 0xfffff0000);
 
         if (result > 0)
         {
