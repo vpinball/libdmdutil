@@ -786,11 +786,11 @@ void DMD::SerumThread()
           {
             uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
 
-            Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID,
-                m_pSerum->rotationtimer, m_pSerum->flags);
-
             if (result != IDENTIFY_NO_FRAME)
             {
+              Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID,
+                  m_pSerum->rotationtimer, m_pSerum->flags);
+
               lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
               QueueSerumFrames(lastDmdUpdate);
 
