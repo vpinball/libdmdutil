@@ -814,7 +814,7 @@ void DMD::SerumThread()
       {
         uint32_t result = Serum_Rotate();
 
-        Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result & 0xfffff0000);
+        Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
 
         QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
 
