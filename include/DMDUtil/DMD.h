@@ -191,7 +191,6 @@ class DMDUTILAPI DMD
   void PupDMDThread();
   void SerumThread();
 
-  uint8_t m_updateBufferQueuePosition = 0;
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   char m_pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
@@ -218,6 +217,7 @@ class DMDUTILAPI DMD
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_dmdFrameReady = false;
   std::atomic<bool> m_stopFlag = false;
+  std::atomic<uint8_t> m_updateBufferQueuePosition;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;
