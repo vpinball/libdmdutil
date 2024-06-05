@@ -72,6 +72,12 @@ set(DMDUTIL_SOURCES
    src/AlphaNumeric.cpp
 )
 
+set_source_files_properties(
+   src/DMD.cpp PROPERTIES COMPILE_FLAGS "-fsanitize=thread"
+)
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
+
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
    list(APPEND DMDUTIL_SOURCES
       src/PixelcadeDMD.cpp
