@@ -9,7 +9,7 @@
 #endif
 
 #define DMDUTIL_FRAME_BUFFER_SIZE 32
-#define DMDUTIL_MAX_FRAME_BUFFER_SIZE (128 * DMDUTIL_FRAME_BUFFER_SIZE)
+#define DMDUTIL_MAX_FRAME_BUFFER_SIZE (16 * DMDUTIL_FRAME_BUFFER_SIZE)
 #define DMDUTIL_MAX_NAME_SIZE 16
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
@@ -217,7 +217,7 @@ class DMDUTILAPI DMD
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_dmdFrameReady;
   std::atomic<bool> m_stopFlag;
-  std::atomic<uint8_t> m_updateBufferQueuePosition;
+  std::atomic<uint16_t> m_updateBufferQueuePosition;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;
