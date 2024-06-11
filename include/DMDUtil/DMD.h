@@ -9,7 +9,8 @@
 #endif
 
 #define DMDUTIL_FRAME_BUFFER_SIZE 32
-#define DMDUTIL_MAX_FRAME_BUFFER_SIZE (16 * DMDUTIL_FRAME_BUFFER_SIZE)
+#define DMDUTIL_MIN_FRAMES_BEHIND 4
+#define DMDUTIL_MAX_FRAMES_BEHIND 16
 #define DMDUTIL_MAX_NAME_SIZE 16
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
@@ -172,7 +173,7 @@ class DMDUTILAPI DMD
   Update* m_pUpdateBufferQueue[DMDUTIL_FRAME_BUFFER_SIZE];
   Update m_updateBuffered;
 
-  int GetNextBufferQueuePosition(int bufferPosition);
+  uint8_t GetNextBufferQueuePosition(uint8_t bufferPosition, const uint8_t updateBufferQueuePosition);
   bool ConnectDMDServer();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
@@ -217,7 +218,7 @@ class DMDUTILAPI DMD
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_dmdFrameReady;
   std::atomic<bool> m_stopFlag;
-  std::atomic<uint16_t> m_updateBufferQueuePosition;
+  std::atomic<uint8_t> m_updateBufferQueuePosition;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;

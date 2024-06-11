@@ -330,9 +330,9 @@ void DMD::QueueUpdate(Update dmdUpdate, bool buffered)
       [this, dmdUpdate, buffered]()
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
-        uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
-        if (++updateBufferQueuePosition >= DMDUTIL_MAX_FRAME_BUFFER_SIZE) updateBufferQueuePosition = 0;
-        memcpy(m_pUpdateBufferQueue[updateBufferQueuePosition % DMDUTIL_FRAME_BUFFER_SIZE], &dmdUpdate, sizeof(Update));
+        uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+        if (++updateBufferQueuePosition >= DMDUTIL_FRAME_BUFFER_SIZE) updateBufferQueuePosition = 0;
+        memcpy(m_pUpdateBufferQueue[updateBufferQueuePosition], &dmdUpdate, sizeof(Update));
         m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
         m_dmdFrameReady.store(true, std::memory_order_release);
 
@@ -534,22 +534,24 @@ void DMD::FindDisplays()
   }
 }
 
-int DMD::GetNextBufferQueuePosition(int bufferPosition)
+uint8_t DMD::GetNextBufferQueuePosition(uint8_t bufferPosition, const uint8_t updateBufferQueuePosition)
 {
-  const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+  if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
-  if (++bufferPosition >= DMDUTIL_MAX_FRAME_BUFFER_SIZE) bufferPosition = 0;
-
-  if (updateBufferQueuePosition >= (DMDUTIL_FRAME_BUFFER_SIZE / 8))
+  if (bufferPosition < updateBufferQueuePosition)
   {
-    // In case the DMD device is far behind the current frame, we need to skip some.
-    if (updateBufferQueuePosition > bufferPosition &&
-        (updateBufferQueuePosition - bufferPosition) > (DMDUTIL_FRAME_BUFFER_SIZE / 2))
-      bufferPosition = updateBufferQueuePosition - (DMDUTIL_FRAME_BUFFER_SIZE / 8);
-    else if (updateBufferQueuePosition < bufferPosition &&
-             (DMDUTIL_MAX_FRAME_BUFFER_SIZE - bufferPosition + updateBufferQueuePosition) >
-                 (DMDUTIL_FRAME_BUFFER_SIZE / 2))
-      bufferPosition = updateBufferQueuePosition - (DMDUTIL_FRAME_BUFFER_SIZE / 8);
+    if ((updateBufferQueuePosition - bufferPosition) > DMDUTIL_MAX_FRAMES_BEHIND)
+      return updateBufferQueuePosition - DMDUTIL_MIN_FRAMES_BEHIND;
+  }
+  else if (bufferPosition > updateBufferQueuePosition)
+  {
+    if ((DMDUTIL_FRAME_BUFFER_SIZE - bufferPosition + updateBufferQueuePosition) > DMDUTIL_MAX_FRAMES_BEHIND)
+    {
+      if (updateBufferQueuePosition >= DMDUTIL_MIN_FRAMES_BEHIND)
+        return updateBufferQueuePosition - DMDUTIL_MIN_FRAMES_BEHIND;
+      else
+        return DMDUTIL_FRAME_BUFFER_SIZE - DMDUTIL_MIN_FRAMES_BEHIND + updateBufferQueuePosition;
+    }
   }
 
   return bufferPosition;
@@ -593,7 +595,7 @@ void DMD::DmdFrameThread()
 
 void DMD::ZeDMDThread()
 {
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   uint16_t width = 0;
   uint16_t height = 0;
   uint16_t segData1[128] = {0};
@@ -616,85 +618,81 @@ void DMD::ZeDMDThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
-      bufferPosition = GetNextBufferQueuePosition(bufferPosition);
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
       // Note: libzedmd has its own update detection.
 
-      if (m_pUpdateBufferQueue[currentBufferPosition]->hasData ||
-          m_pUpdateBufferQueue[currentBufferPosition]->hasSegData)
+      if (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData)
       {
-        if (m_pUpdateBufferQueue[currentBufferPosition]->width != width ||
-            m_pUpdateBufferQueue[currentBufferPosition]->height != height)
+        if (m_pUpdateBufferQueue[bufferPosition]->width != width ||
+            m_pUpdateBufferQueue[bufferPosition]->height != height)
         {
-          width = m_pUpdateBufferQueue[currentBufferPosition]->width;
-          height = m_pUpdateBufferQueue[currentBufferPosition]->height;
+          width = m_pUpdateBufferQueue[bufferPosition]->width;
+          height = m_pUpdateBufferQueue[bufferPosition]->height;
           // Activate the correct scaling mode.
           m_pZeDMD->SetFrameSize(width, height);
         }
 
         bool update = false;
-        if (m_pUpdateBufferQueue[currentBufferPosition]->depth != 24)
+        if (m_pUpdateBufferQueue[bufferPosition]->depth != 24)
         {
-          update = UpdatePalette(palette, m_pUpdateBufferQueue[currentBufferPosition]->depth,
-                                 m_pUpdateBufferQueue[currentBufferPosition]->r,
-                                 m_pUpdateBufferQueue[currentBufferPosition]->g,
-                                 m_pUpdateBufferQueue[currentBufferPosition]->b);
+          update = UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth,
+                                 m_pUpdateBufferQueue[bufferPosition]->r, m_pUpdateBufferQueue[bufferPosition]->g,
+                                 m_pUpdateBufferQueue[bufferPosition]->b);
         }
 
-        if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::RGB24)
+        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24)
         {
           // ZeDMD HD supports 256 * 64 pixels.
           uint8_t rgb24Data[256 * 64 * 3];
 
-          AdjustRGB24Depth(m_pUpdateBufferQueue[currentBufferPosition]->data, rgb24Data, width * height, palette,
-                           m_pUpdateBufferQueue[currentBufferPosition]->depth);
+          AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPosition]->data, rgb24Data, width * height, palette,
+                           m_pUpdateBufferQueue[bufferPosition]->depth);
           m_pZeDMD->DisablePreUpscaling();
           m_pZeDMD->RenderRgb24(rgb24Data);
           m_pZeDMD->EnablePreUpscaling();
         }
-        else if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::RGB16)
+        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16)
         {
           m_pZeDMD->DisablePreUpscaling();
-          m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[currentBufferPosition]->segData);
+          m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
           m_pZeDMD->EnablePreUpscaling();
         }
-        else if (m_pSerum && IsSerumMode(m_pUpdateBufferQueue[currentBufferPosition]->mode))
+        else if (m_pSerum && IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode))
         {
-          if ((m_pZeDMD->GetWidth() == 256 &&
-               m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::SerumV2_32_64) ||
-              (m_pZeDMD->GetWidth() < 256 && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::SerumV2_64_32))
+          if ((m_pZeDMD->GetWidth() == 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_32_64) ||
+              (m_pZeDMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_64_32))
             continue;
 
-          if (IsSerumV2Mode(m_pUpdateBufferQueue[currentBufferPosition]->mode))
+          if (IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode))
           {
-            m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[currentBufferPosition]->segData);
+            m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
           }
           else
           {
             // Note that uint16_t segData is used to transport the uint8_t palette data to keep the dmdserver protocol
             // stable.
-            memcpy(palette, m_pUpdateBufferQueue[currentBufferPosition]->segData, PALETTE_SIZE);
-            m_pZeDMD->RenderColoredGray6(m_pUpdateBufferQueue[currentBufferPosition]->data, palette, nullptr);
+            memcpy(palette, m_pUpdateBufferQueue[bufferPosition]->segData, PALETTE_SIZE);
+            m_pZeDMD->RenderColoredGray6(m_pUpdateBufferQueue[bufferPosition]->data, palette, nullptr);
           }
         }
         else if (!m_pSerum)
         {
-          if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
+          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
           {
-            m_pZeDMD->SetPalette(palette, m_pUpdateBufferQueue[currentBufferPosition]->depth == 2 ? 4 : 16);
+            m_pZeDMD->SetPalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth == 2 ? 4 : 16);
 
-            switch (m_pUpdateBufferQueue[currentBufferPosition]->depth)
+            switch (m_pUpdateBufferQueue[bufferPosition]->depth)
             {
               case 2:
-                m_pZeDMD->RenderGray2(m_pUpdateBufferQueue[currentBufferPosition]->data);
+                m_pZeDMD->RenderGray2(m_pUpdateBufferQueue[bufferPosition]->data);
                 break;
 
               case 4:
-                m_pZeDMD->RenderGray4(m_pUpdateBufferQueue[currentBufferPosition]->data);
+                m_pZeDMD->RenderGray4(m_pUpdateBufferQueue[bufferPosition]->data);
                 break;
 
               default:
@@ -702,18 +700,18 @@ void DMD::ZeDMDThread()
                 break;
             }
           }
-          else if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::AlphaNumeric)
+          else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
           {
-            if (memcmp(segData1, m_pUpdateBufferQueue[currentBufferPosition]->segData, sizeof(segData1)) != 0)
+            if (memcmp(segData1, m_pUpdateBufferQueue[bufferPosition]->segData, sizeof(segData1)) != 0)
             {
-              memcpy(segData1, m_pUpdateBufferQueue[currentBufferPosition]->segData, sizeof(segData1));
+              memcpy(segData1, m_pUpdateBufferQueue[bufferPosition]->segData, sizeof(segData1));
               update = true;
             }
 
-            if (m_pUpdateBufferQueue[currentBufferPosition]->hasSegData2 &&
-                memcmp(segData2, m_pUpdateBufferQueue[currentBufferPosition]->segData2, sizeof(segData2)) != 0)
+            if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2 &&
+                memcmp(segData2, m_pUpdateBufferQueue[bufferPosition]->segData2, sizeof(segData2)) != 0)
             {
-              memcpy(segData2, m_pUpdateBufferQueue[currentBufferPosition]->segData2, sizeof(segData2));
+              memcpy(segData2, m_pUpdateBufferQueue[bufferPosition]->segData2, sizeof(segData2));
               update = true;
             }
 
@@ -722,11 +720,10 @@ void DMD::ZeDMDThread()
               // ZeDMD HD supports 256 * 64 pixels.
               uint8_t renderBuffer[256 * 64];
 
-              if (m_pUpdateBufferQueue[currentBufferPosition]->hasSegData2)
-                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->layout, segData1,
-                                        segData2);
+              if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2)
+                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1, segData2);
               else
-                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->layout, segData1);
+                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1);
 
               m_pZeDMD->SetPalette(palette, 4);
               m_pZeDMD->RenderGray2(renderBuffer);
@@ -742,8 +739,7 @@ void DMD::SerumThread()
 {
   if (Config::GetInstance()->IsAltColor())
   {
-    uint16_t bufferPosition = 0;
-    uint16_t currentBufferPosition = 0;
+    uint8_t bufferPosition = 0;
     uint32_t prevTriggerId = 0;
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
     uint32_t nextRotation = 0;
@@ -775,13 +771,12 @@ void DMD::SerumThread()
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
               .count();
 
-      const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+      const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
       while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
       {
-        if (++bufferPosition >= DMDUTIL_MAX_FRAME_BUFFER_SIZE) bufferPosition = 0;
-        currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+        if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
-        if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
+        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
         {
           if (strcmp(m_romName, name) != 0)
           {
@@ -808,14 +803,14 @@ void DMD::SerumThread()
 
           if (m_pSerum)
           {
-            uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[currentBufferPosition]->data);
+            uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[bufferPosition]->data);
 
             if (result != IDENTIFY_NO_FRAME)
             {
               Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID,
                   m_pSerum->rotationtimer, m_pSerum->flags);
 
-              lastDmdUpdate = m_pUpdateBufferQueue[currentBufferPosition];
+              lastDmdUpdate = m_pUpdateBufferQueue[bufferPosition];
               QueueSerumFrames(lastDmdUpdate);
 
               if (result > 0 && ((result & 0xffff) < 2048))
@@ -933,7 +928,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
 
 void DMD::PixelcadeDMDThread()
 {
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   uint16_t segData1[128] = {0};
   uint16_t segData2[128] = {0};
   uint8_t palette[PALETTE_SIZE] = {0};
@@ -954,33 +949,30 @@ void DMD::PixelcadeDMDThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
-      bufferPosition = GetNextBufferQueuePosition(bufferPosition);
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-      if (m_pUpdateBufferQueue[currentBufferPosition]->hasData ||
-          m_pUpdateBufferQueue[currentBufferPosition]->hasSegData)
+      if (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData)
       {
-        uint16_t width = m_pUpdateBufferQueue[currentBufferPosition]->width;
-        uint16_t height = m_pUpdateBufferQueue[currentBufferPosition]->height;
+        uint16_t width = m_pUpdateBufferQueue[bufferPosition]->width;
+        uint16_t height = m_pUpdateBufferQueue[bufferPosition]->height;
         int length = width * height;
 
         bool update = false;
-        if (m_pUpdateBufferQueue[currentBufferPosition]->depth != 24)
+        if (m_pUpdateBufferQueue[bufferPosition]->depth != 24)
         {
-          update = UpdatePalette(palette, m_pUpdateBufferQueue[currentBufferPosition]->depth,
-                                 m_pUpdateBufferQueue[currentBufferPosition]->r,
-                                 m_pUpdateBufferQueue[currentBufferPosition]->g,
-                                 m_pUpdateBufferQueue[currentBufferPosition]->b);
+          update = UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth,
+                                 m_pUpdateBufferQueue[bufferPosition]->r, m_pUpdateBufferQueue[bufferPosition]->g,
+                                 m_pUpdateBufferQueue[bufferPosition]->b);
         }
 
-        if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::RGB24)
+        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24)
         {
           uint8_t rgb24Data[256 * 64 * 3];
-          AdjustRGB24Depth(m_pUpdateBufferQueue[currentBufferPosition]->data, rgb24Data, length, palette,
-                           m_pUpdateBufferQueue[currentBufferPosition]->depth);
+          AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPosition]->data, rgb24Data, length, palette,
+                           m_pUpdateBufferQueue[bufferPosition]->depth);
 
           uint8_t scaledBuffer[128 * 32 * 3];
           if (width == 128 && height == 32)
@@ -1003,29 +995,29 @@ void DMD::PixelcadeDMDThread()
           }
           update = true;
         }
-        else if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::RGB16)
+        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16)
         {
           if (width == 128 && height == 32)
-            memcpy(rgb565Data, m_pUpdateBufferQueue[currentBufferPosition]->segData, 128 * 32 * 2);
+            memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * 2);
           else if (width == 128 && height == 16)
             FrameUtil::Helper::Center((uint8_t*)rgb565Data, 128, 32,
-                                      (uint8_t*)m_pUpdateBufferQueue[currentBufferPosition]->segData, 128, 16, 16);
+                                      (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData, 128, 16, 16);
           else if (height == 64)
             FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, 128, 32,
-                                         (uint8_t*)m_pUpdateBufferQueue[currentBufferPosition]->segData, width, 64, 16);
+                                         (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData, width, 64, 16);
           else
             continue;
 
           update = true;
         }
-        else if (IsSerumV2Mode(m_pUpdateBufferQueue[currentBufferPosition]->mode))
+        else if (IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode))
         {
-          if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::SerumV2_32 ||
-              m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::SerumV2_32_64)
-            memcpy(rgb565Data, m_pUpdateBufferQueue[currentBufferPosition]->segData, 128 * 32 * 2);
-          else if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::SerumV2_64)
+          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_32 ||
+              m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_32_64)
+            memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPosition]->segData, 128 * 32 * 2);
+          else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_64)
             FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, 128, 32,
-                                         (uint8_t*)m_pUpdateBufferQueue[currentBufferPosition]->segData, width, 64, 16);
+                                         (uint8_t*)m_pUpdateBufferQueue[bufferPosition]->segData, width, 64, 16);
           else
             continue;
 
@@ -1035,39 +1027,38 @@ void DMD::PixelcadeDMDThread()
         {
           uint8_t renderBuffer[256 * 64];
 
-          if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::SerumV1)
+          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV1)
           {
-            memcpy(palette, m_pUpdateBufferQueue[currentBufferPosition]->segData, PALETTE_SIZE);
-            memcpy(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length);
+            memcpy(palette, m_pUpdateBufferQueue[bufferPosition]->segData, PALETTE_SIZE);
+            memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
             update = true;
           }
-          else if (!m_pSerum && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
+          else if (!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
           {
-            memcpy(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length);
+            memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
             update = true;
           }
-          else if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::AlphaNumeric)
+          else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
           {
-            if (memcmp(segData1, m_pUpdateBufferQueue[currentBufferPosition]->segData, sizeof(segData1)) != 0)
+            if (memcmp(segData1, m_pUpdateBufferQueue[bufferPosition]->segData, sizeof(segData1)) != 0)
             {
-              memcpy(segData1, m_pUpdateBufferQueue[currentBufferPosition]->segData, sizeof(segData1));
+              memcpy(segData1, m_pUpdateBufferQueue[bufferPosition]->segData, sizeof(segData1));
               update = true;
             }
 
-            if (m_pUpdateBufferQueue[currentBufferPosition]->hasSegData2 &&
-                memcmp(segData2, m_pUpdateBufferQueue[currentBufferPosition]->segData2, sizeof(segData2)) != 0)
+            if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2 &&
+                memcmp(segData2, m_pUpdateBufferQueue[bufferPosition]->segData2, sizeof(segData2)) != 0)
             {
-              memcpy(segData2, m_pUpdateBufferQueue[currentBufferPosition]->segData2, sizeof(segData2));
+              memcpy(segData2, m_pUpdateBufferQueue[bufferPosition]->segData2, sizeof(segData2));
               update = true;
             }
 
             if (update)
             {
-              if (m_pUpdateBufferQueue[currentBufferPosition]->hasSegData2)
-                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->layout, segData1,
-                                        segData2);
+              if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2)
+                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1, segData2);
               else
-                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->layout, segData1);
+                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1);
             }
           }
 
@@ -1106,7 +1097,7 @@ void DMD::PixelcadeDMDThread()
 
 void DMD::LevelDMDThread()
 {
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
   m_dmdFrameReady.load(std::memory_order_acquire);
@@ -1124,24 +1115,22 @@ void DMD::LevelDMDThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
-      bufferPosition = GetNextBufferQueuePosition(bufferPosition);
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-      if (!m_levelDMDs.empty() && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data &&
-          m_pUpdateBufferQueue[currentBufferPosition]->hasData)
+      if (!m_levelDMDs.empty() && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data &&
+          m_pUpdateBufferQueue[bufferPosition]->hasData)
       {
-        int length =
-            m_pUpdateBufferQueue[currentBufferPosition]->width * m_pUpdateBufferQueue[currentBufferPosition]->height;
-        if (memcmp(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length) != 0)
+        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+        if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length) != 0)
         {
-          memcpy(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length);
+          memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
           for (LevelDMD* pLevelDMD : m_levelDMDs)
           {
             if (pLevelDMD->GetLength() == length)
-              pLevelDMD->Update(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->depth);
+              pLevelDMD->Update(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->depth);
           }
         }
       }
@@ -1151,7 +1140,7 @@ void DMD::LevelDMDThread()
 
 void DMD::RGB24DMDThread()
 {
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   uint16_t segData1[128] = {0};
   uint16_t segData2[128] = {0};
   uint8_t palette[PALETTE_SIZE] = {0};
@@ -1173,33 +1162,30 @@ void DMD::RGB24DMDThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
-      bufferPosition = GetNextBufferQueuePosition(bufferPosition);
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-      if (!m_rgb24DMDs.empty() && (m_pUpdateBufferQueue[currentBufferPosition]->hasData ||
-                                   m_pUpdateBufferQueue[currentBufferPosition]->hasSegData))
+      if (!m_rgb24DMDs.empty() &&
+          (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData))
       {
-        int length =
-            m_pUpdateBufferQueue[currentBufferPosition]->width * m_pUpdateBufferQueue[currentBufferPosition]->height;
+        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
         bool update = false;
 
-        if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::RGB24)
+        if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24)
         {
-          if (memcmp(rgb24Data, m_pUpdateBufferQueue[currentBufferPosition]->data, length * 3) != 0)
+          if (memcmp(rgb24Data, m_pUpdateBufferQueue[bufferPosition]->data, length * 3) != 0)
           {
-            if (m_pUpdateBufferQueue[currentBufferPosition]->depth != 24)
+            if (m_pUpdateBufferQueue[bufferPosition]->depth != 24)
             {
-              UpdatePalette(palette, m_pUpdateBufferQueue[currentBufferPosition]->depth,
-                            m_pUpdateBufferQueue[currentBufferPosition]->r,
-                            m_pUpdateBufferQueue[currentBufferPosition]->g,
-                            m_pUpdateBufferQueue[currentBufferPosition]->b);
+              UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth,
+                            m_pUpdateBufferQueue[bufferPosition]->r, m_pUpdateBufferQueue[bufferPosition]->g,
+                            m_pUpdateBufferQueue[bufferPosition]->b);
             }
 
-            AdjustRGB24Depth(m_pUpdateBufferQueue[currentBufferPosition]->data, rgb24Data, length, palette,
-                             m_pUpdateBufferQueue[currentBufferPosition]->depth);
+            AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPosition]->data, rgb24Data, length, palette,
+                             m_pUpdateBufferQueue[bufferPosition]->depth);
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
             {
@@ -1209,52 +1195,51 @@ void DMD::RGB24DMDThread()
             memset(renderBuffer, 0, sizeof(renderBuffer));
           }
         }
-        else if (m_pUpdateBufferQueue[currentBufferPosition]->mode != Mode::RGB16 &&
-                 !IsSerumV2Mode(m_pUpdateBufferQueue[currentBufferPosition]->mode))
+        else if (m_pUpdateBufferQueue[bufferPosition]->mode != Mode::RGB16 &&
+                 !IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode))
         {
-          if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::SerumV1)
+          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV1)
           {
-            memcpy(palette, m_pUpdateBufferQueue[currentBufferPosition]->segData, PALETTE_SIZE);
-            memcpy(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length);
+            memcpy(palette, m_pUpdateBufferQueue[bufferPosition]->segData, PALETTE_SIZE);
+            memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
             update = true;
           }
           else
           {
-            update = UpdatePalette(palette, m_pUpdateBufferQueue[currentBufferPosition]->depth,
-                                   m_pUpdateBufferQueue[currentBufferPosition]->r,
-                                   m_pUpdateBufferQueue[currentBufferPosition]->g,
-                                   m_pUpdateBufferQueue[currentBufferPosition]->b);
+            update = UpdatePalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth,
+                                   m_pUpdateBufferQueue[bufferPosition]->r, m_pUpdateBufferQueue[bufferPosition]->g,
+                                   m_pUpdateBufferQueue[bufferPosition]->b);
 
-            if (!m_pSerum && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data)
+            if (!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
             {
-              if (memcmp(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length) != 0)
+              if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length) != 0)
               {
-                memcpy(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length);
+                memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
                 update = true;
               }
             }
-            else if (m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::AlphaNumeric)
+            else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
             {
-              if (memcmp(segData1, m_pUpdateBufferQueue[currentBufferPosition]->segData, sizeof(segData1)) != 0)
+              if (memcmp(segData1, m_pUpdateBufferQueue[bufferPosition]->segData, sizeof(segData1)) != 0)
               {
-                memcpy(segData1, m_pUpdateBufferQueue[currentBufferPosition]->segData, sizeof(segData1));
+                memcpy(segData1, m_pUpdateBufferQueue[bufferPosition]->segData, sizeof(segData1));
                 update = true;
               }
 
-              if (m_pUpdateBufferQueue[currentBufferPosition]->hasSegData2 &&
-                  memcmp(segData2, m_pUpdateBufferQueue[currentBufferPosition]->segData2, sizeof(segData2)) != 0)
+              if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2 &&
+                  memcmp(segData2, m_pUpdateBufferQueue[bufferPosition]->segData2, sizeof(segData2)) != 0)
               {
-                memcpy(segData2, m_pUpdateBufferQueue[currentBufferPosition]->segData2, sizeof(segData2));
+                memcpy(segData2, m_pUpdateBufferQueue[bufferPosition]->segData2, sizeof(segData2));
                 update = true;
               }
 
               if (update)
               {
-                if (m_pUpdateBufferQueue[currentBufferPosition]->hasSegData2)
-                  m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->layout, segData1,
+                if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2)
+                  m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1,
                                           segData2);
                 else
-                  m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->layout, segData1);
+                  m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1);
               }
             }
           }
@@ -1281,12 +1266,12 @@ void DMD::RGB24DMDThread()
           for (int i = 0; i < length; i++)
           {
             int pos = i * 3;
-            rgb24Data[pos] = ((m_pUpdateBufferQueue[currentBufferPosition]->segData[i] >> 8) & 0xF8) |
-                             ((m_pUpdateBufferQueue[currentBufferPosition]->segData[i] >> 13) & 0x07);
-            rgb24Data[pos + 1] = ((m_pUpdateBufferQueue[currentBufferPosition]->segData[i] >> 3) & 0xFC) |
-                                 ((m_pUpdateBufferQueue[currentBufferPosition]->segData[i] >> 9) & 0x03);
-            rgb24Data[pos + 2] = ((m_pUpdateBufferQueue[currentBufferPosition]->segData[i] << 3) & 0xF8) |
-                                 ((m_pUpdateBufferQueue[currentBufferPosition]->segData[i] >> 2) & 0x07);
+            rgb24Data[pos] = ((m_pUpdateBufferQueue[bufferPosition]->segData[i] >> 8) & 0xF8) |
+                             ((m_pUpdateBufferQueue[bufferPosition]->segData[i] >> 13) & 0x07);
+            rgb24Data[pos + 1] = ((m_pUpdateBufferQueue[bufferPosition]->segData[i] >> 3) & 0xFC) |
+                                 ((m_pUpdateBufferQueue[bufferPosition]->segData[i] >> 9) & 0x03);
+            rgb24Data[pos + 2] = ((m_pUpdateBufferQueue[bufferPosition]->segData[i] << 3) & 0xF8) |
+                                 ((m_pUpdateBufferQueue[bufferPosition]->segData[i] >> 2) & 0x07);
           }
 
           for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
@@ -1301,7 +1286,7 @@ void DMD::RGB24DMDThread()
 
 void DMD::ConsoleDMDThread()
 {
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
   m_dmdFrameReady.load(std::memory_order_acquire);
@@ -1319,25 +1304,23 @@ void DMD::ConsoleDMDThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
-      bufferPosition = GetNextBufferQueuePosition(bufferPosition);
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-      if (!m_consoleDMDs.empty() && m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data &&
-          m_pUpdateBufferQueue[currentBufferPosition]->hasData)
+      if (!m_consoleDMDs.empty() && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data &&
+          m_pUpdateBufferQueue[bufferPosition]->hasData)
       {
-        int length =
-            m_pUpdateBufferQueue[currentBufferPosition]->width * m_pUpdateBufferQueue[currentBufferPosition]->height;
-        if (memcmp(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length) != 0)
+        int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+        if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length) != 0)
         {
-          memcpy(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length);
+          memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
           for (ConsoleDMD* pConsoleDMD : m_consoleDMDs)
           {
-            pConsoleDMD->Render(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->width,
-                                m_pUpdateBufferQueue[currentBufferPosition]->height,
-                                m_pUpdateBufferQueue[currentBufferPosition]->depth);
+            pConsoleDMD->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->width,
+                                m_pUpdateBufferQueue[bufferPosition]->height,
+                                m_pUpdateBufferQueue[bufferPosition]->depth);
           }
         }
       }
@@ -1400,7 +1383,7 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
 void DMD::DumpDMDTxtThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   uint8_t renderBuffer[3][256 * 64] = {0};
   uint32_t passed[3] = {0};
   std::chrono::steady_clock::time_point start;
@@ -1426,16 +1409,14 @@ void DMD::DumpDMDTxtThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
       // Don't use GetNextBufferPosition() here, we need all frames!
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if (m_pUpdateBufferQueue[currentBufferPosition]->depth <= 4 &&
-          m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data &&
-          m_pUpdateBufferQueue[currentBufferPosition]->hasData)
+      if (m_pUpdateBufferQueue[bufferPosition]->depth <= 4 &&
+          m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->hasData)
       {
         bool update = false;
         if (strcmp(m_romName, name) != 0)
@@ -1462,16 +1443,15 @@ void DMD::DumpDMDTxtThread()
 
         if (name[0] != '\0')
         {
-          int length =
-              m_pUpdateBufferQueue[currentBufferPosition]->width * m_pUpdateBufferQueue[currentBufferPosition]->height;
-          if (update || (memcmp(renderBuffer[1], m_pUpdateBufferQueue[currentBufferPosition]->data, length) != 0))
+          int length = m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
+          if (update || (memcmp(renderBuffer[1], m_pUpdateBufferQueue[bufferPosition]->data, length) != 0))
           {
             passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
                                        std::chrono::steady_clock::now() - start)
                                        .count());
-            memcpy(renderBuffer[2], m_pUpdateBufferQueue[currentBufferPosition]->data, length);
+            memcpy(renderBuffer[2], m_pUpdateBufferQueue[bufferPosition]->data, length);
 
-            if (m_pUpdateBufferQueue[currentBufferPosition]->depth == 2 &&
+            if (m_pUpdateBufferQueue[bufferPosition]->depth == 2 &&
                 (passed[2] - passed[1]) < DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION)
             {
               int i = 0;
@@ -1493,11 +1473,11 @@ void DMD::DumpDMDTxtThread()
             if (f)
             {
               fprintf(f, "0x%08x\n", passed[0]);
-              for (int y = 0; y < m_pUpdateBufferQueue[currentBufferPosition]->height; y++)
+              for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
               {
-                for (int x = 0; x < m_pUpdateBufferQueue[currentBufferPosition]->width; x++)
+                for (int x = 0; x < m_pUpdateBufferQueue[bufferPosition]->width; x++)
                 {
-                  fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[currentBufferPosition]->width + x]);
+                  fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[bufferPosition]->width + x]);
                 }
                 fprintf(f, "\n");
               }
@@ -1517,7 +1497,7 @@ void DMD::DumpDMDTxtThread()
 void DMD::DumpDMDRawThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
 
@@ -1541,15 +1521,13 @@ void DMD::DumpDMDRawThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
       // Don't use GetNextBufferPosition() here, we need all frames!
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if (m_pUpdateBufferQueue[currentBufferPosition]->hasData ||
-          m_pUpdateBufferQueue[currentBufferPosition]->hasSegData)
+      if (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData)
       {
         if (strcmp(m_romName, name) != 0)
         {
@@ -1578,10 +1556,10 @@ void DMD::DumpDMDRawThread()
                 std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
             fwrite(&current, 1, 4, f);
 
-            uint32_t size = sizeof(m_pUpdateBufferQueue[currentBufferPosition]);
+            uint32_t size = sizeof(m_pUpdateBufferQueue[bufferPosition]);
             fwrite(&size, 1, 4, f);
 
-            fwrite(m_pUpdateBufferQueue[currentBufferPosition], 1, size, f);
+            fwrite(m_pUpdateBufferQueue[bufferPosition], 1, size, f);
           }
         }
       }
@@ -1591,7 +1569,7 @@ void DMD::DumpDMDRawThread()
 
 void DMD::PupDMDThread()
 {
-  uint16_t bufferPosition = 0;
+  uint8_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
   uint8_t palette[192] = {0};
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
@@ -1611,12 +1589,11 @@ void DMD::PupDMDThread()
       return;
     }
 
-    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
       // Don't use GetNextBufferPosition() here, we need all frames!
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
-      uint16_t currentBufferPosition = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
       if (strcmp(m_romName, name) != 0)
       {
@@ -1636,7 +1613,7 @@ void DMD::PupDMDThread()
             m_pPUPDMD = new PUPDMD::DMD();
             m_pPUPDMD->SetLogCallback(PUPDMDLogCallback, nullptr);
 
-            if (!m_pPUPDMD->Load(m_pupVideosPath, m_romName, m_pUpdateBufferQueue[currentBufferPosition]->depth))
+            if (!m_pPUPDMD->Load(m_pupVideosPath, m_romName, m_pUpdateBufferQueue[bufferPosition]->depth))
             {
               delete (m_pPUPDMD);
               m_pPUPDMD = nullptr;
@@ -1645,18 +1622,17 @@ void DMD::PupDMDThread()
         }
       }
 
-      if (m_pPUPDMD && m_pUpdateBufferQueue[currentBufferPosition]->hasData &&
-          m_pUpdateBufferQueue[currentBufferPosition]->mode == Mode::Data &&
-          m_pUpdateBufferQueue[currentBufferPosition]->depth != 24)
+      if (m_pPUPDMD && m_pUpdateBufferQueue[bufferPosition]->hasData &&
+          m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->depth != 24)
       {
-        uint16_t width = m_pUpdateBufferQueue[currentBufferPosition]->width;
-        uint16_t height = m_pUpdateBufferQueue[currentBufferPosition]->height;
+        uint16_t width = m_pUpdateBufferQueue[bufferPosition]->width;
+        uint16_t height = m_pUpdateBufferQueue[bufferPosition]->height;
         int length = width * height;
 
-        if (memcmp(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length) != 0)
+        if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length) != 0)
         {
-          memcpy(renderBuffer, m_pUpdateBufferQueue[currentBufferPosition]->data, length);
-          uint8_t depth = m_pUpdateBufferQueue[currentBufferPosition]->depth;
+          memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
+          uint8_t depth = m_pUpdateBufferQueue[bufferPosition]->depth;
 
           uint8_t scaledBuffer[128 * 32];
           if (width == 128 && height == 32)
