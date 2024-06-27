@@ -166,12 +166,12 @@ class DMDUTILAPI DMD
   void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered = false);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b);
-  void QueueUpdate(Update dmdUpdate, bool buffered);
+  void QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered);
   bool QueueBuffer();
 
  private:
   Update* m_pUpdateBufferQueue[DMDUTIL_FRAME_BUFFER_SIZE];
-  Update m_updateBuffered;
+  std::shared_ptr<Update> m_updateBuffered;
 
   uint8_t GetNextBufferQueuePosition(uint8_t bufferPosition, const uint8_t updateBufferQueuePosition);
   bool ConnectDMDServer();

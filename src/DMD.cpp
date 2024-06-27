@@ -53,6 +53,7 @@ DMD::DMD()
   m_updateBufferQueuePosition.store(0, std::memory_order_release);
   m_stopFlag.store(false, std::memory_order_release);
   m_dmdFrameReady.store(false, std::memory_order_release);
+  m_updateBuffered = std::make_shared<Update>();
 
   m_pAlphaNumeric = new AlphaNumeric();
   m_pSerum = nullptr;
@@ -301,30 +302,30 @@ bool DMD::DestroyConsoleDMD(ConsoleDMD* pConsoleDMD)
 void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                      Mode mode, bool buffered)
 {
-  Update dmdUpdate = Update();
-  dmdUpdate.mode = mode;
-  dmdUpdate.depth = depth;
-  dmdUpdate.width = width;
-  dmdUpdate.height = height;
+  auto dmdUpdate = std::make_shared<Update>();
+  dmdUpdate->mode = mode;
+  dmdUpdate->depth = depth;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
   if (pData)
   {
-    memcpy(dmdUpdate.data, pData, width * height * (mode == Mode::RGB16 ? 2 : (mode == Mode::RGB24 ? 3 : 1)));
-    dmdUpdate.hasData = true;
+    memcpy(dmdUpdate->data, pData, width * height * (mode == Mode::RGB16 ? 2 : (mode == Mode::RGB24 ? 3 : 1)));
+    dmdUpdate->hasData = true;
   }
   else
   {
-    dmdUpdate.hasData = false;
+    dmdUpdate->hasData = false;
   }
-  dmdUpdate.hasSegData = false;
-  dmdUpdate.hasSegData2 = false;
-  dmdUpdate.r = r;
-  dmdUpdate.g = g;
-  dmdUpdate.b = b;
+  dmdUpdate->hasSegData = false;
+  dmdUpdate->hasSegData2 = false;
+  dmdUpdate->r = r;
+  dmdUpdate->g = g;
+  dmdUpdate->b = b;
 
   QueueUpdate(dmdUpdate, buffered);
 }
 
-void DMD::QueueUpdate(Update dmdUpdate, bool buffered)
+void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
 {
   std::thread(
       [this, dmdUpdate, buffered]()
@@ -332,23 +333,23 @@ void DMD::QueueUpdate(Update dmdUpdate, bool buffered)
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
         uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
         if (++updateBufferQueuePosition >= DMDUTIL_FRAME_BUFFER_SIZE) updateBufferQueuePosition = 0;
-        memcpy(m_pUpdateBufferQueue[updateBufferQueuePosition], &dmdUpdate, sizeof(Update));
+        memcpy(m_pUpdateBufferQueue[updateBufferQueuePosition], dmdUpdate.get(), sizeof(Update));
         m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
         m_dmdFrameReady.store(true, std::memory_order_release);
 
         Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
-            dmdUpdate.mode, dmdUpdate.depth);
+            dmdUpdate->mode, dmdUpdate->depth);
 
         if (buffered)
         {
-          memcpy(&m_updateBuffered, &dmdUpdate, sizeof(Update));
+          memcpy(m_updateBuffered.get(), dmdUpdate.get(), sizeof(Update));
           m_hasUpdateBuffered = true;
         }
 
         ul.unlock();
         m_dmdCV.notify_all();
 
-        if (m_pDMDServerConnector && !IsSerumMode(dmdUpdate.mode))
+        if (m_pDMDServerConnector && !IsSerumMode(dmdUpdate->mode))
         {
           StreamHeader streamHeader;
           streamHeader.buffered = (uint8_t)buffered;
@@ -396,22 +397,22 @@ void DMD::UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height,
 
 void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered)
 {
-  Update dmdUpdate = Update();
-  dmdUpdate.mode = Mode::RGB16;
-  dmdUpdate.depth = 24;
-  dmdUpdate.width = width;
-  dmdUpdate.height = height;
+  auto dmdUpdate = std::make_shared<Update>();
+  dmdUpdate->mode = Mode::RGB16;
+  dmdUpdate->depth = 24;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
   if (pData)
   {
-    memcpy(dmdUpdate.segData, pData, width * height * sizeof(uint16_t));
-    dmdUpdate.hasData = true;
+    memcpy(dmdUpdate->segData, pData, width * height * sizeof(uint16_t));
+    dmdUpdate->hasData = true;
   }
   else
   {
-    dmdUpdate.hasData = false;
+    dmdUpdate->hasData = false;
   }
-  dmdUpdate.hasSegData = false;
-  dmdUpdate.hasSegData2 = false;
+  dmdUpdate->hasSegData = false;
+  dmdUpdate->hasSegData2 = false;
 
   QueueUpdate(dmdUpdate, buffered);
 }
@@ -419,34 +420,34 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                                  uint8_t g, uint8_t b)
 {
-  Update dmdUpdate = Update();
-  dmdUpdate.mode = Mode::AlphaNumeric;
-  dmdUpdate.layout = layout;
-  dmdUpdate.depth = 2;
-  dmdUpdate.width = 128;
-  dmdUpdate.height = 32;
-  dmdUpdate.hasData = false;
+  auto dmdUpdate = std::make_shared<Update>();
+  dmdUpdate->mode = Mode::AlphaNumeric;
+  dmdUpdate->layout = layout;
+  dmdUpdate->depth = 2;
+  dmdUpdate->width = 128;
+  dmdUpdate->height = 32;
+  dmdUpdate->hasData = false;
   if (pData1)
   {
-    memcpy(dmdUpdate.segData, pData1, 128 * sizeof(uint16_t));
-    dmdUpdate.hasSegData = true;
+    memcpy(dmdUpdate->segData, pData1, 128 * sizeof(uint16_t));
+    dmdUpdate->hasSegData = true;
   }
   else
   {
-    dmdUpdate.hasSegData = false;
+    dmdUpdate->hasSegData = false;
   }
   if (pData2)
   {
-    memcpy(dmdUpdate.segData2, pData2, 128 * sizeof(uint16_t));
-    dmdUpdate.hasSegData2 = true;
+    memcpy(dmdUpdate->segData2, pData2, 128 * sizeof(uint16_t));
+    dmdUpdate->hasSegData2 = true;
   }
   else
   {
-    dmdUpdate.hasSegData2 = false;
+    dmdUpdate->hasSegData2 = false;
   }
-  dmdUpdate.r = r;
-  dmdUpdate.g = g;
-  dmdUpdate.b = b;
+  dmdUpdate->r = r;
+  dmdUpdate->g = g;
+  dmdUpdate->b = b;
 
   QueueUpdate(dmdUpdate, false);
 }
@@ -852,19 +853,19 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
 {
   if (!render32 && !render64) return;
 
-  Update serumUpdate = Update();
-  serumUpdate.hasData = true;
-  serumUpdate.hasSegData = false;
-  serumUpdate.hasSegData2 = false;
+  auto serumUpdate = std::make_shared<Update>();
+  serumUpdate->hasData = true;
+  serumUpdate->hasSegData = false;
+  serumUpdate->hasSegData2 = false;
 
   if (m_pSerum->SerumVersion == SERUM_V1 && render32)
   {
-    serumUpdate.mode = Mode::SerumV1;
-    serumUpdate.depth = 6;
-    serumUpdate.width = dmdUpdate->width;
-    serumUpdate.height = dmdUpdate->height;
-    memcpy(serumUpdate.data, m_pSerum->frame, dmdUpdate->width * dmdUpdate->height);
-    memcpy(serumUpdate.segData, m_pSerum->palette, PALETTE_SIZE);
+    serumUpdate->mode = Mode::SerumV1;
+    serumUpdate->depth = 6;
+    serumUpdate->width = dmdUpdate->width;
+    serumUpdate->height = dmdUpdate->height;
+    memcpy(serumUpdate->data, m_pSerum->frame, dmdUpdate->width * dmdUpdate->height);
+    memcpy(serumUpdate->segData, m_pSerum->palette, PALETTE_SIZE);
 
     QueueUpdate(serumUpdate, false);
   }
@@ -874,11 +875,11 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
     {
       if (render32)
       {
-        serumUpdate.mode = Mode::SerumV2_32;
-        serumUpdate.depth = 24;
-        serumUpdate.width = m_pSerum->width32;
-        serumUpdate.height = 32;
-        memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+        serumUpdate->mode = Mode::SerumV2_32;
+        serumUpdate->depth = 24;
+        serumUpdate->width = m_pSerum->width32;
+        serumUpdate->height = 32;
+        memcpy(serumUpdate->segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdate, false);
       }
@@ -887,11 +888,11 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
     {
       if (render64)
       {
-        serumUpdate.mode = Mode::SerumV2_64;
-        serumUpdate.depth = 24;
-        serumUpdate.width = m_pSerum->width64;
-        serumUpdate.height = 64;
-        memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+        serumUpdate->mode = Mode::SerumV2_64;
+        serumUpdate->depth = 24;
+        serumUpdate->width = m_pSerum->width64;
+        serumUpdate->height = 64;
+        memcpy(serumUpdate->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdate, false);
       }
@@ -900,21 +901,21 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
     {
       if (render32)
       {
-        serumUpdate.mode = Mode::SerumV2_32_64;
-        serumUpdate.depth = 24;
-        serumUpdate.width = m_pSerum->width32;
-        serumUpdate.height = 32;
-        memcpy(serumUpdate.segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+        serumUpdate->mode = Mode::SerumV2_32_64;
+        serumUpdate->depth = 24;
+        serumUpdate->width = m_pSerum->width32;
+        serumUpdate->height = 32;
+        memcpy(serumUpdate->segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdate, false);
       }
 
       if (render64)
       {
-        serumUpdate.mode = Mode::SerumV2_64_32;
-        serumUpdate.width = m_pSerum->width64;
-        serumUpdate.height = 64;
-        memcpy(serumUpdate.segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+        serumUpdate->mode = Mode::SerumV2_64_32;
+        serumUpdate->width = m_pSerum->width64;
+        serumUpdate->height = 64;
+        memcpy(serumUpdate->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdate, false);
       }
