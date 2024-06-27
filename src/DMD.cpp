@@ -155,14 +155,14 @@ DMD::~DMD()
     m_pPixelcadeDMDThread = nullptr;
   }
 #endif
-  delete m_pAlphaNumeric;
-  delete m_pSerum;
-  delete m_pZeDMD;
-  delete m_pPUPDMD;
+  if (m_pAlphaNumeric) delete m_pAlphaNumeric;
+  if (m_pSerum) delete m_pSerum;
+  if (m_pZeDMD) delete m_pZeDMD;
+  if (m_pPUPDMD) delete m_pPUPDMD;
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  delete m_pPixelcadeDMD;
+  if (m_pPixelcadeDMD) delete m_pPixelcadeDMD;
 #endif
 
   for (LevelDMD* pLevelDMD : m_levelDMDs) delete pLevelDMD;
