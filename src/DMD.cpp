@@ -155,10 +155,9 @@ DMD::~DMD()
     m_pPixelcadeDMDThread = nullptr;
   }
 #endif
-  if (m_pAlphaNumeric) delete m_pAlphaNumeric;
-  if (m_pSerum) delete m_pSerum;
-  if (m_pZeDMD) delete m_pZeDMD;
-  if (m_pPUPDMD) delete m_pPUPDMD;
+  delete m_pAlphaNumeric;
+  delete m_pZeDMD;
+  delete m_pPUPDMD;
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -765,6 +764,11 @@ void DMD::SerumThread()
 
       if (m_stopFlag.load(std::memory_order_acquire))
       {
+        if (m_pSerum)
+        {
+          Serum_Dispose();
+        }
+
         return;
       }
 
@@ -785,7 +789,7 @@ void DMD::SerumThread()
 
             if (m_pSerum)
             {
-              delete (m_pSerum);
+              Serum_Dispose();
               m_pSerum = nullptr;
               lastDmdUpdate = nullptr;
             }
