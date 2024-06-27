@@ -4,7 +4,7 @@ set -e
 
 CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
 LIBZEDMD_SHA=1ad393006921581e5bd63fd68b4ebb3348acd6b2
-LIBSERUM_SHA=d073d1f870dd7a2eb8bae9227535499515e3a905
+LIBSERUM_SHA=96d67f39f25753f858ada02319990418daa68829
 SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 LIBPUPDMD_SHA=c640ea2cec94097e8baefee9dab39266970e4405
 LIBFRAMEUTIL_SHA=30048ca23d41ca0a8f7d5ab75d3f646a19a90182
@@ -77,7 +77,7 @@ cd ..
 # build libserum and copy to external
 #
 
-curl -sL https://github.com/zesinger/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
+curl -sL https://github.com/jsm174/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
 unzip libserum.zip
 cd libserum-$LIBSERUM_SHA
 cmake \
