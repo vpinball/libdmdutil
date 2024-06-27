@@ -6,7 +6,7 @@ CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
 LIBZEDMD_SHA=1ad393006921581e5bd63fd68b4ebb3348acd6b2
 LIBSERUM_SHA=b5d0fc40526f1db02246e15cf57f27fdb39c763b
 SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
-LIBPUPDMD_SHA=c640ea2cec94097e8baefee9dab39266970e4405
+LIBPUPDMD_SHA=19e07d2e9235ca9d348205a8f76749709e31e033
 LIBFRAMEUTIL_SHA=30048ca23d41ca0a8f7d5ab75d3f646a19a90182
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
@@ -117,7 +117,7 @@ cd ..
 # build libpupdmd and copy to external
 #
 
-curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.zip -o libpupdmd.zip
+curl -sL https://github.com/jsm174/libpupdmd/archive/${LIBPUPDMD_SHA}.zip -o libpupdmd.zip
 unzip libpupdmd.zip
 cd libpupdmd-$LIBPUPDMD_SHA
 cmake \
