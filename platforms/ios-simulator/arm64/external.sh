@@ -76,19 +76,18 @@ cd ..
 # build libserum and copy to external
 #
 
-curl -sL https://github.com/zesinger/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
+curl -sL https://github.com/jsm174/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
 unzip libserum.zip
 cd libserum-$LIBSERUM_SHA
 cmake \
-   -DPLATFORM=ios \
+   -DPLATFORM=ios-simulator \
    -DARCH=arm64 \
    -DBUILD_SHARED=OFF \
    -DBUILD_STATIC=ON \
-   -DCMAKE_OSX_SYSROOT=iphonesimulator \
-   -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
+cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp build/libserum.a ../../third-party/build-libs/ios-simulator/arm64/
 cd ..
