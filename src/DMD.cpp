@@ -623,6 +623,7 @@ void DMD::ZeDMDThread()
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
+Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: mode=%d, width=%d", m_pUpdateBufferQueue[bufferPosition]->mode, m_pZeDMD->GetWidth());
       if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
 
       // Note: libzedmd has its own update detection.
@@ -645,7 +646,6 @@ void DMD::ZeDMDThread()
                                  m_pUpdateBufferQueue[bufferPosition]->r, m_pUpdateBufferQueue[bufferPosition]->g,
                                  m_pUpdateBufferQueue[bufferPosition]->b);
         }
-
         if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24)
         {
           // ZeDMD HD supports 256 * 64 pixels.
@@ -671,6 +671,7 @@ void DMD::ZeDMDThread()
 
           if (IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode))
           {
+Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render");
             m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
           }
           else
