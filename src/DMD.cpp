@@ -623,7 +623,6 @@ void DMD::ZeDMDThread()
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: mode=%d, width=%d", m_pUpdateBufferQueue[bufferPosition]->mode, m_pZeDMD->GetWidth());
       if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
 
       // Note: libzedmd has its own update detection.
@@ -671,7 +670,6 @@ Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: mode=%d, width=%d", m_pUpdateBufferQueue[buf
 
           if (IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode))
           {
-Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render");
             m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
           }
           else
@@ -804,6 +802,8 @@ void DMD::SerumThread()
                            : nullptr;
             if (m_pSerum)
             {
+              Log(DMDUtil_LogLevel_INFO, "Loaded Serum v%d colorization for %s", m_pSerum->SerumVersion, m_romName);
+
               Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
             }
@@ -815,8 +815,8 @@ void DMD::SerumThread()
 
             if (result != IDENTIFY_NO_FRAME)
             {
-              Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID,
-                  m_pSerum->rotationtimer, m_pSerum->flags);
+              // Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID,
+              // m_pSerum->rotationtimer, m_pSerum->flags);
 
               lastDmdUpdate = m_pUpdateBufferQueue[bufferPosition];
               QueueSerumFrames(lastDmdUpdate);
@@ -841,7 +841,7 @@ void DMD::SerumThread()
       {
         uint32_t result = Serum_Rotate();
 
-        Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
+        // Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
 
         QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
 
@@ -878,8 +878,6 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
   }
   else if (m_pSerum->SerumVersion == SERUM_V2)
   {
-    Log(DMDUtil_LogLevel_DEBUG, "Serum: render32=%d, render64=%s, width32=%d, width64=%s", render32, render64, m_pSerum->width32, m_pSerum->width64);
-
     if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
     {
       if (render32)
@@ -921,12 +919,17 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
 
       if (render64)
       {
-        serumUpdate->mode = Mode::SerumV2_64_32;
-        serumUpdate->width = m_pSerum->width64;
-        serumUpdate->height = 64;
-        memcpy(serumUpdate->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+        // We can't reuse the shared pointer from above.
+        auto serumUpdateHD = std::make_shared<Update>();
+        serumUpdateHD->hasData = true;
+        serumUpdateHD->hasSegData = false;
+        serumUpdateHD->hasSegData2 = false;
+        serumUpdateHD->mode = Mode::SerumV2_64_32;
+        serumUpdateHD->width = m_pSerum->width64;
+        serumUpdateHD->height = 64;
+        memcpy(serumUpdateHD->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
-        QueueUpdate(serumUpdate, false);
+        QueueUpdate(serumUpdateHD, false);
       }
     }
   }
