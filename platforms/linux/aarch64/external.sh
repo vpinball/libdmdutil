@@ -3,10 +3,10 @@
 set -e
 
 CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
-LIBZEDMD_SHA=6395357ce400036432587b4f696a2fac14ddd21a
-LIBSERUM_SHA=b69d2b436bc93570a2e7e78d0946cd3c43f7aed5
+LIBZEDMD_SHA=927a519efcff79f9876fecb9d5a04c9ba5fc2348
+LIBSERUM_SHA=cf31891c9106ae22b54e1e8354178c7b237e3b1a
 SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
-LIBPUPDMD_SHA=c640ea2cec94097e8baefee9dab39266970e4405
+LIBPUPDMD_SHA=124f45e5ddd59ceb339591de88fcca72f8c54612
 LIBFRAMEUTIL_SHA=30048ca23d41ca0a8f7d5ab75d3f646a19a90182
 
 NUM_PROCS=$(nproc)
@@ -86,7 +86,9 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
+cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
+
 cp -a build/libserum.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
 

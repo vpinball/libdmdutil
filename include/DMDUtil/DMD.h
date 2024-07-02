@@ -8,7 +8,9 @@
 #define DMDUTILCALLBACK
 #endif
 
-#define DMDUTIL_FRAME_BUFFER_SIZE 16
+#define DMDUTIL_FRAME_BUFFER_SIZE 32
+#define DMDUTIL_MIN_FRAMES_BEHIND 4
+#define DMDUTIL_MAX_FRAMES_BEHIND 16
 #define DMDUTIL_MAX_NAME_SIZE 16
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
@@ -29,6 +31,10 @@
 #endif
 
 class ZeDMD;
+
+struct _Serum_Frame_Struc;
+typedef _Serum_Frame_Struc SerumFrameStruct;
+
 namespace PUPDMD
 {
 class DMD;
@@ -73,12 +79,29 @@ class DMDUTILAPI DMD
 
   enum class Mode
   {
-    Unknown,      // int 0
-    Data,         // int 1
-    RGB24,        // int 2, RGB888
-    RGB16,        // int 3, RGB565
-    AlphaNumeric  // int 4
+    Unknown,        // int 0
+    Data,           // int 1
+    RGB24,          // int 2, RGB888
+    RGB16,          // int 3, RGB565
+    AlphaNumeric,   // int 4
+    SerumV1,        // int 5
+    SerumV2_32,     // int 6
+    SerumV2_32_64,  // int 7
+    SerumV2_64,     // int 8
+    SerumV2_64_32,  // int 9
   };
+
+  bool IsSerumMode(Mode mode)
+  {
+    return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
+            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32);
+  }
+
+  bool IsSerumV2Mode(Mode mode)
+  {
+    return (mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 || mode == Mode::SerumV2_64 ||
+            mode == Mode::SerumV2_64_32);
+  }
 
 #pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
   struct Update
@@ -87,7 +110,7 @@ class DMDUTILAPI DMD
     AlphaNumericLayout layout;
     int depth;
     uint8_t data[256 * 64 * 3];
-    uint16_t segData[256 * 64];  // RGB16 or segment data
+    uint16_t segData[256 * 64];  // RGB16 or segment data or SerumV1 palette
     uint16_t segData2[128];
     bool hasData;
     bool hasSegData;
@@ -143,19 +166,21 @@ class DMDUTILAPI DMD
   void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered = false);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b);
-  void QueueUpdate(Update dmdUpdate, bool buffered);
+  void QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered);
   bool QueueBuffer();
 
  private:
   Update* m_pUpdateBufferQueue[DMDUTIL_FRAME_BUFFER_SIZE];
-  Update m_updateBuffered;
+  std::shared_ptr<Update> m_updateBuffered;
 
+  uint8_t GetNextBufferQueuePosition(uint8_t bufferPosition, const uint8_t updateBufferQueuePosition);
   bool ConnectDMDServer();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   Mode mode, bool buffered = false);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
   void HandleTrigger(uint16_t id);
+  void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true);
 
   void DmdFrameThread();
   void LevelDMDThread();
@@ -165,13 +190,13 @@ class DMDUTILAPI DMD
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
   void PupDMDThread();
+  void SerumThread();
 
-  uint8_t m_updateBufferQueuePosition = 0;
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   char m_pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
-  Serum* m_pSerum;
+  SerumFrameStruct* m_pSerum;
   ZeDMD* m_pZeDMD;
   PUPDMD::DMD* m_pPUPDMD;
   std::vector<LevelDMD*> m_levelDMDs;
@@ -188,11 +213,12 @@ class DMDUTILAPI DMD
   std::thread* m_pDumpDMDTxtThread;
   std::thread* m_pDumpDMDRawThread;
   std::thread* m_pPupDMDThread;
+  std::thread* m_pSerumThread;
   std::shared_mutex m_dmdSharedMutex;
   std::condition_variable_any m_dmdCV;
-  std::mutex m_serumMutex;
-  std::atomic<bool> m_dmdFrameReady = false;
-  std::atomic<bool> m_stopFlag = false;
+  std::atomic<bool> m_dmdFrameReady;
+  std::atomic<bool> m_stopFlag;
+  std::atomic<uint8_t> m_updateBufferQueuePosition;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;

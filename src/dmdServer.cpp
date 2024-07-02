@@ -134,10 +134,10 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                   DMDUtil::Log(DMDUtil_LogLevel_INFO,
                                "%d: Received paths header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
                                pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
-                DMDUtil::DMD::Update data;
-                memcpy(&data, buffer, n);
+                auto data = std::make_shared<DMDUtil::DMD::Update>();
+                memcpy(data.get(), buffer, n);
 
-                if (data.width <= DMDSERVER_MAX_WIDTH && data.height <= DMDSERVER_MAX_HEIGHT)
+                if (data->width <= DMDSERVER_MAX_WIDTH && data->height <= DMDSERVER_MAX_HEIGHT)
                 {
                   pDmd->SetRomName(pathsHeader.name);
                   if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(pathsHeader.altColorPath);

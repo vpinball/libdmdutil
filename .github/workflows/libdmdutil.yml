@@ -59,6 +59,9 @@ jobs:
             platform: ios
             arch: arm64
           - os: macos-latest
+            platform: ios-simulator
+            arch: arm64
+          - os: macos-latest
             platform: tvos
             arch: arm64
     steps:
@@ -145,7 +148,7 @@ jobs:
                cp build/dmdserver_test tmp
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
-            elif [[ "${{ matrix.platform }}" == "ios" || "${{ matrix.platform }}" == "tvos" ]]; then
+            elif [[ "${{ matrix.platform }}" == "ios" || "${{ matrix.platform }}" == "ios-simulator" || "${{ matrix.platform }}" == "tvos" ]]; then
                cp build/libdmdutil.a tmp
                cp -a build/*.dylib tmp
             elif [[ "${{ matrix.platform }}" == "android" ]]; then
@@ -223,5 +226,6 @@ jobs:
             libdmdutil-${{ needs.version.outputs.tag }}-linux-x64/libdmdutil-${{ needs.version.outputs.tag }}-linux-x64.tar.gz
             libdmdutil-${{ needs.version.outputs.tag }}-linux-aarch64/libdmdutil-${{ needs.version.outputs.tag }}-linux-aarch64.tar.gz
             libdmdutil-${{ needs.version.outputs.tag }}-ios-arm64/libdmdutil-${{ needs.version.outputs.tag }}-ios-arm64.tar.gz
+            libdmdutil-${{ needs.version.outputs.tag }}-ios-simulator-arm64/libdmdutil-${{ needs.version.outputs.tag }}-ios-simulator-arm64.tar.gz
             libdmdutil-${{ needs.version.outputs.tag }}-tvos-arm64/libdmdutil-${{ needs.version.outputs.tag }}-tvos-arm64.tar.gz
             libdmdutil-${{ needs.version.outputs.tag }}-android-arm64-v8a/libdmdutil-${{ needs.version.outputs.tag }}-android-arm64-v8a.tar.gz
