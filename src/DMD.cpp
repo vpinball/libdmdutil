@@ -878,6 +878,8 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
   }
   else if (m_pSerum->SerumVersion == SERUM_V2)
   {
+    Log(DMDUtil_LogLevel_DEBUG, "Serum: render32=%d, render64=%s, width32=%d, width64=%s", render32, render64, m_pSerum->width32, m_pSerum->width64);
+
     if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
     {
       if (render32)
