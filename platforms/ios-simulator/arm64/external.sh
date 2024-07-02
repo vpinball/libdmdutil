@@ -76,7 +76,7 @@ cd ..
 # build libserum and copy to external
 #
 
-curl -sL https://github.com/jsm174/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
+curl -sL https://github.com/zesinger/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
 unzip libserum.zip
 cd libserum-$LIBSERUM_SHA
 cmake \
