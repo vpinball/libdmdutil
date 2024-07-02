@@ -336,8 +336,8 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
         m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
         m_dmdFrameReady.store(true, std::memory_order_release);
 
-        Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
-            dmdUpdate->mode, dmdUpdate->depth);
+        // Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
+        // dmdUpdate->mode, dmdUpdate->depth);
 
         if (buffered)
         {
@@ -622,6 +622,8 @@ void DMD::ZeDMDThread()
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+
+      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
 
       // Note: libzedmd has its own update detection.
 
@@ -959,6 +961,8 @@ void DMD::PixelcadeDMDThread()
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
+      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
+
       if (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData)
       {
         uint16_t width = m_pUpdateBufferQueue[bufferPosition]->width;
@@ -1171,6 +1175,8 @@ void DMD::RGB24DMDThread()
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+
+      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
 
       if (!m_rgb24DMDs.empty() &&
           (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData))
