@@ -359,7 +359,7 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
           strcpy(pathsHeader.altColorPath, m_altColorPath);
           strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
           m_pDMDServerConnector->write_n(&pathsHeader, sizeof(PathsHeader));
-          m_pDMDServerConnector->write_n(&dmdUpdate, sizeof(Update));
+          m_pDMDServerConnector->write_n(dmdUpdate.get(), sizeof(Update));
 
           if (streamHeader.disconnectOthers != 0) m_dmdServerDisconnectOthers = false;
         }
