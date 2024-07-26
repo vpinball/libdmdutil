@@ -11,7 +11,7 @@ RGB24DMD::RGB24DMD(uint16_t width, uint16_t height)
 {
   m_width = width;
   m_height = height;
-  m_length = width * height * 3;
+  m_length = (int)width * height * 3;
   m_pitch = width * 3;
 
   m_pData = (uint8_t*)malloc(m_length);

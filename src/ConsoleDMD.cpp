@@ -19,7 +19,7 @@ void ConsoleDMD::Render(uint8_t* buffer, uint16_t width, uint16_t height, uint8_
   {
     for (uint16_t x = 0; x < width; x++)
     {
-      uint8_t value = buffer[y * width + x];
+      uint8_t value = buffer[(int)y * width + x];
       if (bitDepth > 2)
       {
         fprintf(m_out, "%2x", value);
