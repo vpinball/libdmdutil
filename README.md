@@ -186,7 +186,7 @@ PUPVideosPath =
 PUPExactColorMatch = 0
 
 [ZeDMD]
-# Set to 1 if ZeDMD is attached.
+# Set to 1 if ZeDMD or ZeDMD WiFi is attached.
 Enabled = 1
 # Disable auto-detection and provide a fixed serial port.
 Device =
@@ -203,6 +203,12 @@ RGBOrder = -1
 Brightness = -1
 # Set to 1 to permantenly store the overwritten settings above in ZeDMD internally.
 SaveSettings = 0
+# ZeDMD WiFi enabled? This will disable COM port communication
+WifiEnabled = 0
+# ZeDMD WiFi IP address, you must fill this in for WiFi to work
+WifiIP = 
+# ZeDMD Wifi Port number, you can leave this empty and it will default to 3333
+WifiPort = 
 
 [Pixelcade]
 # Set to 1 if Pixelcade is attached
