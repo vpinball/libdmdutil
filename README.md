@@ -205,11 +205,11 @@ Brightness = -1
 SaveSettings = 0
 
 [ZeDMD-WiFi]
-# ZeDMD WiFi enabled?
+# Set to 1 if ZeDMD-WiFi is available.
 Enabled = 0
-# ZeDMD WiFi IP address, you must fill this in for WiFi to work
+# Enter your ZeDMD WiFi IP address here
 WiFiAddr = 
-# ZeDMD Wifi Port number, you can leave this empty and it will default to 3333
+# Set the ZeDMD WiFi Port number, you can leave this empty and it will default to 3333
 WiFiPort = 3333
 
 [Pixelcade]
