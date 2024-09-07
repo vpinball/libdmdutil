@@ -287,9 +287,9 @@ int main(int argc, char* argv[])
       pConfig->SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness", -1));
       pConfig->SetZeDMDSaveSettings(r.Get<bool>("ZeDMD", "SaveSettings", false));
       // ZeDMD WiFi
-      pConfig->SetZeDMDWiFiEnabled(r.Get<bool>("ZeDMD", "WiFiEnabled", false));
-      pConfig->SetZeDMDWiFiAddr(r.Get<string>("ZeDMD", "WiFiAddr", "").c_str());
-      pConfig->SetZeDMDWiFiPort(r.Get<int>("ZeDMD", "WiFiPort", 3333));
+      pConfig->SetZeDMDWiFiEnabled(r.Get<bool>("ZeDMD-WiFi", "Enabled", false));
+      pConfig->SetZeDMDWiFiAddr(r.Get<string>("ZeDMD-WiFi", "WiFiAddr", "").c_str());
+      pConfig->SetZeDMDWiFiPort(r.Get<int>("ZeDMD-WiFi", "WiFiPort", 3333));
       // Pixelcade
       pConfig->SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
       pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device", "").c_str());

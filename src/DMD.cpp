@@ -468,71 +468,72 @@ void DMD::FindDisplays()
         [this]()
         {
           Config* const pConfig = Config::GetInstance();
-
           ZeDMD* pZeDMD = nullptr;
 
-          if (pConfig->IsZeDMD())
+          bool openSerial = false;
+          bool openWiFi = false;
+
+          if (pConfig->IsZeDMD() || pConfig->IsZeDMDWiFiEnabled())
           {
             pZeDMD = new ZeDMD();
             pZeDMD->SetLogCallback(ZeDMDLogCallback, nullptr);
+          }
 
-            bool open = false;
+          if (pConfig->IsZeDMDWiFiEnabled())
+          {
+            std::string WiFiAddr = pConfig->GetZeDMDWiFiAddr() ? pConfig->GetZeDMDWiFiAddr() : "";
+            uint16_t udpPortNumber = pConfig->GetZeDMDWiFiPort() > 0 ? pConfig->GetZeDMDWiFiPort() : 3333;
 
-            if (pConfig->IsZeDMDWiFiEnabled())
+            if (WiFiAddr.empty())
             {
-              std::string WiFiAddr = pConfig->GetZeDMDWiFiAddr() ? pConfig->GetZeDMDWiFiAddr() : "";
-              uint16_t udpPortNumber = pConfig->GetZeDMDWiFiPort() > 0 ? pConfig->GetZeDMDWiFiPort() : 3333;
-
-              if (WiFiAddr.empty())
-              {
-                DMDUtil::Log(DMDUtil_LogLevel_ERROR, "ERROR: ZeDMD WiFi IP address is not configured.");
-              }
-
-              // Proceed only if the WiFiAddr is valid.
-              if (!WiFiAddr.empty() && (open = pZeDMD->OpenWiFi(WiFiAddr.c_str(), udpPortNumber)))
-              {
-                // Fix RGB and brightness
-                std::stringstream logMessage;
-                logMessage << "ZeDMD WiFi enabled, connected to " << WiFiAddr << ":" << udpPortNumber << ".";
-                DMDUtil::Log(DMDUtil_LogLevel_INFO, logMessage.str().c_str());
-              }
+              DMDUtil::Log(DMDUtil_LogLevel_ERROR, "ERROR: ZeDMD WiFi IP address is not configured.");
             }
-            else  // Serial communication
-            {
-              if (pConfig->GetZeDMDDevice() != nullptr && pConfig->GetZeDMDDevice()[0] != '\0')
-                pZeDMD->SetDevice(pConfig->GetZeDMDDevice());
 
-              if ((open = pZeDMD->Open()))
+            // Proceed only if the WiFiAddr is valid.
+            if (!WiFiAddr.empty() && (openWiFi = pZeDMD->OpenWiFi(WiFiAddr.c_str(), udpPortNumber)))
+            {
+              std::stringstream logMessage;
+              logMessage << "ZeDMD WiFi enabled, connected to " << WiFiAddr << ":" << udpPortNumber << ".";
+              DMDUtil::Log(DMDUtil_LogLevel_INFO, logMessage.str().c_str());
+            }
+          }
+
+          if (pConfig->IsZeDMD())
+          {
+            if (pConfig->GetZeDMDDevice() != nullptr && pConfig->GetZeDMDDevice()[0] != '\0')
+              pZeDMD->SetDevice(pConfig->GetZeDMDDevice());
+
+            if ((openSerial = pZeDMD->Open()))
+            {
+              if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
+              if (pConfig->IsZeDMDSaveSettings())
               {
-                if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
-                if (pConfig->IsZeDMDSaveSettings())
+                if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
+                pZeDMD->SaveSettings();
+                if (pConfig->GetZeDMDRGBOrder() != -1)
                 {
-                  if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
-                  pZeDMD->SaveSettings();
-                  if (pConfig->GetZeDMDRGBOrder() != -1)
-                  {
-                    // Setting the RGBOrder requires a reboot.
-                    pZeDMD->Reset();
-                    std::this_thread::sleep_for(std::chrono::seconds(8));
-                    pZeDMD->Close();
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
-                    open = pZeDMD->Open();
-                  }
+                  // Setting the RGBOrder requires a reboot.
+                  pZeDMD->Reset();
+                  std::this_thread::sleep_for(std::chrono::seconds(8));
+                  pZeDMD->Close();
+                  std::this_thread::sleep_for(std::chrono::seconds(1));
+                  openSerial = pZeDMD->Open();
                 }
               }
             }
-            if (open)
-            {
-              if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
-              pZeDMD->EnablePreDownscaling();
-              pZeDMD->EnablePreUpscaling();
-              m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
-            }
-            else
-            {
-              delete pZeDMD;
-              pZeDMD = nullptr;
-            }
+          }
+
+          if (openSerial || openWiFi)
+          {
+            if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
+            pZeDMD->EnablePreDownscaling();
+            pZeDMD->EnablePreUpscaling();
+            m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
+          }
+          else
+          {
+            delete pZeDMD;
+            pZeDMD = nullptr;
           }
 
           m_pZeDMD = pZeDMD;
