@@ -170,8 +170,9 @@ The "paused" connections aren't really paused. Their data is still accepted but 
 
 ```ini
 [DMDServer]
-# The address (interface) to listen for TCP connections.
-Addr = localhost
+# Address (interface) to bind for incoming connections
+# Use 0.0.0.0 to accept connections from external devices on all interfaces
+Addr = 127.0.0.1
 # The port to listen for TCP connections.
 Port = 6789
 # Set to 1 if Serum colorization should be used, 0 if not.
@@ -203,6 +204,14 @@ RGBOrder = -1
 Brightness = -1
 # Set to 1 to permantenly store the overwritten settings above in ZeDMD internally.
 SaveSettings = 0
+
+[ZeDMD-WiFi]
+# Set to 1 if ZeDMD-WiFi is available.
+Enabled = 0
+# Enter your ZeDMD WiFi IP address here
+WiFiAddr = 
+# Set the ZeDMD WiFi Port number, you can leave this empty and it will default to 3333
+WiFiPort = 3333
 
 [Pixelcade]
 # Set to 1 if Pixelcade is attached

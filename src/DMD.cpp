@@ -468,19 +468,42 @@ void DMD::FindDisplays()
         [this]()
         {
           Config* const pConfig = Config::GetInstance();
-
           ZeDMD* pZeDMD = nullptr;
 
-          if (pConfig->IsZeDMD())
+          bool openSerial = false;
+          bool openWiFi = false;
+
+          if (pConfig->IsZeDMD() || pConfig->IsZeDMDWiFiEnabled())
           {
             pZeDMD = new ZeDMD();
             pZeDMD->SetLogCallback(ZeDMDLogCallback, nullptr);
+          }
 
+          if (pConfig->IsZeDMDWiFiEnabled())
+          {
+            std::string WiFiAddr = pConfig->GetZeDMDWiFiAddr() ? pConfig->GetZeDMDWiFiAddr() : "";
+            uint16_t udpPortNumber = pConfig->GetZeDMDWiFiPort() > 0 ? pConfig->GetZeDMDWiFiPort() : 3333;
+
+            if (WiFiAddr.empty())
+            {
+              DMDUtil::Log(DMDUtil_LogLevel_ERROR, "ERROR: ZeDMD WiFi IP address is not configured.");
+            }
+
+            // Proceed only if the WiFiAddr is valid.
+            if (!WiFiAddr.empty() && (openWiFi = pZeDMD->OpenWiFi(WiFiAddr.c_str(), udpPortNumber)))
+            {
+              std::stringstream logMessage;
+              logMessage << "ZeDMD WiFi enabled, connected to " << WiFiAddr << ":" << udpPortNumber << ".";
+              DMDUtil::Log(DMDUtil_LogLevel_INFO, logMessage.str().c_str());
+            }
+          }
+
+          if (pConfig->IsZeDMD())
+          {
             if (pConfig->GetZeDMDDevice() != nullptr && pConfig->GetZeDMDDevice()[0] != '\0')
               pZeDMD->SetDevice(pConfig->GetZeDMDDevice());
 
-            bool open = false;
-            if ((open = pZeDMD->Open()))
+            if ((openSerial = pZeDMD->Open()))
             {
               if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
               if (pConfig->IsZeDMDSaveSettings())
@@ -494,22 +517,23 @@ void DMD::FindDisplays()
                   std::this_thread::sleep_for(std::chrono::seconds(8));
                   pZeDMD->Close();
                   std::this_thread::sleep_for(std::chrono::seconds(1));
-                  open = pZeDMD->Open();
+                  openSerial = pZeDMD->Open();
                 }
               }
             }
-            if (open)
-            {
-              if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
-              pZeDMD->EnablePreDownscaling();
-              pZeDMD->EnablePreUpscaling();
-              m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
-            }
-            else
-            {
-              delete pZeDMD;
-              pZeDMD = nullptr;
-            }
+          }
+
+          if (openSerial || openWiFi)
+          {
+            if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
+            pZeDMD->EnablePreDownscaling();
+            pZeDMD->EnablePreUpscaling();
+            m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
+          }
+          else
+          {
+            delete pZeDMD;
+            pZeDMD = nullptr;
           }
 
           m_pZeDMD = pZeDMD;
@@ -1386,7 +1410,7 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
         level = (uint8_t)(v >> 4);
 
       int pos2 = level * 3;
-      pDstData[pos    ] = palette[pos2];
+      pDstData[pos] = palette[pos2];
       pDstData[pos + 1] = palette[pos2 + 1];
       pDstData[pos + 2] = palette[pos2 + 2];
     }
