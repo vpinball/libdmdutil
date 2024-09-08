@@ -170,8 +170,10 @@ The "paused" connections aren't really paused. Their data is still accepted but 
 
 ```ini
 [DMDServer]
-# The address (interface) to listen for TCP connections.
-Addr = 0.0.0.0
+# The address (interface) to listen for TCP connections. 
+# If you need to connect from a external device, enter your local IP
+# You can input 0.0.0.0 to listen on all network interfaces
+Addr = 127.0.0.1
 # The port to listen for TCP connections.
 Port = 6789
 # Set to 1 if Serum colorization should be used, 0 if not.
