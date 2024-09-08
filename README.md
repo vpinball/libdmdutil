@@ -170,9 +170,8 @@ The "paused" connections aren't really paused. Their data is still accepted but 
 
 ```ini
 [DMDServer]
-# The address (interface) to listen for TCP connections. 
-# If you need to connect from a external device, enter your local IP
-# You can input 0.0.0.0 to listen on all network interfaces
+# Address (interface) to bind for incoming connections
+# Use 0.0.0.0 to accept connections from external devices on all interfaces
 Addr = 127.0.0.1
 # The port to listen for TCP connections.
 Port = 6789
