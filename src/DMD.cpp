@@ -647,7 +647,11 @@ void DMD::ZeDMDThread()
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
+      if (m_pSerum &&
+          (!IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode) ||
+           (m_pZeDMD->GetWidth() == 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_32_64) ||
+           (m_pZeDMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_64_32)))
+        continue;
 
       // Note: libzedmd has its own update detection.
 
@@ -656,7 +660,8 @@ void DMD::ZeDMDThread()
         if (m_pUpdateBufferQueue[bufferPosition]->width != width ||
             m_pUpdateBufferQueue[bufferPosition]->height != height)
         {
-          Log(DMDUtil_LogLevel_INFO, "Change frame size from %dx%d to %dx%d", width, height, m_pUpdateBufferQueue[bufferPosition]->width, m_pUpdateBufferQueue[bufferPosition]->height);
+          Log(DMDUtil_LogLevel_INFO, "Change frame size from %dx%d to %dx%d", width, height,
+              m_pUpdateBufferQueue[bufferPosition]->width, m_pUpdateBufferQueue[bufferPosition]->height);
           width = m_pUpdateBufferQueue[bufferPosition]->width;
           height = m_pUpdateBufferQueue[bufferPosition]->height;
           // Activate the correct scaling mode.
@@ -689,10 +694,6 @@ void DMD::ZeDMDThread()
         }
         else if (m_pSerum && IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode))
         {
-          if ((m_pZeDMD->GetWidth() == 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_32_64) ||
-              (m_pZeDMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_64_32))
-            continue;
-
           if (IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode))
           {
             m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
