@@ -656,6 +656,7 @@ void DMD::ZeDMDThread()
         if (m_pUpdateBufferQueue[bufferPosition]->width != width ||
             m_pUpdateBufferQueue[bufferPosition]->height != height)
         {
+          Log(DMDUtil_LogLevel_INFO, "Change frame size from %dx%d to %dx%d", width, height, m_pUpdateBufferQueue[bufferPosition]->width, m_pUpdateBufferQueue[bufferPosition]->height);
           width = m_pUpdateBufferQueue[bufferPosition]->width;
           height = m_pUpdateBufferQueue[bufferPosition]->height;
           // Activate the correct scaling mode.
