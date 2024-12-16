@@ -481,7 +481,7 @@ void DMD::FindDisplays()
 
           if (pConfig->IsZeDMDWiFiEnabled())
           {
-            std::string WiFiAddr = pConfig->GetZeDMDWiFiAddr() ? pConfig->GetZeDMDWiFiAddr() : "";
+            std::string WiFiAddr = pConfig->GetZeDMDWiFiAddr() ? pConfig->GetZeDMDWiFiAddr() : "zedmd-wifi.local";
             uint16_t udpPortNumber = pConfig->GetZeDMDWiFiPort() > 0 ? pConfig->GetZeDMDWiFiPort() : 3333;
 
             if (WiFiAddr.empty())
@@ -622,9 +622,11 @@ void DMD::ZeDMDThread()
   uint8_t bufferPosition = 0;
   uint16_t width = 0;
   uint16_t height = 0;
+  uint16_t frameSize = 0;
   uint16_t segData1[128] = {0};
   uint16_t segData2[128] = {0};
   uint8_t palette[PALETTE_SIZE] = {0};
+  uint8_t renderBuffer[256 * 64] = {0};
 
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
@@ -664,6 +666,7 @@ void DMD::ZeDMDThread()
               m_pUpdateBufferQueue[bufferPosition]->width, m_pUpdateBufferQueue[bufferPosition]->height);
           width = m_pUpdateBufferQueue[bufferPosition]->width;
           height = m_pUpdateBufferQueue[bufferPosition]->height;
+          frameSize = width * height;
           // Activate the correct scaling mode.
           m_pZeDMD->SetFrameSize(width, height);
         }
@@ -675,6 +678,7 @@ void DMD::ZeDMDThread()
                                  m_pUpdateBufferQueue[bufferPosition]->r, m_pUpdateBufferQueue[bufferPosition]->g,
                                  m_pUpdateBufferQueue[bufferPosition]->b);
         }
+
         if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24)
         {
           // ZeDMD HD supports 256 * 64 pixels.
@@ -682,50 +686,25 @@ void DMD::ZeDMDThread()
 
           AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPosition]->data, rgb24Data, (size_t)width * height, palette,
                            m_pUpdateBufferQueue[bufferPosition]->depth);
-          m_pZeDMD->DisablePreUpscaling();
-          m_pZeDMD->RenderRgb24(rgb24Data);
-          m_pZeDMD->EnablePreUpscaling();
+          m_pZeDMD->RenderRgb888(rgb24Data);
         }
-        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16)
+        else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16 ||
+                 (m_pSerum && IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode)))
         {
-          m_pZeDMD->DisablePreUpscaling();
           m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
-          m_pZeDMD->EnablePreUpscaling();
         }
-        else if (m_pSerum && IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode))
+        else
         {
-          if (IsSerumV2Mode(m_pUpdateBufferQueue[bufferPosition]->mode))
+          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV1)
           {
-            m_pZeDMD->RenderRgb565(m_pUpdateBufferQueue[bufferPosition]->segData);
-          }
-          else
-          {
-            // Note that uint16_t segData is used to transport the uint8_t palette data to keep the dmdserver protocol
-            // stable.
             memcpy(palette, m_pUpdateBufferQueue[bufferPosition]->segData, PALETTE_SIZE);
-            m_pZeDMD->RenderColoredGray6(m_pUpdateBufferQueue[bufferPosition]->data, palette, nullptr);
+            memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
+            update = true;
           }
-        }
-        else if (!m_pSerum)
-        {
-          if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
+          else if (!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
           {
-            m_pZeDMD->SetPalette(palette, m_pUpdateBufferQueue[bufferPosition]->depth == 2 ? 4 : 16);
-
-            switch (m_pUpdateBufferQueue[bufferPosition]->depth)
-            {
-              case 2:
-                m_pZeDMD->RenderGray2(m_pUpdateBufferQueue[bufferPosition]->data);
-                break;
-
-              case 4:
-                m_pZeDMD->RenderGray4(m_pUpdateBufferQueue[bufferPosition]->data);
-                break;
-
-              default:
-                //@todo log error
-                break;
-            }
+            memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
+            update = true;
           }
           else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
           {
@@ -744,19 +723,26 @@ void DMD::ZeDMDThread()
 
             if (update)
             {
-              // ZeDMD HD supports 256 * 64 pixels.
-              uint8_t renderBuffer[256 * 64];
-
               if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2)
                 m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1, segData2);
               else
                 m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1);
+            }
+          }
 
-              m_pZeDMD->SetPalette(palette, 4);
-              m_pZeDMD->RenderGray2(renderBuffer);
+          if (update)
+          {
+            for (int i = 0; i < frameSize; i++)
+            {
+              int pos = renderBuffer[i] * 3;
+              uint32_t r = palette[pos];
+              uint32_t g = palette[pos + 1];
+              uint32_t b = palette[pos + 2];
             }
           }
         }
+
+        if (update) m_pZeDMD->RenderRgb888(renderBuffer);
       }
     }
   }
