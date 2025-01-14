@@ -625,7 +625,8 @@ void DMD::ZeDMDThread()
   uint16_t segData1[128] = {0};
   uint16_t segData2[128] = {0};
   uint8_t palette[PALETTE_SIZE] = {0};
-  uint8_t renderBuffer[256 * 64] = {0};
+  uint8_t indexBuffer[256 * 64] = {0};
+  uint8_t renderBuffer[256 * 64 * 3] = {0};
 
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
@@ -697,12 +698,12 @@ void DMD::ZeDMDThread()
           if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV1)
           {
             memcpy(palette, m_pUpdateBufferQueue[bufferPosition]->segData, PALETTE_SIZE);
-            memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
+            memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
             update = true;
           }
           else if (!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
           {
-            memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
+            memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
             update = true;
           }
           else if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::AlphaNumeric)
@@ -723,20 +724,21 @@ void DMD::ZeDMDThread()
             if (update)
             {
               if (m_pUpdateBufferQueue[bufferPosition]->hasSegData2)
-                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1, segData2);
+                m_pAlphaNumeric->Render(indexBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1, segData2);
               else
-                m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1);
+                m_pAlphaNumeric->Render(indexBuffer, m_pUpdateBufferQueue[bufferPosition]->layout, segData1);
             }
           }
 
           if (update)
           {
+            uint16_t renderBuferPosition = 0;
             for (int i = 0; i < frameSize; i++)
             {
-              int pos = renderBuffer[i] * 3;
-              uint32_t r = palette[pos];
-              uint32_t g = palette[pos + 1];
-              uint32_t b = palette[pos + 2];
+              int pos = indexBuffer[i] * 3;
+              renderBuffer[renderBuferPosition++] = palette[pos];
+              renderBuffer[renderBuferPosition++] = palette[pos + 1];
+              renderBuffer[renderBuferPosition++] = palette[pos + 2];
             }
           }
         }
