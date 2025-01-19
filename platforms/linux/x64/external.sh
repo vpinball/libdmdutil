@@ -3,9 +3,8 @@
 set -e
 
 CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
-LIBZEDMD_SHA=a77d27877ed4504cc329592606e1976171562329
+LIBZEDMD_SHA=a2f7ce9598b30ee9e0637ac9371da6339db9705b
 LIBSERUM_SHA=b0cc2a871d9d5b6395658c56c65402ae388eb78c
-SOCKPP_SHA=e6c4688a576d95f42dd7628cefe68092f6c5cd0f
 LIBPUPDMD_SHA=124f45e5ddd59ceb339591de88fcca72f8c54612
 LIBFRAMEUTIL_SHA=30048ca23d41ca0a8f7d5ab75d3f646a19a90182
 
@@ -15,7 +14,6 @@ echo "Building libraries..."
 echo "  CARGS_SHA: ${CARGS_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
-echo "  SOCKPP_SHA: ${SOCKPP_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
 echo "  LIBFRAMEUTIL_SHA: ${LIBFRAMEUTIL_SHA}"
 echo ""
@@ -89,21 +87,6 @@ cmake --build build -- -j${NUM_PROCS}
 cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp -a build/libserum.{so,so.*} ../../third-party/runtime-libs/linux/x64/
-cd ..
-
-#
-# build sockpp and copy to external
-#
-
-curl -sL https://github.com/fpagliughi/sockpp/archive/${SOCKPP_SHA}.zip -o sockpp.zip
-unzip sockpp.zip
-cd sockpp-$SOCKPP_SHA
-cmake \
-   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-   -B build
-cmake --build build -- -j${NUM_PROCS}
-cp -r include/sockpp ../../third-party/include/
-cp -a build/libsockpp.{so,so.*} ../../third-party/runtime-libs/linux/x64/
 cd ..
 
 #
