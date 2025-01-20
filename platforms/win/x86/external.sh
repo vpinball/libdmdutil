@@ -64,8 +64,11 @@ cmake \
 cmake --build build --config ${BUILD_TYPE}
 cp src/ZeDMD.h ../../third-party/include/
 cp third-party/include/libserialport.h ../../third-party/include/
+cp -r third-party/include/sockpp ../../third-party/include/
 cp third-party/build-libs/win/x86/libserialport.lib ../../third-party/build-libs/win/x86/
 cp third-party/runtime-libs/win/x86/libserialport.dll ../../third-party/runtime-libs/win/x86/
+cp third-party/build-libs/win/x86/sockpp.lib ../../third-party/build-libs/win/x86/
+cp third-party/runtime-libs/win/x86/sockpp.dll ../../third-party/runtime-libs/win/x86/
 cp build/${BUILD_TYPE}/zedmd.lib ../../third-party/build-libs/win/x86/
 cp build/${BUILD_TYPE}/zedmd.dll ../../third-party/runtime-libs/win/x86/
 cp -r test ../../

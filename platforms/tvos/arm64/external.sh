@@ -62,6 +62,7 @@ cmake \
    -B build
 cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
+cp -r third-party/include/sockpp ../../third-party/include/
 cp build/libzedmd.a ../../third-party/build-libs/tvos/arm64/
 cp -r test ../../
 cd ..

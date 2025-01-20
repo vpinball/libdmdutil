@@ -64,6 +64,7 @@ cmake \
 cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
 cp third-party/include/libserialport.h ../../third-party/include/
+cp -r third-party/include/sockpp ../../third-party/include/
 cp -a third-party/runtime-libs/linux/x64/*.{so,so.*} ../../third-party/runtime-libs/linux/x64/
 cp -a build/*.{so,so.*} ../../third-party/runtime-libs/linux/x64/
 cp -r test ../../
