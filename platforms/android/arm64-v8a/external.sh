@@ -76,7 +76,7 @@ cmake \
 cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
 cp -r third-party/include/sockpp ../../third-party/include/
-cp -a third-party/runtime-libs/android/arm64-v8a/*.so ../../third-party/include/
+cp -a third-party/runtime-libs/android/arm64-v8a/*.so ../../third-party/runtime-libs/android/arm64-v8a/
 cp build/libzedmd.so ../../third-party/runtime-libs/android/arm64-v8a/
 cp -r test ../../
 cd ..
