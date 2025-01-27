@@ -482,7 +482,6 @@ void DMD::FindDisplays()
           if (pConfig->IsZeDMDWiFiEnabled())
           {
             std::string WiFiAddr = pConfig->GetZeDMDWiFiAddr() ? pConfig->GetZeDMDWiFiAddr() : "zedmd-wifi.local";
-            uint16_t udpPortNumber = pConfig->GetZeDMDWiFiPort() > 0 ? pConfig->GetZeDMDWiFiPort() : 3333;
 
             if (WiFiAddr.empty())
             {
@@ -490,10 +489,10 @@ void DMD::FindDisplays()
             }
 
             // Proceed only if the WiFiAddr is valid.
-            if (!WiFiAddr.empty() && (openWiFi = pZeDMD->OpenWiFi(WiFiAddr.c_str(), udpPortNumber)))
+            if (!WiFiAddr.empty() && (openWiFi = pZeDMD->OpenWiFi(WiFiAddr.c_str())))
             {
               std::stringstream logMessage;
-              logMessage << "ZeDMD WiFi enabled, connected to " << WiFiAddr << ":" << udpPortNumber << ".";
+              logMessage << "ZeDMD WiFi enabled, connected to " << WiFiAddr << ".";
               DMDUtil::Log(DMDUtil_LogLevel_INFO, logMessage.str().c_str());
             }
           }
