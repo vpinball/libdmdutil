@@ -505,20 +505,6 @@ void DMD::FindDisplays()
             if ((openSerial = pZeDMD->Open()))
             {
               if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
-              if (pConfig->IsZeDMDSaveSettings())
-              {
-                if (pConfig->GetZeDMDRGBOrder() != -1) pZeDMD->SetRGBOrder(pConfig->GetZeDMDRGBOrder());
-                pZeDMD->SaveSettings();
-                if (pConfig->GetZeDMDRGBOrder() != -1)
-                {
-                  // Setting the RGBOrder requires a reboot.
-                  pZeDMD->Reset();
-                  std::this_thread::sleep_for(std::chrono::seconds(8));
-                  pZeDMD->Close();
-                  std::this_thread::sleep_for(std::chrono::seconds(1));
-                  openSerial = pZeDMD->Open();
-                }
-              }
             }
           }
 

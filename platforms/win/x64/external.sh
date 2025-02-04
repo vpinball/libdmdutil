@@ -2,18 +2,14 @@
 
 set -e
 
-CARGS_SHA=5949a20a926e902931de4a32adaad9f19c76f251
-LIBZEDMD_SHA=d9ef6f7833ee9c6917c5cd85a917b935e15bbc8b
+LIBZEDMD_SHA=794508521a83c1e90e31b9f24b11b574b42c93fe
 LIBSERUM_SHA=b0cc2a871d9d5b6395658c56c65402ae388eb78c
 LIBPUPDMD_SHA=124f45e5ddd59ceb339591de88fcca72f8c54612
-LIBFRAMEUTIL_SHA=30048ca23d41ca0a8f7d5ab75d3f646a19a90182
 
 echo "Building libraries..."
-echo "  CARGS_SHA: ${CARGS_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
-echo "  LIBFRAMEUTIL_SHA: ${LIBFRAMEUTIL_SHA}"
 echo ""
 
 if [ -z "${BUILD_TYPE}" ]; then
@@ -26,24 +22,6 @@ echo ""
 rm -rf external
 mkdir external
 cd external
-
-#
-# build cargs and copy to external
-#
-
-curl -sL https://github.com/likle/cargs/archive/${CARGS_SHA}.zip -o cargs.zip
-unzip cargs.zip
-cd cargs-${CARGS_SHA}
-patch -p1 < ../../platforms/win/x64/cargs/001.patch
-cmake \
-   -G "Visual Studio 17 2022" \
-   -DBUILD_SHARED_LIBS=ON \
-   -B build
-cmake --build build --config ${BUILD_TYPE}
-cp include/cargs.h ../../third-party/include/
-cp build/${BUILD_TYPE}/cargs64.lib ../../third-party/build-libs/win/x64/
-cp build/${BUILD_TYPE}/cargs64.dll ../../third-party/runtime-libs/win/x64/
-cd ..
 
 #
 # build libzedmd and copy to external
@@ -62,8 +40,12 @@ cmake \
    -B build
 cmake --build build --config ${BUILD_TYPE}
 cp src/ZeDMD.h ../../third-party/include/
+cp third-party/include/cargs.h ../../third-party/include/
 cp -r third-party/include/sockpp ../../third-party/include/
+cp third-party/include/FrameUtil.h ../../third-party/include/
 cp third-party/include/libserialport.h ../../third-party/include/
+cp third-party/build-libs/win/x64/cargs64.lib ../../third-party/build-libs/win/x64/
+cp third-party/runtime-libs/win/x64/cargs64.dll ../../third-party/runtime-libs/win/x64/
 cp third-party/build-libs/win/x64/libserialport64.lib ../../third-party/build-libs/win/x64/
 cp third-party/runtime-libs/win/x64/libserialport64.dll ../../third-party/runtime-libs/win/x64/
 cp third-party/build-libs/win/x64/sockpp64.lib ../../third-party/build-libs/win/x64/
@@ -113,14 +95,4 @@ cmake --build build --config ${BUILD_TYPE}
 cp src/pupdmd.h ../../third-party/include/
 cp build/${BUILD_TYPE}/pupdmd64.lib ../../third-party/build-libs/win/x64/
 cp build/${BUILD_TYPE}/pupdmd64.dll ../../third-party/runtime-libs/win/x64/
-cd ..
-
-#
-# copy libframeutil
-#
-
-curl -sL https://github.com/ppuc/libframeutil/archive/${LIBFRAMEUTIL_SHA}.zip -o libframeutil.zip
-unzip libframeutil.zip
-cd libframeutil-$LIBFRAMEUTIL_SHA
-cp include/* ../../third-party/include
 cd ..
