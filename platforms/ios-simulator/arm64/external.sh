@@ -45,7 +45,6 @@ cmake \
    -B build
 cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
-cp third-party/include/cargs.h ../../third-party/include/
 cp -r third-party/include/sockpp ../../third-party/include/
 cp third-party/include/FrameUtil.h ../../third-party/include/
 cp -a third-party/build-libs/ios-simulator/arm64/*.a ../../third-party/build-libs/ios-simulator/arm64/
