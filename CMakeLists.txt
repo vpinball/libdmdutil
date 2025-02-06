@@ -117,12 +117,12 @@ if(BUILD_SHARED)
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp pupdmd)
    elseif(PLATFORM STREQUAL "android")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp pupdmd)
    endif()
 
    if(PLATFORM STREQUAL "win" AND ARCH STREQUAL "x64")

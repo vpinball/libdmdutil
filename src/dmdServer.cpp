@@ -283,9 +283,7 @@ int main(int argc, char* argv[])
       pConfig->SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
       pConfig->SetZeDMDDevice(r.Get<string>("ZeDMD", "Device", "").c_str());
       pConfig->SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug", false));
-      pConfig->SetZeDMDRGBOrder(r.Get<int>("ZeDMD", "RGBOrder", -1));
       pConfig->SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness", -1));
-      pConfig->SetZeDMDSaveSettings(r.Get<bool>("ZeDMD", "SaveSettings", false));
       // ZeDMD WiFi
       pConfig->SetZeDMDWiFiEnabled(r.Get<bool>("ZeDMD-WiFi", "Enabled", false));
       pConfig->SetZeDMDWiFiAddr(r.Get<string>("ZeDMD-WiFi", "WiFiAddr", "").c_str());
