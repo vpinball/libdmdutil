@@ -265,10 +265,10 @@ int main(int argc, char* argv[])
   cag_option_context cag_context;
   bool opt_wait = false;
 
-  cag_option_prepare(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
+  cag_option_init(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
   while (cag_option_fetch(&cag_context))
   {
-    char identifier = cag_option_get(&cag_context);
+    char identifier = cag_option_get_identifier(&cag_context);
     if (identifier == 'c')
     {
       inih::INIReader r{cag_option_get_value(&cag_context)};
