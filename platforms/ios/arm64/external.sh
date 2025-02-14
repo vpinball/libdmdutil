@@ -2,7 +2,7 @@
 
 set -e
 
-LIBZEDMD_SHA=732573aa68c56679859c3d59baa682a7b7ac7cd6
+LIBZEDMD_SHA=4487023aef5019f3b0ce6814834603fa758abcf1
 LIBSERUM_SHA=b0cc2a871d9d5b6395658c56c65402ae388eb78c
 LIBPUPDMD_SHA=124f45e5ddd59ceb339591de88fcca72f8c54612
 
@@ -30,9 +30,10 @@ cd external
 # build libzedmd and copy to external
 #
 
-curl -sL https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.zip -o libzedmd.zip
-unzip libzedmd.zip
-cd libzedmd-$LIBZEDMD_SHA
+curl -sL https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.tar.gz -o libzedmd-${LIBZEDMD_SHA}.tar.gz
+tar xzf libzedmd-${LIBZEDMD_SHA}.tar.gz
+mv libzedmd-${LIBZEDMD_SHA} libzedmd
+cd libzedmd
 BUILD_TYPE=${BUILD_TYPE} platforms/ios/arm64/external.sh
 cmake \
    -DPLATFORM=ios \
@@ -54,9 +55,10 @@ cd ..
 # build libserum and copy to external
 #
 
-curl -sL https://github.com/zesinger/libserum/archive/${LIBSERUM_SHA}.zip -o libserum.zip
-unzip libserum.zip
-cd libserum-$LIBSERUM_SHA
+curl -sL https://github.com/zesinger/libserum/archive/${LIBSERUM_SHA}.tar.gz -o libserum-${LIBSERUM_SHA}.tar.gz
+tar xzf libserum-${LIBSERUM_SHA}.tar.gz
+mv libserum-${LIBSERUM_SHA} libserum
+cd libserum
 cmake \
    -DPLATFORM=ios \
    -DARCH=arm64 \
@@ -74,9 +76,10 @@ cd ..
 # build libpupdmd and copy to external
 #
 
-curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.zip -o libpupdmd.zip
-unzip libpupdmd.zip
-cd libpupdmd-$LIBPUPDMD_SHA
+curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.tar.gz -o libpupdmd-${LIBPUPDMD_SHA}.tar.gz
+tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
+mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
+cd libpupdmd
 cmake \
    -DPLATFORM=ios \
    -DARCH=arm64 \
