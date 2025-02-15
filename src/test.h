@@ -74,10 +74,10 @@ void run(DMDUtil::DMD* pDmd)
   for (int i = 0; i < 4; i++)
   {
     if (i == 0) pConsoleDMD = pDmd->CreateConsoleDMD(false);
-    if (i == 0) pLevelDMD128_2 = pDmd->CreateLevelDMD(128, 32, 2);
+    if (i == 0) pLevelDMD128_2 = pDmd->CreateLevelDMD(128, 32, false);
     if (i == 1) pDmd->DestroyConsoleDMD(pConsoleDMD);
-    if (i == 1) pLevelDMD128_4 = pDmd->CreateLevelDMD(128, 32, 4);
-    if (i == 2) pLevelDMD196_4 = pDmd->CreateLevelDMD(192, 64, 4);
+    if (i == 1) pLevelDMD128_4 = pDmd->CreateLevelDMD(128, 32, true);
+    if (i == 2) pLevelDMD196_4 = pDmd->CreateLevelDMD(192, 64, true);
     if (i == 3) pDmd->DestroyLevelDMD(pLevelDMD128_2);
 
     if (i == 1) pRGB24DMD128 = pDmd->CreateRGB24DMD(128, 32);
