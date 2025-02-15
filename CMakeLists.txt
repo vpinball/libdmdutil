@@ -210,10 +210,14 @@ if(BUILD_STATIC)
 
    target_include_directories(dmdutil_static PUBLIC ${DMDUTIL_INCLUDE_DIRS})
 
-   if(PLATFORM STREQUAL "win" AND ARCH STREQUAL "x64")
-      set(DMDUTIL_OUTPUT_NAME "dmdutil64")
+   if(PLATFORM STREQUAL "win")
+      set_target_properties(dmdutil_static PROPERTIES
+         OUTPUT_NAME "dmdutil_static"
+      )
    else()
-      set(DMDUTIL_OUTPUT_NAME "dmdutil")
+      set_target_properties(dmdutil_static PROPERTIES
+         OUTPUT_NAME "dmdutil"
+      )
    endif()
 
    install(TARGETS dmdutil_static
