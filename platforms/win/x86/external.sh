@@ -2,7 +2,7 @@
 
 set -e
 
-LIBZEDMD_SHA=893e59cc2f671be17455a68837f4618936006785
+LIBZEDMD_SHA=ae3243fe2d31139c7a09755d7503c8f69c5f079d
 LIBSERUM_SHA=b0cc2a871d9d5b6395658c56c65402ae388eb78c
 LIBPUPDMD_SHA=124f45e5ddd59ceb339591de88fcca72f8c54612
 
@@ -76,7 +76,6 @@ cmake \
 cmake --build build --config ${BUILD_TYPE}
 cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
-
 cp build/${BUILD_TYPE}/serum.lib ../../third-party/build-libs/win/x86/
 cp build/${BUILD_TYPE}/serum.dll ../../third-party/runtime-libs/win/x86/
 cd ..

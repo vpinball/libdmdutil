@@ -2,11 +2,9 @@
 
 set -e
 
-LIBZEDMD_SHA=893e59cc2f671be17455a68837f4618936006785
+LIBZEDMD_SHA=ae3243fe2d31139c7a09755d7503c8f69c5f079d
 LIBSERUM_SHA=b0cc2a871d9d5b6395658c56c65402ae388eb78c
 LIBPUPDMD_SHA=124f45e5ddd59ceb339591de88fcca72f8c54612
-
-NUM_PROCS=$(sysctl -n hw.ncpu)
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
@@ -17,6 +15,8 @@ echo ""
 if [ -z "${BUILD_TYPE}" ]; then
    BUILD_TYPE="Release"
 fi
+
+NUM_PROCS=$(sysctl -n hw.ncpu)
 
 echo "Build type: ${BUILD_TYPE}"
 echo "Procs: ${NUM_PROCS}"
@@ -46,7 +46,7 @@ cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
 cp -r third-party/include/sockpp ../../third-party/include/
 cp third-party/include/FrameUtil.h ../../third-party/include/
-cp -a third-party/build-libs/ios-simulator/arm64/*.a ../../third-party/build-libs/ios-simulator/arm64/
+cp -a third-party/build-libs/ios-simulator/arm64/libsockpp.a ../../third-party/build-libs/ios-simulator/arm64/
 cp build/libzedmd.a ../../third-party/build-libs/ios-simulator/arm64/
 cp -r test ../../
 cd ..
