@@ -1,5 +1,4 @@
 #include "DMDUtil/DMD.h"
-
 #include "DMDUtil/Config.h"
 #include "DMDUtil/ConsoleDMD.h"
 #include "DMDUtil/LevelDMD.h"
@@ -14,6 +13,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+
+#include "sockpp/tcp_connector.h"
 
 #include "AlphaNumeric.h"
 #include "FrameUtil.h"
@@ -41,6 +42,29 @@ void ZEDMDCALLBACK ZeDMDLogCallback(const char* format, va_list args, const void
 
   Log(DMDUtil_LogLevel_INFO, "%s", buffer);
 }
+
+class DMDServerConnector
+{
+public:
+   ~DMDServerConnector() { delete m_pConnector; }
+
+   static DMDServerConnector* Create(const char* pAddress, int port)
+   {
+     sockpp::tcp_connector* pConnector = new sockpp::tcp_connector({pAddress, (in_port_t)port});
+     return pConnector ? new DMDServerConnector(pConnector) : nullptr;
+   }
+
+   ssize_t Write(const void* buf, size_t size)
+   {
+     return m_pConnector->write_n(buf, size);
+   }
+
+   void Close() { m_pConnector->close(); }
+
+private:
+  DMDServerConnector(sockpp::tcp_connector* pConnector) : m_pConnector(pConnector) {}
+  sockpp::tcp_connector* m_pConnector;
+};
 
 bool DMD::m_finding = false;
 
@@ -170,7 +194,7 @@ DMD::~DMD()
 
   if (m_pDMDServerConnector)
   {
-    m_pDMDServerConnector->close();
+    m_pDMDServerConnector->Close();
     delete m_pDMDServerConnector;
     m_pDMDServerConnector = nullptr;
   }
@@ -184,8 +208,7 @@ bool DMD::ConnectDMDServer()
     sockpp::initialize();
     Log(DMDUtil_LogLevel_INFO, "Connecting DMDServer on %s:%d", pConfig->GetDMDServerAddr(),
         pConfig->GetDMDServerPort());
-    m_pDMDServerConnector =
-        new sockpp::tcp_connector({pConfig->GetDMDServerAddr(), (in_port_t)pConfig->GetDMDServerPort()});
+    m_pDMDServerConnector = DMDServerConnector::Create(pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
     if (!m_pDMDServerConnector)
     {
       Log(DMDUtil_LogLevel_INFO, "DMDServer connection to %s:%d failed!", pConfig->GetDMDServerAddr(),
@@ -353,13 +376,13 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
           StreamHeader streamHeader;
           streamHeader.buffered = (uint8_t)buffered;
           streamHeader.disconnectOthers = (uint8_t)m_dmdServerDisconnectOthers;
-          m_pDMDServerConnector->write_n(&streamHeader, sizeof(StreamHeader));
+          m_pDMDServerConnector->Write(&streamHeader, sizeof(StreamHeader));
           PathsHeader pathsHeader;
           strcpy(pathsHeader.name, m_romName);
           strcpy(pathsHeader.altColorPath, m_altColorPath);
           strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
-          m_pDMDServerConnector->write_n(&pathsHeader, sizeof(PathsHeader));
-          m_pDMDServerConnector->write_n(dmdUpdate.get(), sizeof(Update));
+          m_pDMDServerConnector->Write(&pathsHeader, sizeof(PathsHeader));
+          m_pDMDServerConnector->Write(dmdUpdate.get(), sizeof(Update));
 
           if (streamHeader.disconnectOthers != 0) m_dmdServerDisconnectOthers = false;
         }

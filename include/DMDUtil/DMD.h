@@ -24,8 +24,6 @@
 #include <string>
 #include <thread>
 
-#include "sockpp/tcp_connector.h"
-
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
@@ -70,6 +68,8 @@ class PixelcadeDMD;
 class LevelDMD;
 class RGB24DMD;
 class ConsoleDMD;
+
+class DMDServerConnector;
 
 class DMDUTILAPI DMD
 {
@@ -202,7 +202,7 @@ class DMDUTILAPI DMD
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;
-  sockpp::tcp_connector* m_pDMDServerConnector;
+  DMDServerConnector* m_pDMDServerConnector;
   bool m_dmdServerDisconnectOthers = false;
 
   std::thread* m_pLevelDMDThread;
