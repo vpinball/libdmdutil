@@ -39,7 +39,7 @@ jobs:
           - { os: macos-latest, platform: macos, arch: arm64 }
           - { os: macos-latest, platform: macos, arch: x64 }
           - { os: ubuntu-latest, platform: linux, arch: x64 }
-          - { os: ubuntu-latest, platform: linux, arch: aarch64 }
+          - { os: ubuntu-24.04-arm, platform: linux, arch: aarch64 }
           - { os: ubuntu-latest, platform: android, arch: arm64-v8a }
           - { os: macos-latest, platform: ios, arch: arm64 }
           - { os: macos-latest, platform: ios-simulator, arch: arm64 }
