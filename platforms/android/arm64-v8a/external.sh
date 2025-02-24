@@ -2,20 +2,13 @@
 
 set -e
 
-LIBZEDMD_SHA=a08859d0042af83e896c60773d33526bf6c1d8e2
-LIBSERUM_SHA=b0cc2a871d9d5b6395658c56c65402ae388eb78c
-LIBPUPDMD_SHA=124f45e5ddd59ceb339591de88fcca72f8c54612
+source ./platforms/config.sh
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
-echo "  NUM_PROCS: ${NUM_PROCS}"
 echo ""
-
-if [ -z "${BUILD_TYPE}" ]; then
-   BUILD_TYPE="Release"
-fi
 
 if [[ $(uname) == "Linux" ]]; then
    NUM_PROCS=$(nproc)
@@ -24,10 +17,6 @@ elif [[ $(uname) == "Darwin" ]]; then
 else
    NUM_PROCS=1
 fi
-
-echo "Build type: ${BUILD_TYPE}"
-echo "Procs: ${NUM_PROCS}"
-echo ""
 
 rm -rf external
 mkdir external
