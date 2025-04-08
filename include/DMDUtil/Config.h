@@ -14,9 +14,9 @@
 
 typedef enum
 {
-  DMDUtil_LogLevel_INFO,
-  DMDUtil_LogLevel_ERROR,
-  DMDUtil_LogLevel_DEBUG
+  DMDUtil_LogLevel_DEBUG = 0,
+  DMDUtil_LogLevel_INFO = 1,
+  DMDUtil_LogLevel_ERROR = 2
 } DMDUtil_LogLevel;
 
 typedef void(DMDUTILCALLBACK* DMDUtil_LogCallback)(DMDUtil_LogLevel logLevel, const char* format, va_list args);
