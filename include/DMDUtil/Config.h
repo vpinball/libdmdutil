@@ -36,6 +36,7 @@ class DMDUTILAPI Config
 {
  public:
   static Config* GetInstance();
+  void parseConfigFile(const char* path);
   bool IsAltColor() const { return m_altColor; }
   void SetAltColor(bool altColor) { m_altColor = altColor; }
   void SetAltColorPath(const char* path) { m_altColorPath = path; }

@@ -9,7 +9,6 @@
 #include "DMDUtil/DMDUtil.h"
 #include "Logger.h"
 #include "cargs.h"
-#include "ini.h"
 #include "sockpp/tcp_acceptor.h"
 
 #define DMDSERVER_MAX_WIDTH 256
@@ -271,26 +270,7 @@ int main(int argc, char* argv[])
     char identifier = cag_option_get_identifier(&cag_context);
     if (identifier == 'c')
     {
-      inih::INIReader r{cag_option_get_value(&cag_context)};
-      pConfig->SetDMDServerAddr(r.Get<string>("DMDServer", "Addr", "localhost").c_str());
-      pConfig->SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
-      pConfig->SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
-      pConfig->SetAltColorPath(r.Get<string>("DMDServer", "AltColorPath", "").c_str());
-      pConfig->SetPUPCapture(r.Get<bool>("DMDServer", "PUPCapture", false));
-      pConfig->SetPUPVideosPath(r.Get<string>("DMDServer", "PUPVideosPath", "").c_str());
-      pConfig->SetPUPExactColorMatch(r.Get<bool>("DMDServer", "PUPExactColorMatch", false));
-      // ZeDMD
-      pConfig->SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
-      pConfig->SetZeDMDDevice(r.Get<string>("ZeDMD", "Device", "").c_str());
-      pConfig->SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug", false));
-      pConfig->SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness", -1));
-      // ZeDMD WiFi
-      pConfig->SetZeDMDWiFiEnabled(r.Get<bool>("ZeDMD-WiFi", "Enabled", false));
-      pConfig->SetZeDMDWiFiAddr(r.Get<string>("ZeDMD-WiFi", "WiFiAddr", "").c_str());
-      // Pixelcade
-      pConfig->SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
-      pConfig->SetPixelcadeDevice(r.Get<string>("Pixelcade", "Device", "").c_str());
-
+      pConfig->parseConfigFile(cag_option_get_value(&cag_context));
       if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "Loaded config file");
     }
     else if (identifier == 'o')
