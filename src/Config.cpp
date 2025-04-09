@@ -1,6 +1,6 @@
 #include "DMDUtil/Config.h"
 
-#include <cstring>
+#include "ini.h"
 
 namespace DMDUtil
 {
@@ -35,6 +35,30 @@ Config::Config()
   m_logLevel = DMDUtil_LogLevel_INFO;
   m_logCallback = nullptr;
   memset(&m_pupTriggerCallbackContext, 0, sizeof(m_pupTriggerCallbackContext));
+}
+
+void Config::parseConfigFile(const char* path)
+{
+  inih::INIReader r{path};
+
+  SetDMDServerAddr(r.Get<std::string>("DMDServer", "Addr", "localhost").c_str());
+  SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
+  SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
+  SetAltColorPath(r.Get<std::string>("DMDServer", "AltColorPath", "").c_str());
+  SetPUPCapture(r.Get<bool>("DMDServer", "PUPCapture", false));
+  SetPUPVideosPath(r.Get<std::string>("DMDServer", "PUPVideosPath", "").c_str());
+  SetPUPExactColorMatch(r.Get<bool>("DMDServer", "PUPExactColorMatch", false));
+  // ZeDMD
+  SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
+  SetZeDMDDevice(r.Get<std::string>("ZeDMD", "Device", "").c_str());
+  SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug", false));
+  SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness", -1));
+  // ZeDMD WiFi
+  SetZeDMDWiFiEnabled(r.Get<bool>("ZeDMD-WiFi", "Enabled", false));
+  SetZeDMDWiFiAddr(r.Get<std::string>("ZeDMD-WiFi", "WiFiAddr", "").c_str());
+  // Pixelcade
+  SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
+  SetPixelcadeDevice(r.Get<std::string>("Pixelcade", "Device", "").c_str());
 }
 
 }  // namespace DMDUtil
