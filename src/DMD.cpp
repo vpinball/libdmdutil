@@ -1,4 +1,5 @@
 #include "DMDUtil/DMD.h"
+
 #include "DMDUtil/Config.h"
 #include "DMDUtil/ConsoleDMD.h"
 #include "DMDUtil/LevelDMD.h"
@@ -14,8 +15,6 @@
 #include <chrono>
 #include <cstring>
 
-#include "sockpp/tcp_connector.h"
-
 #include "AlphaNumeric.h"
 #include "FrameUtil.h"
 #include "Logger.h"
@@ -23,6 +22,7 @@
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
+#include "sockpp/tcp_connector.h"
 
 namespace DMDUtil
 {
@@ -45,23 +45,20 @@ void ZEDMDCALLBACK ZeDMDLogCallback(const char* format, va_list args, const void
 
 class DMDServerConnector
 {
-public:
-   ~DMDServerConnector() { delete m_pConnector; }
+ public:
+  ~DMDServerConnector() { delete m_pConnector; }
 
-   static DMDServerConnector* Create(const char* pAddress, int port)
-   {
-     sockpp::tcp_connector* pConnector = new sockpp::tcp_connector({pAddress, (in_port_t)port});
-     return pConnector ? new DMDServerConnector(pConnector) : nullptr;
-   }
+  static DMDServerConnector* Create(const char* pAddress, int port)
+  {
+    sockpp::tcp_connector* pConnector = new sockpp::tcp_connector({pAddress, (in_port_t)port});
+    return pConnector ? new DMDServerConnector(pConnector) : nullptr;
+  }
 
-   ssize_t Write(const void* buf, size_t size)
-   {
-     return m_pConnector->write_n(buf, size);
-   }
+  ssize_t Write(const void* buf, size_t size) { return m_pConnector->write_n(buf, size); }
 
-   void Close() { m_pConnector->close(); }
+  void Close() { m_pConnector->close(); }
 
-private:
+ private:
   DMDServerConnector(sockpp::tcp_connector* pConnector) : m_pConnector(pConnector) {}
   sockpp::tcp_connector* m_pConnector;
 };
@@ -1510,16 +1507,19 @@ void DMD::DumpDMDTxtThread()
 
             if (f)
             {
-              fprintf(f, "0x%08x\n", passed[0]);
-              for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
+              if (passed[0] > 0)
               {
-                for (int x = 0; x < m_pUpdateBufferQueue[bufferPosition]->width; x++)
+                fprintf(f, "0x%08x\r\n", passed[0]);
+                for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
                 {
-                  fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[bufferPosition]->width + x]);
+                  for (int x = 0; x < m_pUpdateBufferQueue[bufferPosition]->width; x++)
+                  {
+                    fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[bufferPosition]->width + x]);
+                  }
+                  fprintf(f, "\r\n");
                 }
-                fprintf(f, "\n");
+                fprintf(f, "\r\n");
               }
-              fprintf(f, "\n");
             }
             memcpy(renderBuffer[0], renderBuffer[1], length);
             passed[0] = passed[1];
