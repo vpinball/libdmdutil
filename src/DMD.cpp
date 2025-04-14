@@ -236,9 +236,21 @@ void DMD::SetAltColorPath(const char* path) { strcpy(m_altColorPath, path ? path
 
 void DMD::SetPUPVideosPath(const char* path) { strcpy(m_pupVideosPath, path ? path : ""); }
 
-void DMD::DumpDMDTxt() { m_pDumpDMDTxtThread = new std::thread(&DMD::DumpDMDTxtThread, this); }
+void DMD::DumpDMDTxt()
+{
+  if (!m_pDumpDMDTxtThread)
+  {
+    m_pDumpDMDTxtThread = new std::thread(&DMD::DumpDMDTxtThread, this);
+  }
+}
 
-void DMD::DumpDMDRaw() { m_pDumpDMDRawThread = new std::thread(&DMD::DumpDMDRawThread, this); }
+void DMD::DumpDMDRaw()
+{
+  if (m_pDumpDMDRawThread)
+  {
+    m_pDumpDMDRawThread = new std::thread(&DMD::DumpDMDRawThread, this);
+  }
+}
 
 LevelDMD* DMD::CreateLevelDMD(uint16_t width, uint16_t height, bool sam)
 {
@@ -1427,6 +1439,9 @@ void DMD::DumpDMDTxtThread()
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
 
+  Config* const pConfig = Config::GetInstance();
+  bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
@@ -1507,7 +1522,8 @@ void DMD::DumpDMDTxtThread()
 
             if (f)
             {
-              if (passed[0] > 0)
+              if (passed[0] > 0 &&
+                  (!dumpNotColorizedFrames || (m_pSerum && (!IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)))))
               {
                 fprintf(f, "0x%08x\r\n", passed[0]);
                 for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
