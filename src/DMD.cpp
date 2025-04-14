@@ -869,6 +869,8 @@ void DMD::SerumThread()
             }
             else if (dumpNotColorizedFrames)
             {
+              Log(DMDUtil_LogLevel_DEBUG, "Serum: unidentified frame detected");
+
               auto noSerumUpdate = std::make_shared<Update>();
               noSerumUpdate->mode = Mode::NotColorized;
               noSerumUpdate->depth = m_pUpdateBufferQueue[bufferPosition]->depth;
