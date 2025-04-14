@@ -89,6 +89,7 @@ class DMDUTILAPI DMD
     SerumV2_32_64,  // int 7
     SerumV2_64,     // int 8
     SerumV2_64_32,  // int 9
+    NotColorized,   // int 10
   };
 
   bool IsSerumMode(Mode mode)

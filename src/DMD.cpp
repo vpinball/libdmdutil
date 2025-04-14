@@ -781,6 +781,9 @@ void DMD::SerumThread()
     m_dmdFrameReady.load(std::memory_order_acquire);
     m_stopFlag.load(std::memory_order_acquire);
 
+    Config* const pConfig = Config::GetInstance();
+    bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+
     while (true)
     {
       std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
@@ -863,6 +866,19 @@ void DMD::SerumThread()
                 HandleTrigger(m_pSerum->triggerID);
                 prevTriggerId = m_pSerum->triggerID;
               }
+            }
+            else if (dumpNotColorizedFrames)
+            {
+              auto noSerumUpdate = std::make_shared<Update>();
+              noSerumUpdate->mode = Mode::NotColorized;
+              noSerumUpdate->depth = m_pUpdateBufferQueue[bufferPosition]->depth;
+              noSerumUpdate->width = m_pUpdateBufferQueue[bufferPosition]->width;
+              noSerumUpdate->height = m_pUpdateBufferQueue[bufferPosition]->height;
+              memcpy(
+                  noSerumUpdate->data, m_pUpdateBufferQueue[bufferPosition]->data,
+                  (size_t)m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height);
+
+              QueueUpdate(noSerumUpdate, false);
             }
           }
         }
@@ -1468,8 +1484,9 @@ void DMD::DumpDMDTxtThread()
       // Don't use GetNextBufferPosition() here, we need all frames!
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
-      if (m_pUpdateBufferQueue[bufferPosition]->depth <= 4 &&
-          m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->hasData)
+      if (m_pUpdateBufferQueue[bufferPosition]->depth <= 4 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
+          (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data ||
+           (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized && dumpNotColorizedFrames)))
       {
         bool update = false;
         if (strcmp(m_romName, name) != 0)
@@ -1526,7 +1543,7 @@ void DMD::DumpDMDTxtThread()
             if (f)
             {
               if (passed[0] > 0 &&
-                  (!dumpNotColorizedFrames || (m_pSerum && (!IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)))))
+                  (!dumpNotColorizedFrames || m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized))
               {
                 bool dump = true;
 
