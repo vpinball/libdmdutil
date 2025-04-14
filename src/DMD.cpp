@@ -874,6 +874,9 @@ void DMD::SerumThread()
               noSerumUpdate->depth = m_pUpdateBufferQueue[bufferPosition]->depth;
               noSerumUpdate->width = m_pUpdateBufferQueue[bufferPosition]->width;
               noSerumUpdate->height = m_pUpdateBufferQueue[bufferPosition]->height;
+              noSerumUpdate->hasData = true;
+              noSerumUpdate->hasSegData = false;
+              noSerumUpdate->hasSegData2 = false;
               memcpy(
                   noSerumUpdate->data, m_pUpdateBufferQueue[bufferPosition]->data,
                   (size_t)m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height);
