@@ -20,7 +20,7 @@
 #include "FrameUtil.h"
 #include "Logger.h"
 #include "ZeDMD.h"
-#include "komihash.h"
+#include "komihash/komihash.h"
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
