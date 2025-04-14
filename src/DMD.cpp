@@ -14,11 +14,13 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <unordered_set>
 
 #include "AlphaNumeric.h"
 #include "FrameUtil.h"
 #include "Logger.h"
 #include "ZeDMD.h"
+#include "komihash.h"
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
@@ -1435,6 +1437,7 @@ void DMD::DumpDMDTxtThread()
   uint32_t passed[3] = {0};
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
+  std::unordered_set<uint64_t> seenHashes;
 
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
@@ -1525,16 +1528,34 @@ void DMD::DumpDMDTxtThread()
               if (passed[0] > 0 &&
                   (!dumpNotColorizedFrames || (m_pSerum && (!IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)))))
               {
-                fprintf(f, "0x%08x\r\n", passed[0]);
-                for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
+                bool dump = true;
+
+                if (dumpNotColorizedFrames)
                 {
-                  for (int x = 0; x < m_pUpdateBufferQueue[bufferPosition]->width; x++)
+                  uint64_t hash = komihash(renderBuffer[0], length, 0);
+                  if (seenHashes.find(hash) == seenHashes.end())
                   {
-                    fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[bufferPosition]->width + x]);
+                    seenHashes.insert(hash);
+                  }
+                  else
+                  {
+                    dump = false;
+                  }
+                }
+
+                if (dump)
+                {
+                  fprintf(f, "0x%08x\r\n", passed[0]);
+                  for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
+                  {
+                    for (int x = 0; x < m_pUpdateBufferQueue[bufferPosition]->width; x++)
+                    {
+                      fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[bufferPosition]->width + x]);
+                    }
+                    fprintf(f, "\r\n");
                   }
                   fprintf(f, "\r\n");
                 }
-                fprintf(f, "\r\n");
               }
             }
             memcpy(renderBuffer[0], renderBuffer[1], length);
