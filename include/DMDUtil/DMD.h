@@ -79,17 +79,17 @@ class DMDUTILAPI DMD
 
   enum class Mode
   {
-    Unknown,        // int 0
-    Data,           // int 1
-    RGB24,          // int 2, RGB888
-    RGB16,          // int 3, RGB565
-    AlphaNumeric,   // int 4
-    SerumV1,        // int 5
-    SerumV2_32,     // int 6
-    SerumV2_32_64,  // int 7
-    SerumV2_64,     // int 8
-    SerumV2_64_32,  // int 9
-    NotColorized,   // int 10
+    Unknown = 0,
+    Data = 1,
+    RGB24 = 2,  // RGB888
+    RGB16 = 3,  // RGB565
+    AlphaNumeric = 4,
+    SerumV1 = 5,
+    SerumV2_32 = 6,
+    SerumV2_32_64 = 7,
+    SerumV2_64 = 8,
+    SerumV2_64_32 = 9,
+    NotColorized = 10,
   };
 
   bool IsSerumMode(Mode mode)

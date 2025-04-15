@@ -1490,9 +1490,11 @@ void DMD::DumpDMDTxtThread()
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
       if (m_pUpdateBufferQueue[bufferPosition]->depth <= 4 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
-          (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data ||
+          ((m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && !dumpNotColorizedFrames) ||
            (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized && dumpNotColorizedFrames)))
       {
+        Log(DMDUtil_LogLevel_DEBUG, "DumpDMDTxt: hanlde frame, mode %d", m_pUpdateBufferQueue[bufferPosition]->mode);
+
         bool update = false;
         if (strcmp(m_romName, name) != 0)
         {
@@ -1547,8 +1549,7 @@ void DMD::DumpDMDTxtThread()
 
             if (f)
             {
-              if (passed[0] > 0 &&
-                  (!dumpNotColorizedFrames || m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized))
+              if (passed[0] > 0)
               {
                 bool dump = true;
 
