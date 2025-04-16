@@ -14,11 +14,13 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <unordered_set>
 
 #include "AlphaNumeric.h"
 #include "FrameUtil.h"
 #include "Logger.h"
 #include "ZeDMD.h"
+#include "komihash/komihash.h"
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
@@ -236,9 +238,21 @@ void DMD::SetAltColorPath(const char* path) { strcpy(m_altColorPath, path ? path
 
 void DMD::SetPUPVideosPath(const char* path) { strcpy(m_pupVideosPath, path ? path : ""); }
 
-void DMD::DumpDMDTxt() { m_pDumpDMDTxtThread = new std::thread(&DMD::DumpDMDTxtThread, this); }
+void DMD::DumpDMDTxt()
+{
+  if (!m_pDumpDMDTxtThread)
+  {
+    m_pDumpDMDTxtThread = new std::thread(&DMD::DumpDMDTxtThread, this);
+  }
+}
 
-void DMD::DumpDMDRaw() { m_pDumpDMDRawThread = new std::thread(&DMD::DumpDMDRawThread, this); }
+void DMD::DumpDMDRaw()
+{
+  if (m_pDumpDMDRawThread)
+  {
+    m_pDumpDMDRawThread = new std::thread(&DMD::DumpDMDRawThread, this);
+  }
+}
 
 LevelDMD* DMD::CreateLevelDMD(uint16_t width, uint16_t height, bool sam)
 {
@@ -767,6 +781,9 @@ void DMD::SerumThread()
     m_dmdFrameReady.load(std::memory_order_acquire);
     m_stopFlag.load(std::memory_order_acquire);
 
+    Config* const pConfig = Config::GetInstance();
+    bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+
     while (true)
     {
       std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
@@ -849,6 +866,24 @@ void DMD::SerumThread()
                 HandleTrigger(m_pSerum->triggerID);
                 prevTriggerId = m_pSerum->triggerID;
               }
+            }
+            else if (dumpNotColorizedFrames)
+            {
+              Log(DMDUtil_LogLevel_DEBUG, "Serum: unidentified frame detected");
+
+              auto noSerumUpdate = std::make_shared<Update>();
+              noSerumUpdate->mode = Mode::NotColorized;
+              noSerumUpdate->depth = m_pUpdateBufferQueue[bufferPosition]->depth;
+              noSerumUpdate->width = m_pUpdateBufferQueue[bufferPosition]->width;
+              noSerumUpdate->height = m_pUpdateBufferQueue[bufferPosition]->height;
+              noSerumUpdate->hasData = true;
+              noSerumUpdate->hasSegData = false;
+              noSerumUpdate->hasSegData2 = false;
+              memcpy(
+                  noSerumUpdate->data, m_pUpdateBufferQueue[bufferPosition]->data,
+                  (size_t)m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height);
+
+              QueueUpdate(noSerumUpdate, false);
             }
           }
         }
@@ -1423,9 +1458,14 @@ void DMD::DumpDMDTxtThread()
   uint32_t passed[3] = {0};
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
+  std::unordered_set<uint64_t> seenHashes;
 
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
+
+  Config* const pConfig = Config::GetInstance();
+  bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+  bool filterTransitionalFrames = pConfig->IsFilterTransitionalFrames();
 
   while (true)
   {
@@ -1450,8 +1490,9 @@ void DMD::DumpDMDTxtThread()
       // Don't use GetNextBufferPosition() here, we need all frames!
       if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
-      if (m_pUpdateBufferQueue[bufferPosition]->depth <= 4 &&
-          m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && m_pUpdateBufferQueue[bufferPosition]->hasData)
+      if (m_pUpdateBufferQueue[bufferPosition]->depth <= 4 && m_pUpdateBufferQueue[bufferPosition]->hasData &&
+          ((m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && !dumpNotColorizedFrames) ||
+           (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized && dumpNotColorizedFrames)))
       {
         bool update = false;
         if (strcmp(m_romName, name) != 0)
@@ -1486,7 +1527,7 @@ void DMD::DumpDMDTxtThread()
                                        .count());
             memcpy(renderBuffer[2], m_pUpdateBufferQueue[bufferPosition]->data, length);
 
-            if (m_pUpdateBufferQueue[bufferPosition]->depth == 2 &&
+            if (filterTransitionalFrames && m_pUpdateBufferQueue[bufferPosition]->depth == 2 &&
                 (passed[2] - passed[1]) < DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION)
             {
               int i = 0;
@@ -1498,6 +1539,8 @@ void DMD::DumpDMDTxtThread()
               }
               if (i == length)
               {
+                Log(DMDUtil_LogLevel_DEBUG, "DumpDMDTxt: skip transitional frame");
+
                 // renderBuffer[1] is a transitional frame, delete it.
                 memcpy(renderBuffer[1], renderBuffer[2], length);
                 passed[1] += passed[2];
@@ -1509,16 +1552,35 @@ void DMD::DumpDMDTxtThread()
             {
               if (passed[0] > 0)
               {
-                fprintf(f, "0x%08x\r\n", passed[0]);
-                for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
+                bool dump = true;
+
+                if (dumpNotColorizedFrames)
                 {
-                  for (int x = 0; x < m_pUpdateBufferQueue[bufferPosition]->width; x++)
+                  uint64_t hash = komihash(renderBuffer[0], length, 0);
+                  if (seenHashes.find(hash) == seenHashes.end())
                   {
-                    fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[bufferPosition]->width + x]);
+                    seenHashes.insert(hash);
+                  }
+                  else
+                  {
+                    Log(DMDUtil_LogLevel_DEBUG, "DumpDMDTxt: skip duplicate frame");
+                    dump = false;
+                  }
+                }
+
+                if (dump)
+                {
+                  fprintf(f, "0x%08x\r\n", passed[0]);
+                  for (int y = 0; y < m_pUpdateBufferQueue[bufferPosition]->height; y++)
+                  {
+                    for (int x = 0; x < m_pUpdateBufferQueue[bufferPosition]->width; x++)
+                    {
+                      fprintf(f, "%x", renderBuffer[0][y * m_pUpdateBufferQueue[bufferPosition]->width + x]);
+                    }
+                    fprintf(f, "\r\n");
                   }
                   fprintf(f, "\r\n");
                 }
-                fprintf(f, "\r\n");
               }
             }
             memcpy(renderBuffer[0], renderBuffer[1], length);

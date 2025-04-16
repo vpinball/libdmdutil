@@ -36,6 +36,7 @@ cmake --build build -- -j${NUM_PROCS}
 cp src/ZeDMD.h ../../third-party/include/
 cp third-party/include/libserialport.h ../../third-party/include/
 cp third-party/include/cargs.h ../../third-party/include/
+cp -r third-party/include/komihash ../../third-party/include/
 cp -r third-party/include/sockpp ../../third-party/include/
 cp third-party/include/FrameUtil.h ../../third-party/include/
 cp third-party/runtime-libs/linux/aarch64/libcargs.so ../../third-party/runtime-libs/linux/aarch64/
