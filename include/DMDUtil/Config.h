@@ -53,6 +53,11 @@ class DMDUTILAPI Config
   int GetMaximumUnknownFramesToSkip() { return m_framesToSkip; }
   bool IsDumpNotColorizedFrames() const { return m_dumpNotColorizedFrames; }
   void SetDumpNotColorizedFrames(bool dumpNotColorizedFrames) { m_dumpNotColorizedFrames = dumpNotColorizedFrames; }
+  bool IsFilterTransitionalFrames() const { return m_filterTransitionalFrames; }
+  void SetFilterTransitionalFrames(bool filterTransitionalFrames)
+  {
+    m_filterTransitionalFrames = filterTransitionalFrames;
+  }
   bool IsZeDMD() const { return m_zedmd; }
   void SetZeDMD(bool zedmd) { m_zedmd = zedmd; }
   const char* GetZeDMDDevice() const { return m_zedmdDevice.c_str(); }
@@ -99,6 +104,7 @@ class DMDUTILAPI Config
   int m_framesTimeout;
   int m_framesToSkip;
   bool m_dumpNotColorizedFrames;
+  bool m_filterTransitionalFrames;
   bool m_zedmd;
   std::string m_zedmdDevice;
   bool m_zedmdDebug;

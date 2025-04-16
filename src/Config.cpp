@@ -24,6 +24,7 @@ Config::Config()
   m_framesTimeout = 0;
   m_framesToSkip = 0;
   m_dumpNotColorizedFrames = false;
+  m_filterTransitionalFrames = false;
   m_zedmd = true;
   m_zedmdDevice.clear();
   m_zedmdDebug = false;

@@ -1465,6 +1465,7 @@ void DMD::DumpDMDTxtThread()
 
   Config* const pConfig = Config::GetInstance();
   bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+  bool filterTransitionalFrames = pConfig->IsFilterTransitionalFrames();
 
   while (true)
   {
@@ -1493,8 +1494,6 @@ void DMD::DumpDMDTxtThread()
           ((m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data && !dumpNotColorizedFrames) ||
            (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized && dumpNotColorizedFrames)))
       {
-        Log(DMDUtil_LogLevel_DEBUG, "DumpDMDTxt: handle frame, mode %d", m_pUpdateBufferQueue[bufferPosition]->mode);
-
         bool update = false;
         if (strcmp(m_romName, name) != 0)
         {
@@ -1521,7 +1520,6 @@ void DMD::DumpDMDTxtThread()
         if (name[0] != '\0')
         {
           int length = (int)m_pUpdateBufferQueue[bufferPosition]->width * m_pUpdateBufferQueue[bufferPosition]->height;
-          Log(DMDUtil_LogLevel_DEBUG, "DumpDMDTxt: handle frame, length %d", length);
           if (update || (memcmp(renderBuffer[1], m_pUpdateBufferQueue[bufferPosition]->data, length) != 0))
           {
             passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1529,7 +1527,7 @@ void DMD::DumpDMDTxtThread()
                                        .count());
             memcpy(renderBuffer[2], m_pUpdateBufferQueue[bufferPosition]->data, length);
 
-            if (m_pUpdateBufferQueue[bufferPosition]->depth == 2 &&
+            if (filterTransitionalFrames && m_pUpdateBufferQueue[bufferPosition]->depth == 2 &&
                 (passed[2] - passed[1]) < DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION)
             {
               int i = 0;
