@@ -23,6 +23,7 @@ Config::Config()
   m_pupExactColorMatch = true;
   m_framesTimeout = 0;
   m_framesToSkip = 0;
+  m_showNotColorizedFrames = false;
   m_dumpNotColorizedFrames = false;
   m_filterTransitionalFrames = false;
   m_zedmd = true;

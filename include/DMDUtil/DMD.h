@@ -92,10 +92,11 @@ class DMDUTILAPI DMD
     NotColorized = 10,
   };
 
-  bool IsSerumMode(Mode mode)
+  bool IsSerumMode(Mode mode, bool showNotColorized = false)
   {
     return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
-            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32);
+            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 ||
+            (showNotColorized && mode == Mode::NotColorized));
   }
 
   bool IsSerumV2Mode(Mode mode)

@@ -51,6 +51,8 @@ class DMDUTILAPI Config
   void SetMaximumUnknownFramesToSkip(int framesToSkip) { m_framesToSkip = framesToSkip; }
   int GetIgnoreUnknownFramesTimeout() { return m_framesTimeout; }
   int GetMaximumUnknownFramesToSkip() { return m_framesToSkip; }
+  bool IsShowNotColorizedFrames() const { return m_showNotColorizedFrames; }
+  void SetShowNotColorizedFrames(bool showNotColorizedFrames) { m_showNotColorizedFrames = showNotColorizedFrames; }
   bool IsDumpNotColorizedFrames() const { return m_dumpNotColorizedFrames; }
   void SetDumpNotColorizedFrames(bool dumpNotColorizedFrames) { m_dumpNotColorizedFrames = dumpNotColorizedFrames; }
   bool IsFilterTransitionalFrames() const { return m_filterTransitionalFrames; }
@@ -103,6 +105,7 @@ class DMDUTILAPI Config
   bool m_pupExactColorMatch;
   int m_framesTimeout;
   int m_framesToSkip;
+  bool m_showNotColorizedFrames;
   bool m_dumpNotColorizedFrames;
   bool m_filterTransitionalFrames;
   bool m_zedmd;

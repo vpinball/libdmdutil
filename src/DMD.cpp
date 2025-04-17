@@ -650,6 +650,9 @@ void DMD::ZeDMDThread()
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
 
+  Config* const pConfig = Config::GetInstance();
+  bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
@@ -669,7 +672,7 @@ void DMD::ZeDMDThread()
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
       if (m_pSerum &&
-          (!IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode) ||
+          (!IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode, showNotColorizedFrames) ||
            (m_pZeDMD->GetWidth() == 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_32_64) ||
            (m_pZeDMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_64_32)))
         continue;
@@ -782,6 +785,7 @@ void DMD::SerumThread()
     m_stopFlag.load(std::memory_order_acquire);
 
     Config* const pConfig = Config::GetInstance();
+    bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
     bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
 
     while (true)
@@ -867,7 +871,7 @@ void DMD::SerumThread()
                 prevTriggerId = m_pSerum->triggerID;
               }
             }
-            else if (dumpNotColorizedFrames)
+            else if (showNotColorizedFrames || dumpNotColorizedFrames)
             {
               Log(DMDUtil_LogLevel_DEBUG, "Serum: unidentified frame detected");
 
@@ -1003,6 +1007,9 @@ void DMD::PixelcadeDMDThread()
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
 
+  Config* const pConfig = Config::GetInstance();
+  bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
@@ -1020,7 +1027,7 @@ void DMD::PixelcadeDMDThread()
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
+      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode, showNotColorizedFrames)) continue;
 
       if (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData)
       {
@@ -1218,6 +1225,9 @@ void DMD::RGB24DMDThread()
   m_dmdFrameReady.load(std::memory_order_acquire);
   m_stopFlag.load(std::memory_order_acquire);
 
+  Config* const pConfig = Config::GetInstance();
+  bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
@@ -1235,7 +1245,7 @@ void DMD::RGB24DMDThread()
     {
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
 
-      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode)) continue;
+      if (m_pSerum && !IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode, showNotColorizedFrames)) continue;
 
       if (!m_rgb24DMDs.empty() &&
           (m_pUpdateBufferQueue[bufferPosition]->hasData || m_pUpdateBufferQueue[bufferPosition]->hasSegData))
