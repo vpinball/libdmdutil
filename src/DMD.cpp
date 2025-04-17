@@ -723,7 +723,8 @@ void DMD::ZeDMDThread()
             memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
             update = true;
           }
-          else if (!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
+          else if ((!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data) ||
+                   (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized))
           {
             memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPosition]->data, frameSize);
             update = true;
@@ -1108,7 +1109,8 @@ void DMD::PixelcadeDMDThread()
             memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
             update = true;
           }
-          else if (!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
+          else if ((!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data) ||
+                   (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized))
           {
             memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length);
             update = true;
@@ -1290,7 +1292,8 @@ void DMD::RGB24DMDThread()
                                    m_pUpdateBufferQueue[bufferPosition]->r, m_pUpdateBufferQueue[bufferPosition]->g,
                                    m_pUpdateBufferQueue[bufferPosition]->b);
 
-            if (!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
+            if ((!m_pSerum && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data) ||
+                (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::NotColorized))
             {
               if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPosition]->data, length) != 0)
               {
