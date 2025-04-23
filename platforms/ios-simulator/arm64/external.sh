@@ -46,9 +46,9 @@ cd ..
 # build libserum and copy to external
 #
 
-curl -sL https://github.com/zesinger/libserum/archive/${LIBSERUM_SHA}.tar.gz -o libserum-${LIBSERUM_SHA}.tar.gz
+curl -sL https://github.com/PPUC/libserum_concentrate/archive/${LIBSERUM_SHA}.tar.gz -o libserum-${LIBSERUM_SHA}.tar.gz
 tar xzf libserum-${LIBSERUM_SHA}.tar.gz
-mv libserum-${LIBSERUM_SHA} libserum
+mv libserum_concentrate-${LIBSERUM_SHA} libserum
 cd libserum
 cmake \
    -DPLATFORM=ios-simulator \
