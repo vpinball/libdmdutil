@@ -836,10 +836,9 @@ void DMD::SerumThread()
             }
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
-
-            m_pSerum = (name[0] != '\0')
-                           ? Serum_Load(m_altColorPath, m_romName, FLAG_REQUEST_32P_FRAMES | FLAG_REQUEST_64P_FRAMES)
-                           : nullptr;
+            uint8_t flags = FLAG_REQUEST_32P_FRAMES;
+            if (m_pZeDMD && m_pZeDMD->GetWidth() == 256) flags |= FLAG_REQUEST_64P_FRAMES;
+            m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)
             {
               Log(DMDUtil_LogLevel_INFO, "Loaded Serum v%d colorization for %s", m_pSerum->SerumVersion, m_romName);
