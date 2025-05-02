@@ -1491,6 +1491,7 @@ void DMD::DumpDMDTxtThread()
     {
       if (f)
       {
+        fflush(f);
         fclose(f);
         f = nullptr;
       }
@@ -1628,6 +1629,7 @@ void DMD::DumpDMDRawThread()
     {
       if (f)
       {
+        fflush(f);
         fclose(f);
         f = nullptr;
       }
