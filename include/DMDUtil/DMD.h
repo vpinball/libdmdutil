@@ -183,6 +183,7 @@ class DMDUTILAPI DMD
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
   void HandleTrigger(uint16_t id);
   void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true);
+  void GenerateRandomSuffix(char* buffer, size_t length);
 
   void DmdFrameThread();
   void LevelDMDThread();

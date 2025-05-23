@@ -1463,6 +1463,18 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
   }
 }
 
+void DMD::GenerateRandomSuffix(char* buffer, size_t length)
+{
+  const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
+  size_t charsetSize = sizeof(charset) - 1;  // exclude null terminator
+
+  for (size_t i = 0; i < length; ++i)
+  {
+    buffer[i] = charset[rand() % charsetSize];
+  }
+  buffer[length] = '\0';
+}
+
 void DMD::DumpDMDTxtThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
@@ -1523,8 +1535,10 @@ void DMD::DumpDMDTxtThread()
           if (name[0] != '\0')
           {
             char filename[128];
-            snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.txt", name);
-            f = fopen(filename, "a");
+            char suffix[9];  // 8 chars + null terminator
+            GenerateRandomSuffix(suffix, 8);
+            snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s-%s.txt", name, suffix);
+            f = fopen(filename, "w");
             update = true;
             memset(renderBuffer, 0, 2 * 256 * 64);
             passed[0] = passed[1] = 0;
