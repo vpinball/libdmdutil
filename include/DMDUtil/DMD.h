@@ -183,6 +183,7 @@ class DMDUTILAPI DMD
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
   void HandleTrigger(uint16_t id);
   void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true);
+  void GenerateRandomSuffix(char* buffer, size_t length);
 
   void DmdFrameThread();
   void LevelDMDThread();
@@ -197,6 +198,7 @@ class DMDUTILAPI DMD
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   char m_pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
+  char m_dumpPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   SerumFrameStruct* m_pSerum;
   ZeDMD* m_pZeDMD;

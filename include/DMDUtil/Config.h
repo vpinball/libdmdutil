@@ -55,6 +55,10 @@ class DMDUTILAPI Config
   void SetShowNotColorizedFrames(bool showNotColorizedFrames) { m_showNotColorizedFrames = showNotColorizedFrames; }
   bool IsDumpNotColorizedFrames() const { return m_dumpNotColorizedFrames; }
   void SetDumpNotColorizedFrames(bool dumpNotColorizedFrames) { m_dumpNotColorizedFrames = dumpNotColorizedFrames; }
+  bool IsDumpFrames() const { return m_dumpFrames; }
+  void SetDumpFrames(bool dumpFrames) { m_dumpFrames = dumpFrames; }
+  void SetDumpPath(const char* path) { m_dumpPath = path; }
+  const char* GetDumpPath() const { return m_dumpPath.c_str(); }
   bool IsFilterTransitionalFrames() const { return m_filterTransitionalFrames; }
   void SetFilterTransitionalFrames(bool filterTransitionalFrames)
   {
@@ -107,6 +111,8 @@ class DMDUTILAPI Config
   int m_framesToSkip;
   bool m_showNotColorizedFrames;
   bool m_dumpNotColorizedFrames;
+  bool m_dumpFrames;
+  std::string m_dumpPath;
   bool m_filterTransitionalFrames;
   bool m_zedmd;
   std::string m_zedmdDevice;

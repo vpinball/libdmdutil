@@ -25,6 +25,7 @@ Config::Config()
   m_framesToSkip = 0;
   m_showNotColorizedFrames = false;
   m_dumpNotColorizedFrames = false;
+  m_dumpFrames = false;
   m_filterTransitionalFrames = false;
   m_zedmd = true;
   m_zedmdDevice.clear();
@@ -44,6 +45,7 @@ void Config::parseConfigFile(const char* path)
 {
   inih::INIReader r{path};
 
+  // DMDServer
   SetDMDServerAddr(r.Get<std::string>("DMDServer", "Addr", "localhost").c_str());
   SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
   SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
@@ -62,6 +64,15 @@ void Config::parseConfigFile(const char* path)
   // Pixelcade
   SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
   SetPixelcadeDevice(r.Get<std::string>("Pixelcade", "Device", "").c_str());
+  // Serum
+  SetIgnoreUnknownFramesTimeout(r.Get<int>("Serum", "IgnoreUnknownFramesTimeout", 0));
+  SetMaximumUnknownFramesToSkip(r.Get<int>("Serum", "MaximumUnknownFramesToSkip", 0));
+  SetShowNotColorizedFrames(r.Get<bool>("Serum", "ShowNotColorizedFrames", false));
+  // Dump
+  SetDumpNotColorizedFrames(r.Get<bool>("Dump", "DumpNotColorizedFrames", false));
+  SetDumpFrames(r.Get<bool>("Dump", "DumpFrames", false));
+  SetDumpPath(r.Get<std::string>("Dump", "DumpPath", "").c_str());
+  SetFilterTransitionalFrames(r.Get<bool>("Dump", "FilterTransitionalFrames", false));
 }
 
 }  // namespace DMDUtil

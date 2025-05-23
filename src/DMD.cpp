@@ -1463,6 +1463,18 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
   }
 }
 
+void DMD::GenerateRandomSuffix(char* buffer, size_t length)
+{
+  const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
+  size_t charsetSize = sizeof(charset) - 1;  // exclude null terminator
+
+  for (size_t i = 0; i < length; ++i)
+  {
+    buffer[i] = charset[rand() % charsetSize];
+  }
+  buffer[length] = '\0';
+}
+
 void DMD::DumpDMDTxtThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
@@ -1522,9 +1534,19 @@ void DMD::DumpDMDTxtThread()
 
           if (name[0] != '\0')
           {
-            char filename[128];
-            snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s.txt", name);
-            f = fopen(filename, "a");
+            char filename[DMDUTIL_MAX_NAME_SIZE + 128 + 8 + 5];
+            char suffix[9];  // 8 chars + null terminator
+            GenerateRandomSuffix(suffix, 8);
+            if (m_dumpPath[0] == '\0') strcpy(m_dumpPath, Config::GetInstance()->GetDumpPath());
+            if (m_dumpPath[strlen(m_dumpPath) - 1] == '/' || m_dumpPath[strlen(m_dumpPath) - 1] == '\\')
+            {
+              snprintf(filename, sizeof(filename), "%s%s-%s.txt", m_dumpPath, name, suffix);
+            }
+            else
+            {
+              snprintf(filename, sizeof(filename), "%s/%s-%s.txt", m_dumpPath, name, suffix);
+            }
+            f = fopen(filename, "w");
             update = true;
             memset(renderBuffer, 0, 2 * 256 * 64);
             passed[0] = passed[1] = 0;
