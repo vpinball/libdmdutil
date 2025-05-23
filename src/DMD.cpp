@@ -1534,10 +1534,18 @@ void DMD::DumpDMDTxtThread()
 
           if (name[0] != '\0')
           {
-            char filename[128];
+            char filename[DMDUTIL_MAX_NAME_SIZE + 128 + 8 + 5];
             char suffix[9];  // 8 chars + null terminator
             GenerateRandomSuffix(suffix, 8);
-            snprintf(filename, DMDUTIL_MAX_NAME_SIZE + 5, "%s-%s.txt", name, suffix);
+            if (m_dumpPath[0] == '\0') strcpy(m_dumpPath, Config::GetInstance()->GetDumpPath());
+            if (m_dumpPath[strlen(m_dumpPath) - 1] == '/' || m_dumpPath[strlen(m_dumpPath) - 1] == '\\')
+            {
+              snprintf(filename, sizeof(filename), "%s%s-%s.txt", m_dumpPath, name, suffix);
+            }
+            else
+            {
+              snprintf(filename, sizeof(filename), "%s/%s-%s.txt", m_dumpPath, name, suffix);
+            }
             f = fopen(filename, "w");
             update = true;
             memset(renderBuffer, 0, 2 * 256 * 64);

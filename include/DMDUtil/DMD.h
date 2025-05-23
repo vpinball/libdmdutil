@@ -198,6 +198,7 @@ class DMDUTILAPI DMD
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   char m_pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
+  char m_dumpPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   SerumFrameStruct* m_pSerum;
   ZeDMD* m_pZeDMD;
