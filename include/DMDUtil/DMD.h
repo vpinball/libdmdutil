@@ -156,8 +156,8 @@ class DMDUTILAPI DMD
   void DumpDMDRaw();
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
   bool DestroyLevelDMD(LevelDMD* pLevelDMD);
-  void AddRGB24DMD(RGB24DMD* const pRGB24DMD);
-  RGB24DMD* const CreateRGB24DMD(uint16_t width, uint16_t height);
+  void AddRGB24DMD(RGB24DMD* pRGB24DMD);
+  RGB24DMD* CreateRGB24DMD(uint16_t width, uint16_t height);
   bool DestroyRGB24DMD(RGB24DMD* pRGB24DMD);
   ConsoleDMD* CreateConsoleDMD(bool overwrite, FILE* out = stdout);
   bool DestroyConsoleDMD(ConsoleDMD* pConsoleDMD);
