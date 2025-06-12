@@ -15,6 +15,8 @@
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
 
+#include <arpa/inet.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
