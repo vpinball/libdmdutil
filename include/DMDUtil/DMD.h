@@ -131,6 +131,7 @@ class DMDUTILAPI DMD
 
     void convertToHostByteOrder()
     {
+      // uint8_t and bool are not converted, as they are already in host byte order.
       mode = static_cast<Mode>(ntohl(static_cast<uint32_t>(mode)));
       layout = static_cast<AlphaNumericLayout>(ntohl(static_cast<uint32_t>(layout)));
       depth = ntohl(depth);
@@ -148,6 +149,7 @@ class DMDUTILAPI DMD
 
     Update toNetworkByteOrder() const
     {
+      // uint8_t and bool are not converted, as they are already in network byte order.
       Update copy = *this;
       copy.mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
       copy.layout = static_cast<AlphaNumericLayout>(htonl(static_cast<uint32_t>(layout)));
@@ -179,24 +181,20 @@ class DMDUTILAPI DMD
 
     void convertToHostByteOrder()
     {
-      version = ntohs(version);
+      // uint8_t and char are not converted, as they are already in host byte order.
       mode = static_cast<Mode>(ntohl(static_cast<uint32_t>(mode)));
       width = ntohs(width);
       height = ntohs(height);
       length = ntohl(length);
-      buffered = ntohs(buffered);
-      disconnectOthers = ntohs(disconnectOthers);
     }
 
     void convertToNetworkByteOrder()
     {
-      version = htons(version);
+      // uint8_t and char are not converted, as they are already in network byte order.
       mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
       width = htons(width);
       height = htons(height);
       length = htonl(length);
-      buffered = htons(buffered);
-      disconnectOthers = htons(disconnectOthers);
     }
   };
 
