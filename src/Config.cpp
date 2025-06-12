@@ -36,6 +36,7 @@ Config::Config()
   m_dmdServer = false;
   m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;
+  m_localDisplaysActive = true;
   m_logLevel = DMDUtil_LogLevel_INFO;
   m_logCallback = nullptr;
   memset(&m_pupTriggerCallbackContext, 0, sizeof(m_pupTriggerCallbackContext));
