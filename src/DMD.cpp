@@ -499,11 +499,13 @@ void DMD::FindDisplays()
   if (m_finding) return;
 
   Config* const pConfig = Config::GetInstance();
+
   if (pConfig->IsDmdServer())
   {
     ConnectDMDServer();
   }
-  else
+
+  if (pConfig->IsLocalDisplaysActive())
   {
     m_finding = true;
 

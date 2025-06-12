@@ -80,12 +80,19 @@ class DMDUTILAPI Config
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
-  void SetDMDServer(bool dmdServer) { m_dmdServer = dmdServer; }
+  void SetDMDServer(bool dmdServer)
+  {
+    m_dmdServer = dmdServer;
+    // backward compatibility, use SetLocalDisplaysActive() afterwards to use both.
+    m_localDisplaysActive = !dmdServer;
+  }
   bool IsDmdServer() { return m_dmdServer; }
   void SetDMDServerAddr(const char* addr) { m_dmdServerAddr = addr; }
   const char* GetDMDServerAddr() const { return m_dmdServerAddr.c_str(); }
   void SetDMDServerPort(int port) { m_dmdServerPort = port; }
   int GetDMDServerPort() const { return m_dmdServerPort; }
+  void SetLocalDisplaysActive(bool localDisplaysActive) { m_localDisplaysActive = localDisplaysActive; }
+  bool IsLocalDisplaysActive() { return m_localDisplaysActive; }
   DMDUtil_LogLevel GetLogLevel() const { return m_logLevel; }
   void SetLogLevel(DMDUtil_LogLevel logLevel) { m_logLevel = logLevel; }
   DMDUtil_LogCallback GetLogCallback() const { return m_logCallback; }
@@ -121,6 +128,7 @@ class DMDUTILAPI Config
   bool m_zedmdWiFiEnabled;
   std::string m_zedmdWiFiAddr;
   bool m_dmdServer;
+  bool m_localDisplaysActive;
   std::string m_dmdServerAddr;
   int m_dmdServerPort;
   bool m_pixelcade;
