@@ -53,7 +53,18 @@ class DMDServerConnector
   static DMDServerConnector* Create(const char* pAddress, int port)
   {
     sockpp::tcp_connector* pConnector = new sockpp::tcp_connector({pAddress, (in_port_t)port});
-    return pConnector ? new DMDServerConnector(pConnector) : nullptr;
+    if (pConnector)
+    {
+      int flag = 1;
+      int mss = 1200;  // Conservative size
+      int bufsize = 65536;
+      pConnector->set_option(IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+      pConnector->set_option(IPPROTO_TCP, TCP_MAXSEG, &mss, sizeof(mss));
+      pConnector->set_option(SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+      pConnector->set_option(SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+      return new DMDServerConnector(pConnector);
+    }
+    return nullptr;
   }
 
   ssize_t Write(const void* buf, size_t size) { return m_pConnector->write_n(buf, size); }
