@@ -15,7 +15,11 @@
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
 
-#include <arpa/inet.h>
+#if defined(_WIN32) || defined(_WIN64)
+#include <winsock2.h>  // Windows byte-order functions
+#else
+#include <arpa/inet.h>  // Linux/macOS byte-order functions
+#endif
 
 #include <atomic>
 #include <condition_variable>
