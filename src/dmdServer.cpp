@@ -94,9 +94,8 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
 
     if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
-      // At the moment the server only listens on localhost.
-      // Therefore, we don't have to take care about litte vs. big endian and can use memcpy.
       memcpy(pStreamHeader, buffer, n);
+      pStreamHeader->convertToHostByteOrder();
       if (strcmp(pStreamHeader->header, "DMDStream") == 0 && pStreamHeader->version == 1)
       {
         if (opt_verbose)
@@ -124,6 +123,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
             {
               DMDUtil::DMD::PathsHeader pathsHeader;
               memcpy(&pathsHeader, buffer, n);
+              pathsHeader.convertToHostByteOrder();
 
               if (strcmp(pathsHeader.header, "Paths") == 0 &&
                   (n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
@@ -135,6 +135,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                                pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
                 auto data = std::make_shared<DMDUtil::DMD::Update>();
                 memcpy(data.get(), buffer, n);
+                data->convertToHostByteOrder();
 
                 if (data->width <= DMDSERVER_MAX_WIDTH && data->height <= DMDSERVER_MAX_HEIGHT)
                 {
@@ -165,9 +166,13 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
                 threadId == currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
                 pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
-              // At the moment the server only listens on localhost.
-              // Therefore, we don't have to take care about litte vs. big endian and can use the buffer as uint16_t as
-              // it is.
+              uint16_t* pixelData = (uint16_t*)buffer;
+              size_t pixelCount = pStreamHeader->length / sizeof(uint16_t);
+              for (size_t i = 0; i < pixelCount; i++)
+              {
+                pixelData[i] = ntohs(pixelData[i]);
+              }
+
               pDmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height,
                                     pStreamHeader->buffered == 1);
             }

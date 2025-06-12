@@ -396,13 +396,16 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
           StreamHeader streamHeader;
           streamHeader.buffered = (uint8_t)buffered;
           streamHeader.disconnectOthers = (uint8_t)m_dmdServerDisconnectOthers;
+          streamHeader.convertToNetworkByteOrder();
           m_pDMDServerConnector->Write(&streamHeader, sizeof(StreamHeader));
           PathsHeader pathsHeader;
           strcpy(pathsHeader.name, m_romName);
           strcpy(pathsHeader.altColorPath, m_altColorPath);
           strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
+          pathsHeader.convertToNetworkByteOrder();
           m_pDMDServerConnector->Write(&pathsHeader, sizeof(PathsHeader));
-          m_pDMDServerConnector->Write(dmdUpdate.get(), sizeof(Update));
+          Update dmdUpdateNetwork = dmdUpdate->toNetworkByteOrder();
+          m_pDMDServerConnector->Write(&dmdUpdateNetwork, sizeof(Update));
 
           if (streamHeader.disconnectOthers != 0) m_dmdServerDisconnectOthers = false;
         }
