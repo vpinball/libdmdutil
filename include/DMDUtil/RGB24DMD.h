@@ -19,14 +19,14 @@ class DMDUTILAPI RGB24DMD
   RGB24DMD(uint16_t width, uint16_t height);
   ~RGB24DMD();
 
-  void Update(uint8_t* pRGB24Data);
+  virtual void Update(uint8_t* pRGB24Data);
   int GetWidth() const { return m_width; }
   int GetHeight() const { return m_height; }
   int GetLength() const { return m_length; }
   int GetPitch() const { return m_pitch; }
   uint8_t* GetData();
 
- private:
+ protected:
   uint16_t m_width;
   uint16_t m_height;
   int m_length;

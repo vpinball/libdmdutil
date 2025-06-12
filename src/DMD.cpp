@@ -280,11 +280,20 @@ bool DMD::DestroyLevelDMD(LevelDMD* pLevelDMD)
   return false;
 }
 
+void DMD::AddRGB24DMD(RGB24DMD* pRGB24DMD)
+{
+  m_rgb24DMDs.push_back(pRGB24DMD);
+  Log(DMDUtil_LogLevel_INFO, "Added RGB24DMD");
+  if (!m_pRGB24DMDThread) {
+    m_pRGB24DMDThread = new std::thread(&DMD::RGB24DMDThread, this);
+    Log(DMDUtil_LogLevel_INFO, "RGB24DMDThread started");
+  }
+}
+
 RGB24DMD* DMD::CreateRGB24DMD(uint16_t width, uint16_t height)
 {
   RGB24DMD* const pRGB24DMD = new RGB24DMD(width, height);
-  m_rgb24DMDs.push_back(pRGB24DMD);
-  if (!m_pRGB24DMDThread) m_pRGB24DMDThread = new std::thread(&DMD::RGB24DMDThread, this);
+  AddRGB24DMD(pRGB24DMD);
   return pRGB24DMD;
 }
 
