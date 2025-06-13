@@ -55,13 +55,6 @@ class DMDServerConnector
     sockpp::tcp_connector* pConnector = new sockpp::tcp_connector({pAddress, (in_port_t)port});
     if (pConnector)
     {
-      int flag = 1;
-      int mss = 1200;  // Conservative size
-      int bufsize = 65536;
-      pConnector->set_option(IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-      pConnector->set_option(IPPROTO_TCP, TCP_MAXSEG, &mss, sizeof(mss));
-      pConnector->set_option(SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
-      pConnector->set_option(SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
       return new DMDServerConnector(pConnector);
     }
     return nullptr;

@@ -2,7 +2,6 @@
 #include <winsock2.h>  // Windows byte-order functions
 #else
 #include <arpa/inet.h>  // Linux/macOS byte-order functions
-#include <netinet/tcp.h>
 #endif
 
 #include <algorithm>
@@ -368,14 +367,6 @@ int main(int argc, char* argv[])
     }
     else
     {
-      int flag = 1;
-      int mss = 1200;  // Conservative size
-      int bufsize = 65536;
-      sock.set_option(IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-      sock.set_option(IPPROTO_TCP, TCP_MAXSEG, &mss, sizeof(mss));
-      sock.set_option(SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
-      sock.set_option(SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
-
       threadMutex.lock();
       currentThreadId = ++threadId;
       threads.push_back(currentThreadId);

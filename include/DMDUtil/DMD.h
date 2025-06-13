@@ -19,7 +19,6 @@
 #include <winsock2.h>  // Windows byte-order functions
 #else
 #include <arpa/inet.h>  // Linux/macOS byte-order functions
-#include <netinet/tcp.h>
 #endif
 
 #include <atomic>
