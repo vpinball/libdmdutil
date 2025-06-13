@@ -53,7 +53,11 @@ class DMDServerConnector
   static DMDServerConnector* Create(const char* pAddress, int port)
   {
     sockpp::tcp_connector* pConnector = new sockpp::tcp_connector({pAddress, (in_port_t)port});
-    return pConnector ? new DMDServerConnector(pConnector) : nullptr;
+    if (pConnector)
+    {
+      return new DMDServerConnector(pConnector);
+    }
+    return nullptr;
   }
 
   ssize_t Write(const void* buf, size_t size) { return m_pConnector->write_n(buf, size); }
@@ -284,7 +288,8 @@ void DMD::AddRGB24DMD(RGB24DMD* pRGB24DMD)
 {
   m_rgb24DMDs.push_back(pRGB24DMD);
   Log(DMDUtil_LogLevel_INFO, "Added RGB24DMD");
-  if (!m_pRGB24DMDThread) {
+  if (!m_pRGB24DMDThread)
+  {
     m_pRGB24DMDThread = new std::thread(&DMD::RGB24DMDThread, this);
     Log(DMDUtil_LogLevel_INFO, "RGB24DMDThread started");
   }
@@ -396,13 +401,16 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
           StreamHeader streamHeader;
           streamHeader.buffered = (uint8_t)buffered;
           streamHeader.disconnectOthers = (uint8_t)m_dmdServerDisconnectOthers;
+          streamHeader.convertToNetworkByteOrder();
           m_pDMDServerConnector->Write(&streamHeader, sizeof(StreamHeader));
           PathsHeader pathsHeader;
           strcpy(pathsHeader.name, m_romName);
           strcpy(pathsHeader.altColorPath, m_altColorPath);
           strcpy(pathsHeader.pupVideosPath, m_pupVideosPath);
+          pathsHeader.convertToNetworkByteOrder();
           m_pDMDServerConnector->Write(&pathsHeader, sizeof(PathsHeader));
-          m_pDMDServerConnector->Write(dmdUpdate.get(), sizeof(Update));
+          Update dmdUpdateNetwork = dmdUpdate->toNetworkByteOrder();
+          m_pDMDServerConnector->Write(&dmdUpdateNetwork, sizeof(Update));
 
           if (streamHeader.disconnectOthers != 0) m_dmdServerDisconnectOthers = false;
         }
