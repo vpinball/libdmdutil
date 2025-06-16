@@ -145,6 +145,7 @@ if(BUILD_SHARED)
       add_executable(dmdserver
          src/dmdServer.cpp
          src/Logger.cpp
+         src/dmd.cpp
       )
       target_link_libraries(dmdserver PUBLIC dmdutil_shared)
 
