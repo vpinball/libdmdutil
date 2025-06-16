@@ -5,6 +5,12 @@
 #include "DMDUtil/LevelDMD.h"
 #include "DMDUtil/RGB24DMD.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <winsock2.h>  // Windows byte-order functions
+#else
+#include <arpa/inet.h>  // Linux/macOS byte-order functions
+#endif
+
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
