@@ -129,43 +129,8 @@ class DMDUTILAPI DMD
     uint16_t width;
     uint16_t height;
 
-    void convertToHostByteOrder()
-    {
-      // uint8_t and bool are not converted, as they are already in host byte order.
-      mode = static_cast<Mode>(ntohl(static_cast<uint32_t>(mode)));
-      layout = static_cast<AlphaNumericLayout>(ntohl(static_cast<uint32_t>(layout)));
-      depth = ntohl(depth);
-      for (size_t i = 0; i < 256 * 64; i++)
-      {
-        segData[i] = ntohs(segData[i]);
-      }
-      for (size_t i = 0; i < 128; i++)
-      {
-        segData2[i] = ntohs(segData2[i]);
-      }
-      width = ntohs(width);
-      height = ntohs(height);
-    }
-
-    Update toNetworkByteOrder() const
-    {
-      // uint8_t and bool are not converted, as they are already in network byte order.
-      Update copy = *this;
-      copy.mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
-      copy.layout = static_cast<AlphaNumericLayout>(htonl(static_cast<uint32_t>(layout)));
-      copy.depth = htonl(depth);
-      for (size_t i = 0; i < 256 * 64; i++)
-      {
-        copy.segData[i] = htons(segData[i]);
-      }
-      for (size_t i = 0; i < 128; i++)
-      {
-        copy.segData2[i] = htons(segData2[i]);
-      }
-      copy.width = htons(width);
-      copy.height = htons(height);
-      return copy;
-    }
+    void convertToHostByteOrder();
+    Update toNetworkByteOrder() const;
   };
 
   struct StreamHeader
@@ -179,23 +144,8 @@ class DMDUTILAPI DMD
     uint8_t disconnectOthers = 0;  // 0 => no, 1 => yes
     uint32_t length = 0;
 
-    void convertToHostByteOrder()
-    {
-      // uint8_t and char are not converted, as they are already in host byte order.
-      mode = static_cast<Mode>(ntohl(static_cast<uint32_t>(mode)));
-      width = ntohs(width);
-      height = ntohs(height);
-      length = ntohl(length);
-    }
-
-    void convertToNetworkByteOrder()
-    {
-      // uint8_t and char are not converted, as they are already in network byte order.
-      mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
-      width = htons(width);
-      height = htons(height);
-      length = htonl(length);
-    }
+    void convertToHostByteOrder();
+    void convertToNetworkByteOrder();
   };
 
   struct PathsHeader
@@ -206,7 +156,6 @@ class DMDUTILAPI DMD
     char pupVideosPath[DMDUTIL_MAX_PATH_SIZE] = {0};
 
     void convertToHostByteOrder() {}
-
     void convertToNetworkByteOrder() {}
   };
 #pragma pack(pop)  // Reset to default packing
