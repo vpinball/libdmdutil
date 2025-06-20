@@ -684,8 +684,8 @@ void DMD::DmdFrameThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -728,8 +728,8 @@ void DMD::ZeDMDThread()
   uint8_t indexBuffer[256 * 64] = {0};
   uint8_t renderBuffer[256 * 64 * 3] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -863,8 +863,8 @@ void DMD::SerumThread()
     uint32_t nextRotation = 0;
     Update* lastDmdUpdate = nullptr;
 
-    m_dmdFrameReady.load(std::memory_order_acquire);
-    m_stopFlag.load(std::memory_order_acquire);
+    (void)m_dmdFrameReady.load(std::memory_order_acquire);
+    (void)m_stopFlag.load(std::memory_order_acquire);
 
     Config* const pConfig = Config::GetInstance();
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -1086,8 +1086,8 @@ void DMD::PixelcadeDMDThread()
   uint8_t palette[PALETTE_SIZE] = {0};
   uint16_t rgb565Data[128 * 32] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -1258,8 +1258,8 @@ void DMD::LevelDMDThread()
   uint8_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -1305,8 +1305,8 @@ void DMD::RGB24DMDThread()
   uint8_t renderBuffer[256 * 64] = {0};
   uint8_t rgb24Data[256 * 64 * 3] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -1453,8 +1453,8 @@ void DMD::ConsoleDMDThread()
   uint8_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -1566,8 +1566,8 @@ void DMD::DumpDMDTxtThread()
   FILE* f = nullptr;
   std::unordered_set<uint64_t> seenHashes;
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
@@ -1718,8 +1718,8 @@ void DMD::DumpDMDRawThread()
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -1792,8 +1792,8 @@ void DMD::PupDMDThread()
   uint8_t palette[192] = {0};
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {

@@ -123,8 +123,8 @@ class DMDUTILAPI DMD
     uint16_t width;
     uint16_t height;
 
-    void convertToHostByteOrder();
-    Update toNetworkByteOrder() const;
+    DMDUTILAPI void convertToHostByteOrder();
+    DMDUTILAPI Update toNetworkByteOrder() const;
   };
 
   struct StreamHeader
@@ -138,8 +138,8 @@ class DMDUTILAPI DMD
     uint8_t disconnectOthers = 0;  // 0 => no, 1 => yes
     uint32_t length = 0;
 
-    void convertToHostByteOrder();
-    void convertToNetworkByteOrder();
+    DMDUTILAPI void convertToHostByteOrder();
+    DMDUTILAPI void convertToNetworkByteOrder();
   };
 
   struct PathsHeader
