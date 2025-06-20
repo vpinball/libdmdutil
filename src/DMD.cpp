@@ -5,6 +5,12 @@
 #include "DMDUtil/LevelDMD.h"
 #include "DMDUtil/RGB24DMD.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <winsock2.h>  // Windows byte-order functions
+#else
+#include <arpa/inet.h>  // Linux/macOS byte-order functions
+#endif
+
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -70,6 +76,62 @@ class DMDServerConnector
 };
 
 bool DMD::m_finding = false;
+
+void DMD::Update::convertToHostByteOrder()
+{
+  // uint8_t and bool are not converted, as they are already in host byte order.
+  mode = static_cast<Mode>(ntohl(static_cast<uint32_t>(mode)));
+  layout = static_cast<AlphaNumericLayout>(ntohl(static_cast<uint32_t>(layout)));
+  depth = ntohl(depth);
+  for (size_t i = 0; i < 256 * 64; i++)
+  {
+    segData[i] = ntohs(segData[i]);
+  }
+  for (size_t i = 0; i < 128; i++)
+  {
+    segData2[i] = ntohs(segData2[i]);
+  }
+  width = ntohs(width);
+  height = ntohs(height);
+}
+
+DMD::Update DMD::Update::toNetworkByteOrder() const
+{
+  // uint8_t and bool are not converted, as they are already in network byte order.
+  Update copy = *this;
+  copy.mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
+  copy.layout = static_cast<AlphaNumericLayout>(htonl(static_cast<uint32_t>(layout)));
+  copy.depth = htonl(depth);
+  for (size_t i = 0; i < 256 * 64; i++)
+  {
+    copy.segData[i] = htons(segData[i]);
+  }
+  for (size_t i = 0; i < 128; i++)
+  {
+    copy.segData2[i] = htons(segData2[i]);
+  }
+  copy.width = htons(width);
+  copy.height = htons(height);
+  return copy;
+}
+
+void DMD::StreamHeader::convertToHostByteOrder()
+{
+  // uint8_t and char are not converted, as they are already in host byte order.
+  mode = static_cast<Mode>(ntohl(static_cast<uint32_t>(mode)));
+  width = ntohs(width);
+  height = ntohs(height);
+  length = ntohl(length);
+}
+
+void DMD::StreamHeader::convertToNetworkByteOrder()
+{
+  // uint8_t and char are not converted, as they are already in network byte order.
+  mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
+  width = htons(width);
+  height = htons(height);
+  length = htonl(length);
+}
 
 DMD::DMD()
 {
@@ -622,8 +684,8 @@ void DMD::DmdFrameThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -666,8 +728,8 @@ void DMD::ZeDMDThread()
   uint8_t indexBuffer[256 * 64] = {0};
   uint8_t renderBuffer[256 * 64 * 3] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -801,8 +863,8 @@ void DMD::SerumThread()
     uint32_t nextRotation = 0;
     Update* lastDmdUpdate = nullptr;
 
-    m_dmdFrameReady.load(std::memory_order_acquire);
-    m_stopFlag.load(std::memory_order_acquire);
+    (void)m_dmdFrameReady.load(std::memory_order_acquire);
+    (void)m_stopFlag.load(std::memory_order_acquire);
 
     Config* const pConfig = Config::GetInstance();
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -1024,8 +1086,8 @@ void DMD::PixelcadeDMDThread()
   uint8_t palette[PALETTE_SIZE] = {0};
   uint16_t rgb565Data[128 * 32] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -1196,8 +1258,8 @@ void DMD::LevelDMDThread()
   uint8_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -1243,8 +1305,8 @@ void DMD::RGB24DMDThread()
   uint8_t renderBuffer[256 * 64] = {0};
   uint8_t rgb24Data[256 * 64 * 3] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -1391,8 +1453,8 @@ void DMD::ConsoleDMDThread()
   uint8_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -1504,8 +1566,8 @@ void DMD::DumpDMDTxtThread()
   FILE* f = nullptr;
   std::unordered_set<uint64_t> seenHashes;
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
   bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
@@ -1656,8 +1718,8 @@ void DMD::DumpDMDRawThread()
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
@@ -1730,8 +1792,8 @@ void DMD::PupDMDThread()
   uint8_t palette[192] = {0};
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
 
-  m_dmdFrameReady.load(std::memory_order_acquire);
-  m_stopFlag.load(std::memory_order_acquire);
+  (void)m_dmdFrameReady.load(std::memory_order_acquire);
+  (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
