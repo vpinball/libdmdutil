@@ -175,8 +175,7 @@ void PixelcadeDMD::Run()
         EnableRgbLedMatrix(4, 16);
 
         int errors = 0;
-        FrameUtil::ColorMatrix colorMatrix =
-            (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
+        FrameUtil::ColorMatrix colorMatrix = (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
 
         while (m_running)
         {

@@ -14,6 +14,7 @@
 
 #include "DMDUtil/DMDUtil.h"
 #include "Logger.h"
+#include "VirtualDMD.h"
 #include "cargs.h"
 #include "sockpp/tcp_acceptor.h"
 
@@ -30,6 +31,8 @@ vector<uint32_t> threads;
 bool opt_verbose = false;
 bool opt_fixedAltColorPath = false;
 bool opt_fixedPupPath = false;
+bool opt_virtualDMD = false;
+int opt_virtualDMDPort = 6790;
 
 static struct cag_option options[] = {
     {.identifier = 'c',
@@ -73,6 +76,16 @@ static struct cag_option options[] = {
      .access_name = "verbose-logging",
      .value_name = NULL,
      .description = "Enables verbose logging, includes normal logging (optional, default is no logging)"},
+    {.identifier = 'd',
+     .access_letters = "d",
+     .access_name = "virtual-dmd",
+     .value_name = NULL,
+     .description = "Enable virtual DMD web interface (default port is 6790)"},
+    {.identifier = 'q',
+     .access_letters = "q",
+     .access_name = "virtual-dmd-port",
+     .value_name = "VALUE",
+     .description = "Set virtual DMD web interface port (optional, default is 6790)"},
     {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
 
 void DMDUTILCALLBACK LogCallback(DMDUtil_LogLevel logLevel, const char* format, va_list args)
@@ -102,6 +115,7 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
     {
       memcpy(pStreamHeader, buffer, n);
       pStreamHeader->convertToHostByteOrder();
+
       if (strcmp(pStreamHeader->header, "DMDStream") == 0 && pStreamHeader->version == 1)
       {
         if (opt_verbose)
@@ -131,25 +145,39 @@ void run(sockpp::tcp_socket sock, uint32_t threadId)
               memcpy(&pathsHeader, buffer, n);
               pathsHeader.convertToHostByteOrder();
 
-              if (strcmp(pathsHeader.header, "Paths") == 0 &&
-                  (n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
-                  threadId == currentThreadId)
+              if (strcmp(pathsHeader.header, "Paths") == 0)
               {
                 if (opt_verbose)
                   DMDUtil::Log(DMDUtil_LogLevel_INFO,
                                "%d: Received paths header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
                                pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
-                auto data = std::make_shared<DMDUtil::DMD::Update>();
-                memcpy(data.get(), buffer, n);
-                data->convertToHostByteOrder();
 
-                if (data->width <= DMDSERVER_MAX_WIDTH && data->height <= DMDSERVER_MAX_HEIGHT)
+                n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update));
+
+                if (n == sizeof(DMDUtil::DMD::Update) && threadId == currentThreadId)
                 {
-                  pDmd->SetRomName(pathsHeader.name);
-                  if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(pathsHeader.altColorPath);
-                  if (!opt_fixedPupPath) pDmd->SetPUPVideosPath(pathsHeader.pupVideosPath);
+                  auto data = std::make_shared<DMDUtil::DMD::Update>();
+                  memcpy(data.get(), buffer, n);
+                  data->convertToHostByteOrder();
 
-                  pDmd->QueueUpdate(data, (pStreamHeader->buffered == 1));
+                  if (data->width <= DMDSERVER_MAX_WIDTH && data->height <= DMDSERVER_MAX_HEIGHT)
+                  {
+                    pDmd->SetRomName(pathsHeader.name);
+                    if (!opt_fixedAltColorPath) pDmd->SetAltColorPath(pathsHeader.altColorPath);
+                    if (!opt_fixedPupPath) pDmd->SetPUPVideosPath(pathsHeader.pupVideosPath);
+
+                    // Special handling for virtual DMD
+                    if (opt_virtualDMD)
+                    {
+                      DMDUtil::VirtualDMD* pVirtualDmd = static_cast<DMDUtil::VirtualDMD*>(pDmd);
+                      pVirtualDmd->UpdateData(data->data, data->depth, data->width, data->height, data->r, data->g,
+                                              data->b, (pStreamHeader->buffered == 1));
+                    }
+                    else
+                    {
+                      pDmd->QueueUpdate(data, (pStreamHeader->buffered == 1));
+                    }
+                  }
                 }
                 else
                 {
@@ -316,6 +344,15 @@ int main(int argc, char* argv[])
     {
       pConfig->SetLogCallback(LogCallback);
     }
+    else if (identifier == 'd')
+    {
+      opt_virtualDMD = true;
+    }
+    else if (identifier == 'q')
+    {
+      std::stringstream ssPort(cag_option_get_value(&cag_context));
+      ssPort >> opt_virtualDMDPort;
+    }
     else if (identifier == 'h')
     {
       cout << "Usage: dmdserver [OPTION]..." << endl;
@@ -335,16 +372,35 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  pDmd = new DMDUtil::DMD();
-
-  while (true)
+  if (opt_virtualDMD)
   {
-    pDmd->FindDisplays();
-    while (DMDUtil::DMD::IsFinding()) this_thread::sleep_for(chrono::milliseconds(100));
+    pDmd = new DMDUtil::VirtualDMD(opt_virtualDMDPort, pConfig->GetDMDServerAddr());
+  }
+  else
+  {
+    pDmd = new DMDUtil::DMD();
+  }
 
-    if (pDmd->HasDisplay() || !opt_wait) break;
+  if (opt_virtualDMD)
+  {
+    DMDUtil::VirtualDMD* pVirtualDmd = static_cast<DMDUtil::VirtualDMD*>(pDmd);
+    if (!pVirtualDmd->StartWebServer())
+    {
+      DMDUtil::Log(DMDUtil_LogLevel_ERROR, "Failed to start virtual DMD web server");
+      return 1;
+    }
+  }
+  else
+  {
+    while (true)
+    {
+      pDmd->FindDisplays();
+      while (DMDUtil::DMD::IsFinding()) this_thread::sleep_for(chrono::milliseconds(100));
 
-    this_thread::sleep_for(chrono::milliseconds(1000));
+      if (pDmd->HasDisplay() || !opt_wait) break;
+
+      this_thread::sleep_for(chrono::milliseconds(1000));
+    }
   }
 
   std::string altColorPath = DMDUtil::Config::GetInstance()->GetAltColorPath();
@@ -354,7 +410,7 @@ int main(int argc, char* argv[])
     opt_fixedAltColorPath = true;
   }
 
-  while (pDmd->HasDisplay())
+  while (pDmd->HasDisplay() || opt_virtualDMD)
   {
     sockpp::inet_address peer;
 
@@ -379,6 +435,11 @@ int main(int argc, char* argv[])
     }
   }
 
-  DMDUtil::Log(DMDUtil_LogLevel_INFO, "No DMD displays found.");
-  return 2;
+  if (!opt_virtualDMD)
+  {
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "No DMD displays found.");
+    return 2;
+  }
+
+  return 0;
 }

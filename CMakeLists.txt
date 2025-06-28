@@ -75,6 +75,8 @@ set(DMDUTIL_SOURCES
    src/ConsoleDMD.cpp
    src/Logger.cpp
    src/AlphaNumeric.cpp
+   src/VirtualDMD.cpp
+   third-party/include/mongoose/mongoose.c
 )
 
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
