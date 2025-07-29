@@ -862,7 +862,7 @@ void DMD::SerumThread()
     uint8_t bufferPosition = 0;
     uint32_t prevTriggerId = 0;
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
-    char csvPath[DMDUTIL_MAX_PATH_SIZE + DMDUTIL_MAX_NAME_SIZE + 10] = {0};
+    char csvPath[DMDUTIL_MAX_PATH_SIZE + DMDUTIL_MAX_NAME_SIZE + DMDUTIL_MAX_NAME_SIZE + 10] = {0};
     uint32_t nextRotation = 0;
     Update* lastDmdUpdate = nullptr;
 
@@ -965,7 +965,15 @@ void DMD::SerumThread()
               Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
 
-              snprintf(csvPath, sizeof(csvPath), "%s/%s.pup.csv", m_altColorPath, m_romName);
+              if (m_dumpPath[strlen(m_altColorPath) - 1] == '/' || m_dumpPath[strlen(m_altColorPath) - 1] == '\\')
+              {
+                snprintf(csvPath, sizeof(csvPath), "%s%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
+              }
+              else
+              {
+                snprintf(csvPath, sizeof(csvPath), "%s/%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
+              }
+
               if (generator.parseCSV(csvPath))
               {
                 Log(DMDUtil_LogLevel_INFO, "Loaded PUP scenes for %s", m_romName);
