@@ -4,6 +4,7 @@
 #include "DMDUtil/ConsoleDMD.h"
 #include "DMDUtil/LevelDMD.h"
 #include "DMDUtil/RGB24DMD.h"
+#include "DMDUtil/SceneGenerator.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <winsock2.h>  // Windows byte-order functions
@@ -148,6 +149,7 @@ DMD::DMD()
   m_pSerum = nullptr;
   m_pZeDMD = nullptr;
   m_pPUPDMD = nullptr;
+  m_pZeDMD = nullptr;
   m_pZeDMDThread = nullptr;
   m_pLevelDMDThread = nullptr;
   m_pRGB24DMDThread = nullptr;
@@ -860,6 +862,7 @@ void DMD::SerumThread()
     uint8_t bufferPosition = 0;
     uint32_t prevTriggerId = 0;
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
+    char csvPath[DMDUTIL_MAX_PATH_SIZE + DMDUTIL_MAX_NAME_SIZE + 10] = {0};
     uint32_t nextRotation = 0;
     Update* lastDmdUpdate = nullptr;
 
@@ -869,6 +872,13 @@ void DMD::SerumThread()
     Config* const pConfig = Config::GetInstance();
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
     bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+
+    SceneGenerator generator;
+    int sceneFrameCount = 0;
+    int sceneCurrentFrame = 0;
+    int sceneDurationPerFrame = 0;
+    bool sceneInterruptable = false;
+    uint32_t nextSceneFrame = 0;
 
     while (true)
     {
@@ -898,10 +908,36 @@ void DMD::SerumThread()
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
               .count();
 
+      if (!m_stopFlag.load(std::memory_order_relaxed) && sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now)
+      {
+        Update* sceneUpdate = new Update();
+        sceneUpdate->mode = Mode::Data;
+        sceneUpdate->depth = 2;
+        sceneUpdate->width = 128;
+        sceneUpdate->height = 32;
+        sceneUpdate->hasData = true;
+        sceneUpdate->r = 0;
+        sceneUpdate->g = 0;
+        sceneUpdate->b = 0;
+        if (generator.generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
+        {
+          uint32_t result = Serum_Colorize(sceneUpdate->data);
+
+          if (result != IDENTIFY_NO_FRAME)
+          {
+            QueueSerumFrames(sceneUpdate);
+          }
+        }
+        nextSceneFrame = now + sceneDurationPerFrame;
+        delete sceneUpdate;
+      }
+
       const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
       while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
       {
         if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
+
+        if (sceneCurrentFrame < sceneFrameCount && !sceneInterruptable) break;
 
         if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
         {
@@ -914,6 +950,7 @@ void DMD::SerumThread()
               Serum_Dispose();
               m_pSerum = nullptr;
               lastDmdUpdate = nullptr;
+              generator.Reset();
             }
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
@@ -927,6 +964,12 @@ void DMD::SerumThread()
 
               Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
+
+              snprintf(csvPath, sizeof(csvPath), "%s/%s.pup.csv", m_altColorPath, m_romName);
+              if (generator.parseCSV(csvPath))
+              {
+                Log(DMDUtil_LogLevel_INFO, "Loaded PUP scenes for %s", m_romName);
+              }
             }
           }
 
@@ -949,8 +992,23 @@ void DMD::SerumThread()
 
               if (m_pSerum->triggerID < 0xffffffff & m_pSerum->triggerID != prevTriggerId)
               {
-                HandleTrigger(m_pSerum->triggerID);
+                if (m_pSerum->triggerID < 60000)
+                {
+                  HandleTrigger(m_pSerum->triggerID);
+                }
+                else if (generator.getSceneInfo(m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame,
+                                                sceneInterruptable))
+                {
+                  Log(DMDUtil_LogLevel_DEBUG, "Serum: trigger ID %lu found in scenes, frame count=%d, duration=%dms",
+                      m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame);
+                  sceneCurrentFrame = 0;
+                  nextSceneFrame = now + sceneDurationPerFrame;
+                }
                 prevTriggerId = m_pSerum->triggerID;
+              }
+              else
+              {
+                sceneFrameCount = 0;
               }
             }
             else if (showNotColorizedFrames || dumpNotColorizedFrames)

@@ -2,7 +2,7 @@
 
 #define DMDUTIL_VERSION_MAJOR 0  // X Digits
 #define DMDUTIL_VERSION_MINOR 9  // Max 2 Digits
-#define DMDUTIL_VERSION_PATCH 2  // Max 2 Digits
+#define DMDUTIL_VERSION_PATCH 3  // Max 2 Digits
 
 #define _DMDUTIL_STR(x) #x
 #define DMDUTIL_STR(x) _DMDUTIL_STR(x)
@@ -16,3 +16,4 @@
 #include "DMD.h"
 #include "LevelDMD.h"
 #include "RGB24DMD.h"
+#include "SceneGenerator.h"

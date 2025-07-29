@@ -1,0 +1,7 @@
+# Format:
+#  PUP Trigger ID, Number od Frames, Duration of a Frame, Interruptable
+#
+# Scene 60001
+60001,38,16,0
+# Scene 63479
+63479,52,20,1

@@ -75,6 +75,7 @@ set(DMDUTIL_SOURCES
    src/ConsoleDMD.cpp
    src/Logger.cpp
    src/AlphaNumeric.cpp
+   src/SceneGenerator.cpp
 )
 
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
@@ -157,6 +158,11 @@ if(BUILD_SHARED)
          src/test.cpp
       )
       target_link_libraries(dmdutil_test PUBLIC dmdutil_shared)
+
+      add_executable(dmdutil-generate-scenes
+         src/generateScenesDump.cpp
+      )
+      target_link_libraries(dmdutil-generate-scenes PUBLIC dmdutil_shared)
 
       if(POST_BUILD_COPY_EXT_LIBS)
          if(PLATFORM STREQUAL "win")
