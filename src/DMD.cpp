@@ -928,7 +928,7 @@ void DMD::SerumThread()
             QueueSerumFrames(sceneUpdate);
           }
         }
-        nextSceneFrame = now + sceneDurationPerFrame;
+        nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
         delete sceneUpdate;
       }
 
@@ -937,7 +937,7 @@ void DMD::SerumThread()
       {
         if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
-        if (sceneCurrentFrame < sceneFrameCount && !sceneInterruptable) break;
+        if (sceneCurrentFrame < sceneFrameCount && !sceneInterruptable) continue;
 
         if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
         {
@@ -1040,6 +1040,11 @@ void DMD::SerumThread()
             }
           }
         }
+      }
+
+      if (sceneCurrentFrame < sceneFrameCount) {
+        nextRotation = 0;
+        continue;
       }
 
       if (!m_stopFlag.load(std::memory_order_acquire) && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 &&
