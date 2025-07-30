@@ -882,18 +882,28 @@ void DMD::SerumThread()
 
     while (true)
     {
-      std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-      m_dmdCV.wait(sl,
-                   [&]()
-                   {
-                     uint32_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                        std::chrono::system_clock::now().time_since_epoch())
-                                        .count();
+      auto systemNow = std::chrono::system_clock::now();
+      auto nextWakeTime = systemNow + std::chrono::hours(1);  // Default: far in the future
 
-                     return m_dmdFrameReady.load(std::memory_order_relaxed) ||
-                            m_stopFlag.load(std::memory_order_relaxed) || (nextRotation > 0 && nextRotation <= now) ||
-                            (sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now);
-                   });
+      if (nextRotation > 0)
+      {
+        auto rotationTime = std::chrono::system_clock::time_point(std::chrono::milliseconds(nextRotation));
+        if (rotationTime > systemNow) nextWakeTime = std::min(nextWakeTime, rotationTime);
+      }
+
+      if (sceneCurrentFrame < sceneFrameCount && nextSceneFrame > 0)
+      {
+        auto sceneTime = std::chrono::system_clock::time_point(std::chrono::milliseconds(nextSceneFrame));
+        if (sceneTime > systemNow) nextWakeTime = std::min(nextWakeTime, sceneTime);
+      }
+
+      std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+      // Wait until either:
+      // - m_dmdFrameReady/m_stopFlag is set (via notify_all), OR
+      // - The timeout (nextRotation/nextSceneFrame) is reached
+      m_dmdCV.wait_until(
+          sl, nextWakeTime, [&]()
+          { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
       sl.unlock();
 
       if (m_stopFlag.load(std::memory_order_acquire))
