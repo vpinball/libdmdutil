@@ -883,7 +883,7 @@ void DMD::SerumThread()
     while (true)
     {
       auto systemNow = std::chrono::system_clock::now();
-      auto nextWakeTime = systemNow + std::chrono::hours(1);  // Default: far in the future
+      auto nextWakeTime = systemNow + std::chrono::hours(24);  // Default: far in the future
 
       if (nextRotation > 0)
       {
@@ -901,9 +901,18 @@ void DMD::SerumThread()
       // Wait until either:
       // - m_dmdFrameReady/m_stopFlag is set (via notify_all), OR
       // - The timeout (nextRotation/nextSceneFrame) is reached
-      m_dmdCV.wait_until(
-          sl, nextWakeTime, [&]()
-          { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+      m_dmdCV.wait_until(sl, nextWakeTime,
+                         [&]()
+                         {
+                           uint32_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                              std::chrono::system_clock::now().time_since_epoch())
+                                              .count();
+
+                           return m_dmdFrameReady.load(std::memory_order_relaxed) ||
+                                  m_stopFlag.load(std::memory_order_relaxed) ||
+                                  (nextRotation > 0 && nextRotation <= now) ||
+                                  (sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now);
+                         });
       sl.unlock();
 
       if (m_stopFlag.load(std::memory_order_acquire))
