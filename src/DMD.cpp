@@ -886,11 +886,13 @@ void DMD::SerumThread()
       m_dmdCV.wait(sl,
                    [&]()
                    {
+                     uint32_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::system_clock::now().time_since_epoch())
+                                        .count();
+
                      return m_dmdFrameReady.load(std::memory_order_relaxed) ||
-                            m_stopFlag.load(std::memory_order_relaxed) ||
-                            (nextRotation > 0 && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                     std::chrono::system_clock::now().time_since_epoch())
-                                                         .count() > nextRotation);
+                            m_stopFlag.load(std::memory_order_relaxed) || (nextRotation > 0 && nextRotation <= now) ||
+                            (sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now);
                    });
       sl.unlock();
 
