@@ -951,6 +951,7 @@ void DMD::SerumThread()
               m_pSerum = nullptr;
               lastDmdUpdate = nullptr;
               generator.Reset();
+              sceneFrameCount = 0;
             }
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
@@ -998,7 +999,7 @@ void DMD::SerumThread()
               else
                 nextRotation = 0;
 
-              if (m_pSerum->triggerID < 0xffffffff & m_pSerum->triggerID != prevTriggerId)
+              if (m_pSerum->triggerID < 0xffffffff)
               {
                 if (m_pSerum->triggerID < 60000)
                 {
