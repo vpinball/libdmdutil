@@ -882,38 +882,18 @@ void DMD::SerumThread()
 
     while (true)
     {
-      auto systemNow = std::chrono::system_clock::now();
-      auto nextWakeTime = systemNow + std::chrono::hours(24);  // Default: far in the future
-
-      if (nextRotation > 0)
+      if (nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
       {
-        auto rotationTime = std::chrono::system_clock::time_point(std::chrono::milliseconds(nextRotation));
-        if (rotationTime > systemNow) nextWakeTime = std::min(nextWakeTime, rotationTime);
+        std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+        m_dmdCV.wait(
+            sl, [&]()
+            { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+        sl.unlock();
       }
-
-      if (sceneCurrentFrame < sceneFrameCount && nextSceneFrame > 0)
+      else
       {
-        auto sceneTime = std::chrono::system_clock::time_point(std::chrono::milliseconds(nextSceneFrame));
-        if (sceneTime > systemNow) nextWakeTime = std::min(nextWakeTime, sceneTime);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
       }
-
-      std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-      // Wait until either:
-      // - m_dmdFrameReady/m_stopFlag is set (via notify_all), OR
-      // - The timeout (nextRotation/nextSceneFrame) is reached
-      m_dmdCV.wait_until(sl, nextWakeTime,
-                         [&]()
-                         {
-                           uint32_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                              std::chrono::system_clock::now().time_since_epoch())
-                                              .count();
-
-                           return m_dmdFrameReady.load(std::memory_order_relaxed) ||
-                                  m_stopFlag.load(std::memory_order_relaxed) ||
-                                  (nextRotation > 0 && nextRotation <= now) ||
-                                  (sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now);
-                         });
-      sl.unlock();
 
       if (m_stopFlag.load(std::memory_order_acquire))
       {
