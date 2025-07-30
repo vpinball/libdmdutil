@@ -32,7 +32,7 @@ class DMDUTILAPI SceneGenerator
   bool generateDump(const std::string& dump_filename, int id = -1);
   bool getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable) const;
   bool generateFrame(int sceneId, int frameIndex, uint8_t* buffer);
-  void setDepth(int depth) { m_depth = depth; }
+  void setDepth(int depth);
   void Reset()
   {
     m_sceneData.clear();

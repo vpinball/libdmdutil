@@ -977,8 +977,9 @@ void DMD::SerumThread()
 
               if (generator.parseCSV(csvPath))
               {
-                Log(DMDUtil_LogLevel_INFO, "Loaded PUP scenes for %s", m_romName);
                 generator.setDepth(m_pUpdateBufferQueue[bufferPosition]->depth);
+                Log(DMDUtil_LogLevel_INFO, "Loaded PUP scenes for %s, bit depth %d", m_romName,
+                    m_pUpdateBufferQueue[bufferPosition]->depth);
               }
             }
           }

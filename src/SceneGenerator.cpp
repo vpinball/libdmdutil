@@ -40,6 +40,13 @@ const int NUM_X = RIGHT_ALIGN_X - NUMBER_PIXELS + 1;
 
 SceneGenerator::SceneGenerator() : m_templateInitialized(false) { initializeTemplate(); }
 
+void SceneGenerator::setDepth(int depth)
+{
+  m_depth = depth;
+  m_templateInitialized = false;
+  initializeTemplate();
+}
+
 bool SceneGenerator::parseCSV(const std::string& csv_filename)
 {
   std::ifstream in_csv(csv_filename);
