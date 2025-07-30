@@ -29,9 +29,10 @@ class DMDUTILAPI SceneGenerator
   SceneGenerator();
 
   bool parseCSV(const std::string& csv_filename);
-  bool generateDump(const std::string& dump_filename);
+  bool generateDump(const std::string& dump_filename, int id = -1);
   bool getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable) const;
   bool generateFrame(int sceneId, int frameIndex, uint8_t* buffer);
+  void setDepth(int depth) { m_depth = depth; }
   void Reset()
   {
     m_sceneData.clear();
@@ -54,6 +55,8 @@ class DMDUTILAPI SceneGenerator
   bool m_templateInitialized;
 
   void initializeTemplate();
+
+  int m_depth = 2;  // Default depth for rendering
 };
 
 }  // namespace DMDUtil

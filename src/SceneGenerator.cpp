@@ -111,7 +111,7 @@ bool SceneGenerator::parseCSV(const std::string& csv_filename)
   return true;
 }
 
-bool SceneGenerator::generateDump(const std::string& dump_filename)
+bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
 {
   std::ofstream out_dump(dump_filename, std::ios::binary);
   if (!out_dump.is_open())
@@ -123,6 +123,11 @@ bool SceneGenerator::generateDump(const std::string& dump_filename)
   uint32_t cumulative_duration = 0;
   for (const auto& scene : m_sceneData)
   {
+    if (id != -1 && scene.sceneId != id)
+    {
+      continue;  // Skip scenes that don't match the specified ID
+    }
+
     for (int frameIndex = 1; frameIndex <= scene.frameCount; frameIndex++)
     {
       cumulative_duration += static_cast<uint32_t>(scene.durationPerFrame);
@@ -145,7 +150,7 @@ bool SceneGenerator::generateDump(const std::string& dump_filename)
         for (int col = 0; col < 128; col++)
         {
           uint8_t value = frameBuffer[row * 128 + col];
-          out_dump << static_cast<char>(value ? '3' : '0');
+          out_dump << static_cast<char>(value ? (m_depth == 2 ? '3' : 'f') : '0');
         }
         out_dump << "\r\n";
       }
@@ -197,8 +202,8 @@ bool SceneGenerator::generateFrame(int sceneId, int frameIndex, uint8_t* buffer)
   std::string frameStr = formatNumber(frameIndex, NUMBER_WIDTH);
   renderString(buffer, frameStr, NUM_X, FRAME_Y);
 
-  std::string durStr = formatNumber(it->durationPerFrame, NUMBER_WIDTH);
-  renderString(buffer, durStr, NUM_X, DURATION_Y);
+  // std::string durStr = formatNumber(it->durationPerFrame, NUMBER_WIDTH);
+  // renderString(buffer, durStr, NUM_X, DURATION_Y);
 
   return true;
 }
@@ -213,7 +218,7 @@ void SceneGenerator::initializeTemplate()
   // Render fixed text to template at new positions
   renderString(m_template.fullFrame, "PUP SCENE ID", 0, SCENE_Y);
   renderString(m_template.fullFrame, "FRAME NUMBER", 0, FRAME_Y);
-  renderString(m_template.fullFrame, "FRAME DURATION", 0, DURATION_Y);
+  // renderString(m_template.fullFrame, "FRAME DURATION", 0, DURATION_Y);
 
   m_templateInitialized = true;
 }
@@ -308,7 +313,7 @@ void SceneGenerator::renderChar(uint8_t* buffer, char c, int x, int y) const
         int abs_y = y + row;
         if (abs_x < 128 && abs_y < 32)
         {
-          buffer[abs_y * 128 + abs_x] = 3;
+          buffer[abs_y * 128 + abs_x] = (m_depth == 2 ? 3 : 15);  // Use 3 for depth 2, 15 for depth 4
         }
       }
     }

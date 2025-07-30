@@ -978,6 +978,7 @@ void DMD::SerumThread()
               if (generator.parseCSV(csvPath))
               {
                 Log(DMDUtil_LogLevel_INFO, "Loaded PUP scenes for %s", m_romName);
+                generator.setDepth(m_pUpdateBufferQueue[bufferPosition]->depth);
               }
             }
           }
@@ -1001,18 +1002,17 @@ void DMD::SerumThread()
 
               if (m_pSerum->triggerID < 0xffffffff)
               {
-                if (m_pSerum->triggerID < 60000)
-                {
-                  HandleTrigger(m_pSerum->triggerID);
-                }
-                else if (generator.getSceneInfo(m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame,
-                                                sceneInterruptable))
+                HandleTrigger(m_pSerum->triggerID);
+
+                if (generator.getSceneInfo(m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame,
+                                           sceneInterruptable))
                 {
                   Log(DMDUtil_LogLevel_DEBUG, "Serum: trigger ID %lu found in scenes, frame count=%d, duration=%dms",
                       m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame);
                   sceneCurrentFrame = 0;
                   nextSceneFrame = now + sceneDurationPerFrame;
                 }
+
                 prevTriggerId = m_pSerum->triggerID;
               }
               else
@@ -1042,7 +1042,8 @@ void DMD::SerumThread()
         }
       }
 
-      if (sceneCurrentFrame < sceneFrameCount) {
+      if (sceneCurrentFrame < sceneFrameCount)
+      {
         nextRotation = 0;
         continue;
       }
