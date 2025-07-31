@@ -917,10 +917,14 @@ void DMD::SerumThread()
         if (sceneCurrentFrame >= sceneFrameCount)
         {
           // The scene is finished.
-          if (sceneRepeatCount > 0)
+          if (sceneRepeatCount > 1)
           {
             sceneCurrentFrame = 0;
-            sceneRepeatCount--;
+            if (--sceneRepeatCount == 1) sceneRepeatCount = 0;
+          }
+          else if (sceneRepeatCount == 1) {
+            // loop
+            sceneCurrentFrame = 0;
           }
           else
           {
