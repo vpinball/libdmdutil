@@ -28,8 +28,8 @@ std::string formatNumber(int num, int width)
 
 // Constants for text positioning
 const int SCENE_Y = 2;
-const int FRAME_Y = 12;
-const int DURATION_Y = 22;
+const int GROUP_Y = 12;
+const int FRAME_Y = 22;
 const int RIGHT_ALIGN_X = 127;
 const int NUMBER_WIDTH = 5;
 const int NUMBER_PIXELS = NUMBER_WIDTH * 6 - 1;  // 5 digits * 6px/digit - last space
@@ -97,14 +97,13 @@ bool SceneGenerator::parseCSV(const std::string& csv_filename)
       data.sceneId = std::stoi(row[0]);
       data.frameCount = std::stoi(row[1]);
       data.durationPerFrame = std::stoi(row[2]);
-
-      // Default to non-interruptable if not specified
-      data.interruptable = false;
-      if (row.size() >= 4)
-      {
-        int interruptValue = std::stoi(row[3]);
-        data.interruptable = (interruptValue == 1);
-      }
+      if (row.size() >= 4) data.interruptable = (std::stoi(row[3]) == 1);
+      if (row.size() >= 5) data.immediateStart = (std::stoi(row[4]) == 1);
+      if (row.size() >= 6) data.repeat = std::stoi(row[5]);
+      if (row.size() >= 7) data.frameGroup = std::stoi(row[6]);
+      if (row.size() >= 8) data.random = (std::stoi(row[7]) == 1);
+      if (row.size() >= 9) data.autoStart = std::stoi(row[8]);
+      if (row.size() >= 10) data.endFrame = std::stoi(row[9]);
 
       m_sceneData.push_back(data);
     }
@@ -135,33 +134,37 @@ bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
       continue;  // Skip scenes that don't match the specified ID
     }
 
-    for (int frameIndex = 1; frameIndex <= scene.frameCount; frameIndex++)
+    int goups = scene.frameGroup > 0 ? scene.frameGroup : 1;
+    for (int group = 1; group <= goups; group++)
     {
-      cumulative_duration += static_cast<uint32_t>(scene.durationPerFrame);
-
-      // Format as 8-digit hex with 0x prefix
-      char hex_line[11];
-      std::snprintf(hex_line, sizeof(hex_line), "0x%08x", cumulative_duration);
-      out_dump << hex_line << "\r\n";
-
-      uint8_t frameBuffer[4096];
-      if (!generateFrame(scene.sceneId, frameIndex, frameBuffer))
+      for (int frameIndex = 0; frameIndex < scene.frameCount; frameIndex++)
       {
-        std::cerr << "Error generating frame " << frameIndex << " for scene " << scene.sceneId << std::endl;
-        continue;
-      }
+        cumulative_duration += static_cast<uint32_t>(scene.durationPerFrame);
 
-      // Write 128x32 grid
-      for (int row = 0; row < 32; row++)
-      {
-        for (int col = 0; col < 128; col++)
+        // Format as 8-digit hex with 0x prefix
+        char hex_line[11];
+        std::snprintf(hex_line, sizeof(hex_line), "0x%08x", cumulative_duration);
+        out_dump << hex_line << "\r\n";
+
+        uint8_t frameBuffer[4096];
+        if (!generateFrame(scene.sceneId, frameIndex, frameBuffer, group))
         {
-          uint8_t value = frameBuffer[row * 128 + col];
-          out_dump << static_cast<char>(value ? (m_depth == 2 ? '3' : 'f') : '0');
+          std::cerr << "Error generating frame " << frameIndex << " for scene " << scene.sceneId << std::endl;
+          continue;
         }
-        out_dump << "\r\n";
+
+        // Write 128x32 grid
+        for (int row = 0; row < 32; row++)
+        {
+          for (int col = 0; col < 128; col++)
+          {
+            uint8_t value = frameBuffer[row * 128 + col];
+            out_dump << static_cast<char>(value ? (m_depth == 2 ? '3' : 'f') : '0');
+          }
+          out_dump << "\r\n";
+        }
+        out_dump << "\r\n";  // Empty line between frames
       }
-      out_dump << "\r\n";  // Empty line between frames
     }
   }
 
@@ -184,7 +187,7 @@ bool SceneGenerator::getSceneInfo(int sceneId, int& frameCount, int& durationPer
   return true;
 }
 
-bool SceneGenerator::generateFrame(int sceneId, int frameIndex, uint8_t* buffer)
+bool SceneGenerator::generateFrame(int sceneId, int frameIndex, uint8_t* buffer, int group)
 {
   auto it = std::find_if(m_sceneData.begin(), m_sceneData.end(),
                          [sceneId](const SceneData& data) { return data.sceneId == sceneId; });
@@ -194,9 +197,22 @@ bool SceneGenerator::generateFrame(int sceneId, int frameIndex, uint8_t* buffer)
     return false;
   }
 
-  if (frameIndex < 1 || frameIndex > it->frameCount)
+  if (frameIndex < 0 || frameIndex >= it->frameCount)
   {
     return false;
+  }
+
+  if (frameIndex == 0)
+  {
+    if (group == -1)
+    {
+      // @todo random or order play.
+      m_currentGroup = 1;
+    }
+    else
+    {
+      m_currentGroup = group;
+    }
   }
 
   // Copy pre-rendered template
@@ -206,11 +222,11 @@ bool SceneGenerator::generateFrame(int sceneId, int frameIndex, uint8_t* buffer)
   std::string sceneIdStr = formatNumber(sceneId, NUMBER_WIDTH);
   renderString(buffer, sceneIdStr, NUM_X, SCENE_Y);
 
-  std::string frameStr = formatNumber(frameIndex, NUMBER_WIDTH);
-  renderString(buffer, frameStr, NUM_X, FRAME_Y);
+  std::string groupStr = formatNumber(m_currentGroup, NUMBER_WIDTH);
+  renderString(buffer, groupStr, NUM_X, GROUP_Y);
 
-  // std::string durStr = formatNumber(it->durationPerFrame, NUMBER_WIDTH);
-  // renderString(buffer, durStr, NUM_X, DURATION_Y);
+  std::string frameStr = formatNumber(frameIndex + 1, NUMBER_WIDTH);
+  renderString(buffer, frameStr, NUM_X, FRAME_Y);
 
   return true;
 }
@@ -224,8 +240,8 @@ void SceneGenerator::initializeTemplate()
 
   // Render fixed text to template at new positions
   renderString(m_template.fullFrame, "PUP SCENE ID", 0, SCENE_Y);
+  renderString(m_template.fullFrame, "FRAME GROUP", 0, GROUP_Y);
   renderString(m_template.fullFrame, "FRAME NUMBER", 0, FRAME_Y);
-  // renderString(m_template.fullFrame, "FRAME DURATION", 0, DURATION_Y);
 
   m_templateInitialized = true;
 }
@@ -250,15 +266,26 @@ const unsigned char* SceneGenerator::getCharFont(char c) const
   static const unsigned char D[7] = {30, 17, 17, 17, 17, 17, 30};  // 'D'
   static const unsigned char E[7] = {31, 16, 16, 30, 16, 16, 31};  // 'E'
   static const unsigned char F[7] = {31, 16, 16, 30, 16, 16, 16};  // 'F'
+  static const unsigned char G[7] = {14, 17, 16, 19, 17, 17, 14};  // 'G'
+  static const unsigned char H[7] = {17, 17, 17, 31, 17, 17, 17};  // 'H'
   static const unsigned char I[7] = {31, 4, 4, 4, 4, 4, 31};       // 'I'
+  static const unsigned char J[7] = {15, 2, 2, 2, 18, 18, 12};     // 'J'
+  static const unsigned char K[7] = {17, 18, 20, 24, 20, 18, 17};  // 'K'
+  static const unsigned char L[7] = {16, 16, 16, 16, 16, 16, 31};  // 'L'
   static const unsigned char M[7] = {17, 27, 21, 17, 17, 17, 17};  // 'M'
   static const unsigned char N[7] = {17, 17, 25, 21, 19, 17, 17};  // 'N'
   static const unsigned char O[7] = {14, 17, 17, 17, 17, 17, 14};  // 'O'
   static const unsigned char P[7] = {30, 17, 17, 30, 16, 16, 16};  // 'P'
+  static const unsigned char Q[7] = {14, 17, 17, 17, 21, 18, 13};  // 'Q'
   static const unsigned char R[7] = {30, 17, 17, 30, 18, 17, 17};  // 'R'
   static const unsigned char S[7] = {14, 17, 16, 14, 1, 17, 14};   // 'S'
   static const unsigned char T[7] = {31, 4, 4, 4, 4, 4, 4};        // 'T'
   static const unsigned char U[7] = {17, 17, 17, 17, 17, 17, 14};  // 'U'
+  static const unsigned char V[7] = {17, 17, 17, 17, 10, 10, 4};   // 'V'
+  static const unsigned char W[7] = {17, 17, 17, 21, 21, 21, 10};  // 'W'
+  static const unsigned char X[7] = {17, 17, 10, 4, 10, 17, 17};   // 'X'
+  static const unsigned char Y[7] = {17, 17, 10, 4, 4, 4, 4};      // 'Y'
+  static const unsigned char Z[7] = {31, 1, 2, 4, 8, 16, 31};      // 'Z'
   static const unsigned char space[7] = {0};                       // ' '
 
   if (c >= '0' && c <= '9')
@@ -281,8 +308,18 @@ const unsigned char* SceneGenerator::getCharFont(char c) const
         return E;
       case 'F':
         return F;
+      case 'G':
+        return G;
+      case 'H':
+        return H;
       case 'I':
         return I;
+      case 'J':
+        return J;
+      case 'K':
+        return K;
+      case 'L':
+        return L;
       case 'M':
         return M;
       case 'N':
@@ -291,6 +328,8 @@ const unsigned char* SceneGenerator::getCharFont(char c) const
         return O;
       case 'P':
         return P;
+      case 'Q':
+        return Q;
       case 'R':
         return R;
       case 'S':
@@ -299,6 +338,16 @@ const unsigned char* SceneGenerator::getCharFont(char c) const
         return T;
       case 'U':
         return U;
+      case 'V':
+        return V;
+      case 'W':
+        return W;
+      case 'X':
+        return X;
+      case 'Y':
+        return Y;
+      case 'Z':
+        return Z;
       default:
         return space;
     }

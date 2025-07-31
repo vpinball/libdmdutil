@@ -20,7 +20,15 @@ struct SceneData
   int sceneId;
   int frameCount;
   int durationPerFrame;
-  bool interruptable;
+  bool interruptable = false;
+  bool immediateStart = false;
+  int repeat = 0;  // 0 - play once, 1 - loop, >= 2 - repeat x times
+  int frameGroup = 0;
+  bool random = false;
+  int autoStart = 0;  // 0 - no autostart, >= 1 - start this scene after x seconds of inactivity (no new frames), only
+                      // use once, could be combined with frame groups
+  int endFrame = 0;  // 0 - when scene is finished, show last frame of the scene until a new frame is matched, 1 - black
+                     // screen, 2 - show last frame before scene started
 };
 
 class DMDUTILAPI SceneGenerator
@@ -31,7 +39,7 @@ class DMDUTILAPI SceneGenerator
   bool parseCSV(const std::string& csv_filename);
   bool generateDump(const std::string& dump_filename, int id = -1);
   bool getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable) const;
-  bool generateFrame(int sceneId, int frameIndex, uint8_t* buffer);
+  bool generateFrame(int sceneId, int frameIndex, uint8_t* buffer, int group = -1);
   void setDepth(int depth);
   void Reset()
   {
@@ -57,6 +65,7 @@ class DMDUTILAPI SceneGenerator
   void initializeTemplate();
 
   int m_depth = 2;  // Default depth for rendering
+  int m_currentGroup = 0;
 };
 
 }  // namespace DMDUtil
