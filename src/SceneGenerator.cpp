@@ -100,7 +100,7 @@ bool SceneGenerator::parseCSV(const std::string& csv_filename)
       if (row.size() >= 4) data.interruptable = (std::stoi(row[3]) == 1);
       if (row.size() >= 5) data.immediateStart = (std::stoi(row[4]) == 1);
       if (row.size() >= 6) data.repeat = std::stoi(row[5]);
-      if (row.size() >= 7) data.frameGroup = std::stoi(row[6]);
+      if (row.size() >= 7) data.frameGroups = std::stoi(row[6]) == 0 ? 1 : std::stoi(row[6]);
       if (row.size() >= 8) data.random = (std::stoi(row[7]) == 1);
       if (row.size() >= 9) data.autoStart = std::stoi(row[8]);
       if (row.size() >= 10) data.endFrame = std::stoi(row[9]);
@@ -134,7 +134,7 @@ bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
       continue;  // Skip scenes that don't match the specified ID
     }
 
-    int goups = scene.frameGroup > 0 ? scene.frameGroup : 1;
+    int goups = scene.frameGroups > 0 ? scene.frameGroups : 1;
     for (int group = 1; group <= goups; group++)
     {
       for (int frameIndex = 0; frameIndex < scene.frameCount; frameIndex++)
@@ -171,7 +171,8 @@ bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
   return true;
 }
 
-bool SceneGenerator::getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable) const
+bool SceneGenerator::getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable,
+                                  bool& startImmediately, int& repeat, int& endFrame) const
 {
   auto it = std::find_if(m_sceneData.begin(), m_sceneData.end(),
                          [sceneId](const SceneData& data) { return data.sceneId == sceneId; });
@@ -184,6 +185,9 @@ bool SceneGenerator::getSceneInfo(int sceneId, int& frameCount, int& durationPer
   frameCount = it->frameCount;
   durationPerFrame = it->durationPerFrame;
   interruptable = it->interruptable;
+  startImmediately = it->immediateStart;
+  repeat = it->repeat;
+  endFrame = it->endFrame;
   return true;
 }
 
@@ -206,12 +210,26 @@ bool SceneGenerator::generateFrame(int sceneId, int frameIndex, uint8_t* buffer,
   {
     if (group == -1)
     {
-      // @todo random or order play.
-      m_currentGroup = 1;
+      if (it->frameGroups > 1)
+      {
+        if (it->random)
+        {
+          it->currentGroup = rand() % it->frameGroups + 1;
+        }
+        else
+        {
+          it->currentGroup++;
+          if (it->currentGroup > it->frameGroups) it->currentGroup = 1;
+        }
+      }
+      else
+      {
+        it->currentGroup = 1;
+      }
     }
     else
     {
-      m_currentGroup = group;
+      it->currentGroup = group;
     }
   }
 
@@ -222,7 +240,7 @@ bool SceneGenerator::generateFrame(int sceneId, int frameIndex, uint8_t* buffer,
   std::string sceneIdStr = formatNumber(sceneId, NUMBER_WIDTH);
   renderString(buffer, sceneIdStr, NUM_X, SCENE_Y);
 
-  std::string groupStr = formatNumber(m_currentGroup, NUMBER_WIDTH);
+  std::string groupStr = formatNumber(it->currentGroup, NUMBER_WIDTH);
   renderString(buffer, groupStr, NUM_X, GROUP_Y);
 
   std::string frameStr = formatNumber(frameIndex + 1, NUMBER_WIDTH);

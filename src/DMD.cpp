@@ -878,11 +878,14 @@ void DMD::SerumThread()
     int sceneCurrentFrame = 0;
     int sceneDurationPerFrame = 0;
     bool sceneInterruptable = false;
+    bool sceneStartImmediately = false;
+    int sceneRepeatCount = 0;
+    int sceneEndFrame = 0;
     uint32_t nextSceneFrame = 0;
 
     while (true)
     {
-      if (nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
+      if (nextRotation == 0 && sceneCurrentFrame > sceneFrameCount)
       {
         std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
         m_dmdCV.wait(
@@ -909,28 +912,59 @@ void DMD::SerumThread()
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
               .count();
 
-      if (!m_stopFlag.load(std::memory_order_relaxed) && sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now)
+      if (!m_stopFlag.load(std::memory_order_relaxed) && sceneCurrentFrame <= sceneFrameCount && nextSceneFrame <= now)
       {
-        Update* sceneUpdate = new Update();
-        sceneUpdate->mode = Mode::Data;
-        sceneUpdate->depth = 2;
-        sceneUpdate->width = 128;
-        sceneUpdate->height = 32;
-        sceneUpdate->hasData = true;
-        sceneUpdate->r = 0;
-        sceneUpdate->g = 0;
-        sceneUpdate->b = 0;
-        if (generator.generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
+        if (sceneCurrentFrame >= sceneFrameCount)
         {
-          uint32_t result = Serum_Colorize(sceneUpdate->data);
-
-          if (result != IDENTIFY_NO_FRAME)
+          // The scene is finished.
+          if (sceneRepeatCount > 0)
           {
-            QueueSerumFrames(sceneUpdate);
+            sceneCurrentFrame = 0;
+            sceneRepeatCount--;
+          }
+          else
+          {
+            sceneFrameCount = 0;
+            if (lastDmdUpdate && sceneEndFrame >= 0)
+            {
+              uint32_t result = Serum_Colorize(lastDmdUpdate->data);
+              if (result != IDENTIFY_NO_FRAME)
+              {
+                if (sceneEndFrame == 1)
+                {
+                  // Black frame.
+                  memset(m_pSerum->palette, 0, PALETTE_SIZE);
+                  if (m_pSerum->width32 > 0) memset(m_pSerum->frame32, 0, m_pSerum->width32 * 32 * sizeof(uint16_t));
+                  if (m_pSerum->width64 > 0) memset(m_pSerum->frame64, 0, m_pSerum->width64 * 64 * sizeof(uint16_t));
+                }
+                QueueSerumFrames(lastDmdUpdate);
+              }
+            }
           }
         }
-        nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
-        delete sceneUpdate;
+        else
+        {
+          Update* sceneUpdate = new Update();
+          sceneUpdate->mode = Mode::Data;
+          sceneUpdate->depth = 2;
+          sceneUpdate->width = 128;
+          sceneUpdate->height = 32;
+          sceneUpdate->hasData = true;
+          sceneUpdate->r = 0;
+          sceneUpdate->g = 0;
+          sceneUpdate->b = 0;
+          if (generator.generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
+          {
+            uint32_t result = Serum_Colorize(sceneUpdate->data);
+
+            if (result != IDENTIFY_NO_FRAME)
+            {
+              QueueSerumFrames(sceneUpdate);
+            }
+          }
+          nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
+          delete sceneUpdate;
+        }
       }
 
       const uint8_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
@@ -995,7 +1029,6 @@ void DMD::SerumThread()
               // m_pSerum->rotationtimer, m_pSerum->flags);
 
               lastDmdUpdate = m_pUpdateBufferQueue[bufferPosition];
-              QueueSerumFrames(lastDmdUpdate);
 
               if (result > 0 && ((result & 0xffff) < 2048))
                 nextRotation = now + m_pSerum->rotationtimer;
@@ -1004,22 +1037,35 @@ void DMD::SerumThread()
 
               if (m_pSerum->triggerID < 0xffffffff)
               {
-                HandleTrigger(m_pSerum->triggerID);
-
                 if (generator.getSceneInfo(m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame,
-                                           sceneInterruptable))
+                                           sceneInterruptable, sceneStartImmediately, sceneRepeatCount, sceneEndFrame))
                 {
                   Log(DMDUtil_LogLevel_DEBUG, "Serum: trigger ID %lu found in scenes, frame count=%d, duration=%dms",
                       m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame);
                   sceneCurrentFrame = 0;
-                  nextSceneFrame = now + sceneDurationPerFrame;
+                  nextSceneFrame = now + (sceneStartImmediately ? 0 : sceneDurationPerFrame);
+                  if (sceneStartImmediately)
+                  {
+                    nextSceneFrame = now;
+                  }
+                  else
+                  {
+                    nextSceneFrame = now + sceneDurationPerFrame;
+                    QueueSerumFrames(lastDmdUpdate);
+                  }
+                }
+                else
+                {
+                  QueueSerumFrames(lastDmdUpdate);
                 }
 
+                HandleTrigger(m_pSerum->triggerID);
                 prevTriggerId = m_pSerum->triggerID;
               }
               else
               {
                 sceneFrameCount = 0;
+                QueueSerumFrames(lastDmdUpdate);
               }
             }
             else if (showNotColorizedFrames || dumpNotColorizedFrames)
