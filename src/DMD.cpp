@@ -922,7 +922,8 @@ void DMD::SerumThread()
             sceneCurrentFrame = 0;
             if (--sceneRepeatCount == 1) sceneRepeatCount = 0;
           }
-          else if (sceneRepeatCount == 1) {
+          else if (sceneRepeatCount == 1)
+          {
             // loop
             sceneCurrentFrame = 0;
           }
@@ -1013,6 +1014,7 @@ void DMD::SerumThread()
               {
                 snprintf(csvPath, sizeof(csvPath), "%s/%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
               }
+              Log(DMDUtil_LogLevel_DEBUG, "Check for PUP scenes for %s at %s", m_romName, csvPath);
 
               if (generator.parseCSV(csvPath))
               {
