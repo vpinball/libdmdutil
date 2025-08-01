@@ -1014,7 +1014,7 @@ void DMD::SerumThread()
               {
                 snprintf(csvPath, sizeof(csvPath), "%s/%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
               }
-              Log(DMDUtil_LogLevel_DEBUG, "Check for PUP scenes for %s at %s", m_romName, csvPath);
+              Log(DMDUtil_LogLevel_INFO, "Check for PUP scenes for %s at %s", m_romName, csvPath);
 
               if (generator.parseCSV(csvPath))
               {
