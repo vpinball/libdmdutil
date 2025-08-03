@@ -885,7 +885,7 @@ void DMD::SerumThread()
 
     while (true)
     {
-      if (nextRotation == 0 && sceneCurrentFrame > sceneFrameCount)
+      if (nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
       {
         std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
         m_dmdCV.wait(
@@ -912,11 +912,32 @@ void DMD::SerumThread()
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
               .count();
 
-      if (!m_stopFlag.load(std::memory_order_relaxed) && sceneCurrentFrame <= sceneFrameCount && nextSceneFrame <= now)
+      if (!m_stopFlag.load(std::memory_order_relaxed) && sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now)
       {
+        Update* sceneUpdate = new Update();
+        sceneUpdate->mode = Mode::Data;
+        sceneUpdate->depth = 2;
+        sceneUpdate->width = 128;
+        sceneUpdate->height = 32;
+        sceneUpdate->hasData = true;
+        sceneUpdate->r = 0;
+        sceneUpdate->g = 0;
+        sceneUpdate->b = 0;
+        if (generator.generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
+        {
+          uint32_t result = Serum_Colorize(sceneUpdate->data);
+
+          if (result != IDENTIFY_NO_FRAME)
+          {
+            QueueSerumFrames(sceneUpdate);
+          }
+        }
+        nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
+        delete sceneUpdate;
+
+        // If the scene is finished.
         if (sceneCurrentFrame >= sceneFrameCount)
         {
-          // The scene is finished.
           if (sceneRepeatCount > 1)
           {
             sceneCurrentFrame = 0;
@@ -942,33 +963,16 @@ void DMD::SerumThread()
                   if (m_pSerum->width32 > 0) memset(m_pSerum->frame32, 0, m_pSerum->width32 * 32 * sizeof(uint16_t));
                   if (m_pSerum->width64 > 0) memset(m_pSerum->frame64, 0, m_pSerum->width64 * 64 * sizeof(uint16_t));
                 }
+                while (std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count() < nextSceneFrame)
+                {
+                  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
                 QueueSerumFrames(lastDmdUpdate);
               }
             }
           }
-        }
-        else
-        {
-          Update* sceneUpdate = new Update();
-          sceneUpdate->mode = Mode::Data;
-          sceneUpdate->depth = 2;
-          sceneUpdate->width = 128;
-          sceneUpdate->height = 32;
-          sceneUpdate->hasData = true;
-          sceneUpdate->r = 0;
-          sceneUpdate->g = 0;
-          sceneUpdate->b = 0;
-          if (generator.generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
-          {
-            uint32_t result = Serum_Colorize(sceneUpdate->data);
-
-            if (result != IDENTIFY_NO_FRAME)
-            {
-              QueueSerumFrames(sceneUpdate);
-            }
-          }
-          nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
-          delete sceneUpdate;
         }
       }
 

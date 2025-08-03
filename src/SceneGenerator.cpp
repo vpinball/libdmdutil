@@ -179,6 +179,12 @@ bool SceneGenerator::getSceneInfo(int sceneId, int& frameCount, int& durationPer
 
   if (it == m_sceneData.end())
   {
+    frameCount = 0;
+    durationPerFrame = 0;
+    interruptable = 0;
+    startImmediately = false;
+    repeat = 0;
+    endFrame = 0;
     return false;
   }
 
