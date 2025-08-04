@@ -1677,6 +1677,13 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
 
 void DMD::GenerateRandomSuffix(char* buffer, size_t length)
 {
+  static bool seedDone = false;
+  if (!seedDone)
+  {
+    srand(static_cast<unsigned int>(time(nullptr)));
+    seedDone = true;
+  }
+
   const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
   size_t charsetSize = sizeof(charset) - 1;  // exclude null terminator
 
