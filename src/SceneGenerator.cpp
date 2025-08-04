@@ -94,16 +94,18 @@ bool SceneGenerator::parseCSV(const std::string& csv_filename)
     try
     {
       SceneData data;
-      data.sceneId = std::stoi(row[0]);
-      data.frameCount = std::stoi(row[1]);
-      data.durationPerFrame = std::stoi(row[2]);
-      if (row.size() >= 4) data.interruptable = (std::stoi(row[3]) == 1);
-      if (row.size() >= 5) data.immediateStart = (std::stoi(row[4]) == 1);
-      if (row.size() >= 6) data.repeat = std::stoi(row[5]);
-      if (row.size() >= 7) data.frameGroups = std::stoi(row[6]) == 0 ? 1 : std::stoi(row[6]);
-      if (row.size() >= 8) data.random = (std::stoi(row[7]) == 1);
-      if (row.size() >= 9) data.autoStart = std::stoi(row[8]);
-      if (row.size() >= 10) data.endFrame = std::stoi(row[9]);
+      data.source = row[0][0];  // First character of the first column
+      data.sceneId = std::stoi(row[1]);
+      data.value = std::stoi(row[2]);
+      data.frameCount = std::stoi(row[3]);
+      data.durationPerFrame = std::stoi(row[4]);
+      if (row.size() >= 6) data.interruptable = (std::stoi(row[5]) == 1);
+      if (row.size() >= 7) data.immediateStart = (std::stoi(row[6]) == 1);
+      if (row.size() >= 8) data.repeat = std::stoi(row[7]);
+      if (row.size() >= 9) data.frameGroups = std::stoi(row[8]) == 0 ? 1 : std::stoi(row[8]);
+      if (row.size() >= 10) data.random = (std::stoi(row[9]) == 1);
+      if (row.size() >= 11) data.autoStart = std::stoi(row[10]);
+      if (row.size() >= 12) data.endFrame = std::stoi(row[11]);
 
       m_sceneData.push_back(data);
     }
@@ -171,11 +173,24 @@ bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
   return true;
 }
 
-bool SceneGenerator::getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable,
-                                  bool& startImmediately, int& repeat, int& endFrame) const
+bool SceneGenerator::getSceneExists(char source, int sceneId, int value) const
 {
-  auto it = std::find_if(m_sceneData.begin(), m_sceneData.end(),
-                         [sceneId](const SceneData& data) { return data.sceneId == sceneId; });
+  auto it = std::find_if(m_sceneData.begin(), m_sceneData.end(), [source, sceneId, value](const SceneData& data)
+                         { return data.source == source && data.sceneId == sceneId && data.value == value; });
+
+  if (it == m_sceneData.end())
+  {
+    return false;
+  }
+
+  return true;
+}
+
+bool SceneGenerator::getSceneInfo(char source, int sceneId, int value, int& frameCount, int& durationPerFrame,
+                                  bool& interruptable, bool& startImmediately, int& repeat, int& endFrame) const
+{
+  auto it = std::find_if(m_sceneData.begin(), m_sceneData.end(), [source, sceneId, value](const SceneData& data)
+                         { return data.source == source && data.sceneId == sceneId && data.value == value; });
 
   if (it == m_sceneData.end())
   {

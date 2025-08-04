@@ -146,6 +146,7 @@ DMD::DMD()
   m_updateBuffered = std::make_shared<Update>();
 
   m_pAlphaNumeric = new AlphaNumeric();
+  m_pGenerator = new SceneGenerator();
   m_pSerum = nullptr;
   m_pZeDMD = nullptr;
   m_pPUPDMD = nullptr;
@@ -247,6 +248,7 @@ DMD::~DMD()
   }
 #endif
   delete m_pAlphaNumeric;
+  delete m_pGenerator;
   delete m_pZeDMD;
   delete m_pPUPDMD;
 #if !(                                                                                                                \
@@ -873,7 +875,6 @@ void DMD::SerumThread()
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
     bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
 
-    SceneGenerator generator;
     int sceneFrameCount = 0;
     int sceneCurrentFrame = 0;
     int sceneDurationPerFrame = 0;
@@ -895,7 +896,28 @@ void DMD::SerumThread()
       }
       else
       {
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        PUPTrigger pupTrigger = m_pupTrigger.load(std::memory_order_relaxed);
+        if (pupTrigger.source != 0)
+        {
+          if (m_pGenerator->getSceneInfo(pupTrigger.source, pupTrigger.id, pupTrigger.value, sceneFrameCount,
+                                         sceneDurationPerFrame, sceneInterruptable, sceneStartImmediately,
+                                         sceneRepeatCount, sceneEndFrame))
+          {
+            Log(DMDUtil_LogLevel_DEBUG, "Serum: trigger ID %lu found in scenes, frame count=%d, duration=%dms",
+                pupTrigger.id, sceneFrameCount, sceneDurationPerFrame);
+            sceneCurrentFrame = 0;
+            nextSceneFrame = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 std::chrono::system_clock::now().time_since_epoch())
+                                 .count() +
+                             (sceneStartImmediately ? 0 : sceneDurationPerFrame);
+          }
+          pupTrigger.source = 0;  // Reset the trigger after processing
+          m_pupTrigger.store(pupTrigger, std::memory_order_release);
+        }
+        else
+        {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
       }
 
       if (m_stopFlag.load(std::memory_order_acquire))
@@ -923,7 +945,7 @@ void DMD::SerumThread()
         sceneUpdate->r = 0;
         sceneUpdate->g = 0;
         sceneUpdate->b = 0;
-        if (generator.generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
+        if (m_pGenerator->generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
         {
           uint32_t result = Serum_Colorize(sceneUpdate->data);
 
@@ -994,7 +1016,7 @@ void DMD::SerumThread()
               Serum_Dispose();
               m_pSerum = nullptr;
               lastDmdUpdate = nullptr;
-              generator.Reset();
+              m_pGenerator->Reset();
               sceneFrameCount = 0;
             }
 
@@ -1020,9 +1042,9 @@ void DMD::SerumThread()
               }
               Log(DMDUtil_LogLevel_INFO, "Check for PUP scenes for %s at %s", m_romName, csvPath);
 
-              if (generator.parseCSV(csvPath))
+              if (m_pGenerator->parseCSV(csvPath))
               {
-                generator.setDepth(m_pUpdateBufferQueue[bufferPosition]->depth);
+                m_pGenerator->setDepth(m_pUpdateBufferQueue[bufferPosition]->depth);
                 Log(DMDUtil_LogLevel_INFO, "Loaded PUP scenes for %s, bit depth %d", m_romName,
                     m_pUpdateBufferQueue[bufferPosition]->depth);
               }
@@ -1047,13 +1069,13 @@ void DMD::SerumThread()
 
               if (m_pSerum->triggerID < 0xffffffff)
               {
-                if (generator.getSceneInfo(m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame,
-                                           sceneInterruptable, sceneStartImmediately, sceneRepeatCount, sceneEndFrame))
+                if (m_pGenerator->getSceneInfo('D', m_pSerum->triggerID, 1, sceneFrameCount, sceneDurationPerFrame,
+                                               sceneInterruptable, sceneStartImmediately, sceneRepeatCount,
+                                               sceneEndFrame))
                 {
                   Log(DMDUtil_LogLevel_DEBUG, "Serum: trigger ID %lu found in scenes, frame count=%d, duration=%dms",
                       m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame);
                   sceneCurrentFrame = 0;
-                  nextSceneFrame = now + (sceneStartImmediately ? 0 : sceneDurationPerFrame);
                   if (sceneStartImmediately)
                   {
                     nextSceneFrame = now;
@@ -2037,6 +2059,18 @@ void DMD::HandleTrigger(uint16_t id)
   if (callbackContext.callback != nullptr)
   {
     (*callbackContext.callback)(id, callbackContext.pUserData);
+  }
+}
+
+void DMD::SetPUPTrigger(const char source, const uint16_t id, const uint8_t value)
+{
+  if (m_pSerum && m_pGenerator->getSceneExists(source, id, value))
+  {
+    while (m_pupTrigger.load(std::memory_order_acquire).source != 0)
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    m_pupTrigger.store({source, id, value}, std::memory_order_release);
   }
 }
 

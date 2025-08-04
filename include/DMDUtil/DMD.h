@@ -68,7 +68,7 @@ class PixelcadeDMD;
 class LevelDMD;
 class RGB24DMD;
 class ConsoleDMD;
-
+class SceneGenerator;
 class DMDServerConnector;
 
 class DMDUTILAPI DMD
@@ -152,6 +152,13 @@ class DMDUTILAPI DMD
     void convertToHostByteOrder() {}
     void convertToNetworkByteOrder() {}
   };
+
+  struct PUPTrigger
+  {
+    char source = 0;
+    uint16_t id = 0;
+    uint8_t value = 1;
+  };
 #pragma pack(pop)  // Reset to default packing
 
   void FindDisplays();
@@ -161,6 +168,7 @@ class DMDUTILAPI DMD
   void SetRomName(const char* name);
   void SetAltColorPath(const char* path);
   void SetPUPVideosPath(const char* path);
+  void SetPUPTrigger(const char source, const uint16_t id, const uint8_t value = 1);
   void DumpDMDTxt();
   void DumpDMDRaw();
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
@@ -213,6 +221,7 @@ class DMDUTILAPI DMD
   SerumFrameStruct* m_pSerum;
   ZeDMD* m_pZeDMD;
   PUPDMD::DMD* m_pPUPDMD;
+  SceneGenerator* m_pGenerator;
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;
@@ -233,6 +242,7 @@ class DMDUTILAPI DMD
   std::atomic<bool> m_dmdFrameReady;
   std::atomic<bool> m_stopFlag;
   std::atomic<uint8_t> m_updateBufferQueuePosition;
+  std::atomic<PUPTrigger> m_pupTrigger;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;

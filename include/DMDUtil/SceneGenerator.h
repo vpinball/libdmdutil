@@ -17,7 +17,9 @@ namespace DMDUtil
 
 struct SceneData
 {
+  char source;
   int sceneId;
+  int value;
   int frameCount;
   int durationPerFrame;
   bool interruptable = false;
@@ -39,8 +41,9 @@ class DMDUTILAPI SceneGenerator
 
   bool parseCSV(const std::string& csv_filename);
   bool generateDump(const std::string& dump_filename, int id = -1);
-  bool getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable, bool& startImmediately,
-                    int& repeat, int& endFrame) const;
+  bool getSceneExists(char source, int sceneId, int value) const;
+  bool getSceneInfo(char source, int sceneId, int value, int& frameCount, int& durationPerFrame, bool& interruptable,
+                    bool& startImmediately, int& repeat, int& endFrame) const;
   bool generateFrame(int sceneId, int frameIndex, uint8_t* buffer, int group = -1);
   void setDepth(int depth);
   void Reset()
