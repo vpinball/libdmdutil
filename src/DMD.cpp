@@ -1596,6 +1596,7 @@ void DMD::RGB24DMDThread()
         }
         else
         {
+          // Serum v2 or RGB16
           for (int i = 0; i < length; i++)
           {
             int pos = i * 3;
@@ -1609,6 +1610,12 @@ void DMD::RGB24DMDThread()
 
           for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
           {
+            if (m_pSerum &&
+                (!IsSerumMode(m_pUpdateBufferQueue[bufferPosition]->mode, showNotColorizedFrames) ||
+                 (pRGB24DMD->GetWidth() == 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_32_64) ||
+                 (pRGB24DMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_64_32)))
+              continue;
+
             if (pRGB24DMD->GetLength() == length * 3) pRGB24DMD->Update(rgb24Data);
           }
         }
