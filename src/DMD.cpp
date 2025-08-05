@@ -1022,8 +1022,24 @@ void DMD::SerumThread()
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
             uint8_t flags = FLAG_REQUEST_32P_FRAMES;
-            // At the moment, ZeDMD HD is the only device supporting 64P frames. Not requesting 64P saves memory
-            if (m_pZeDMD && m_pZeDMD->GetWidth() == 256) flags |= FLAG_REQUEST_64P_FRAMES;
+            // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P saves
+            // memory.
+            if (m_pZeDMD && m_pZeDMD->GetWidth() == 256)
+            {
+              flags |= FLAG_REQUEST_64P_FRAMES;
+            }
+            else if (m_rgb24DMDs.size() > 0)
+            {
+              for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
+              {
+                if (pRGB24DMD->GetWidth() == 256)
+                {
+                  flags |= FLAG_REQUEST_64P_FRAMES;
+                  break;
+                }
+              }
+            }
+
             m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)
             {
