@@ -152,13 +152,6 @@ class DMDUTILAPI DMD
     void convertToHostByteOrder() {}
     void convertToNetworkByteOrder() {}
   };
-
-  struct PUPTrigger
-  {
-    char source = 0;
-    uint16_t id = 0;
-    uint8_t value = 1;
-  };
 #pragma pack(pop)  // Reset to default packing
 
   void FindDisplays();
@@ -242,7 +235,7 @@ class DMDUTILAPI DMD
   std::atomic<bool> m_dmdFrameReady;
   std::atomic<bool> m_stopFlag;
   std::atomic<uint8_t> m_updateBufferQueuePosition;
-  std::atomic<PUPTrigger> m_pupTrigger;
+  std::atomic<uint16_t> m_pupSceneId;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;

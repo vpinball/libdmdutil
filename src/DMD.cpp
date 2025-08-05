@@ -896,23 +896,22 @@ void DMD::SerumThread()
       }
       else
       {
-        PUPTrigger pupTrigger = m_pupTrigger.load(std::memory_order_relaxed);
-        if (pupTrigger.source != 0)
+        uint16_t sceneId = m_pupSceneId.load(std::memory_order_relaxed);
+        if (sceneId > 0)
         {
-          if (m_pGenerator->getSceneInfo(pupTrigger.source, pupTrigger.id, pupTrigger.value, sceneFrameCount,
-                                         sceneDurationPerFrame, sceneInterruptable, sceneStartImmediately,
-                                         sceneRepeatCount, sceneEndFrame))
+          if (m_pGenerator->getSceneInfo(sceneId, sceneFrameCount, sceneDurationPerFrame, sceneInterruptable,
+                                         sceneStartImmediately, sceneRepeatCount, sceneEndFrame))
           {
-            Log(DMDUtil_LogLevel_DEBUG, "Serum: trigger ID %lu found in scenes, frame count=%d, duration=%dms",
-                pupTrigger.id, sceneFrameCount, sceneDurationPerFrame);
+            Log(DMDUtil_LogLevel_DEBUG, "Serum: PUP Scene ID %lu found in scenes, frame count=%d, duration=%dms",
+                sceneId, sceneFrameCount, sceneDurationPerFrame);
             sceneCurrentFrame = 0;
             nextSceneFrame = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::system_clock::now().time_since_epoch())
                                  .count() +
                              (sceneStartImmediately ? 0 : sceneDurationPerFrame);
           }
-          pupTrigger.source = 0;  // Reset the trigger after processing
-          m_pupTrigger.store(pupTrigger, std::memory_order_release);
+          // Reset the trigger after processing
+          m_pupSceneId.store(0, std::memory_order_release);
         }
         else
         {
@@ -1085,7 +1084,7 @@ void DMD::SerumThread()
 
               if (m_pSerum->triggerID < 0xffffffff)
               {
-                if (m_pGenerator->getSceneInfo('D', m_pSerum->triggerID, 1, sceneFrameCount, sceneDurationPerFrame,
+                if (m_pGenerator->getSceneInfo(m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame,
                                                sceneInterruptable, sceneStartImmediately, sceneRepeatCount,
                                                sceneEndFrame))
                 {
@@ -2085,15 +2084,19 @@ void DMD::HandleTrigger(uint16_t id)
   }
 }
 
-void DMD::SetPUPTrigger(const char source, const uint16_t id, const uint8_t value)
+void DMD::SetPUPTrigger(const char source, const uint16_t event, const uint8_t value)
 {
-  if (m_pSerum && m_pGenerator->getSceneExists(source, id, value))
+  if (m_pSerum)
   {
-    while (m_pupTrigger.load(std::memory_order_acquire).source != 0)
+    uint16_t id = m_pGenerator->getSceneId(source, event, value);
+    if (id > 0)
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      while (m_pupSceneId.load(std::memory_order_acquire) != 0)
+      {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+      m_pupSceneId.store(id, std::memory_order_release);
     }
-    m_pupTrigger.store({source, id, value}, std::memory_order_release);
   }
 }
 
