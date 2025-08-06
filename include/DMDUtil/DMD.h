@@ -108,20 +108,20 @@ class DMDUTILAPI DMD
 #pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
   struct Update
   {
-    Mode mode;
-    AlphaNumericLayout layout;
-    int depth;
-    uint8_t data[256 * 64 * 3];
-    uint16_t segData[256 * 64];  // RGB16 or segment data or SerumV1 palette
+    Mode mode = Mode::Data;  // int
+    AlphaNumericLayout layout = AlphaNumericLayout::NoLayout;  // int
+    int depth = 2;
+    uint8_t data[256 * 64 * 3] = {0};
+    uint16_t segData[256 * 64] = {0};  // RGB16 or segment data or SerumV1 palette
     uint16_t segData2[128];
-    bool hasData;
-    bool hasSegData;
-    bool hasSegData2;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    uint16_t width;
-    uint16_t height;
+    bool hasData = false;
+    bool hasSegData = false;
+    bool hasSegData2 = false;
+    uint8_t r = 255;
+    uint8_t g = 255;
+    uint8_t b = 255;
+    uint16_t width = 128;
+    uint16_t height = 32;
 
     DMDUTILAPI void convertToHostByteOrder();
     DMDUTILAPI Update toNetworkByteOrder() const;

@@ -150,7 +150,7 @@ DMD::DMD()
   m_pSerum = nullptr;
   m_pZeDMD = nullptr;
   m_pPUPDMD = nullptr;
-  m_pZeDMD = nullptr;
+
   m_pZeDMDThread = nullptr;
   m_pLevelDMDThread = nullptr;
   m_pRGB24DMDThread = nullptr;
@@ -429,10 +429,6 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
                      Mode mode, bool buffered)
 {
   auto dmdUpdate = std::make_shared<Update>();
-  dmdUpdate->mode = mode;
-  dmdUpdate->depth = depth;
-  dmdUpdate->width = width;
-  dmdUpdate->height = height;
   if (pData)
   {
     memcpy(dmdUpdate->data, pData, (size_t)width * height * (mode == Mode::RGB16 ? 2 : (mode == Mode::RGB24 ? 3 : 1)));
@@ -442,6 +438,10 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   {
     dmdUpdate->hasData = false;
   }
+  dmdUpdate->mode = mode;
+  dmdUpdate->depth = depth;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
   dmdUpdate->hasSegData = false;
   dmdUpdate->hasSegData2 = false;
   dmdUpdate->r = r;
