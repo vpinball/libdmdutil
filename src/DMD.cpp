@@ -300,7 +300,20 @@ bool DMD::HasDisplay() const
 #endif
 }
 
-bool DMD::HasHDDisplay() const { return (m_pZeDMD != nullptr && m_pZeDMD->GetWidth() == 256); }
+bool DMD::HasHDDisplay() const
+{
+  if (m_pZeDMD != nullptr && m_pZeDMD->GetWidth() == 256) return true;
+
+  if (m_rgb24DMDs.size() > 0)
+  {
+    for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
+    {
+      if (pRGB24DMD->GetWidth() == 256) return true;
+    }
+  }
+
+  return false;
+}
 
 void DMD::SetRomName(const char* name) { strcpy(m_romName, name ? name : ""); }
 
@@ -450,8 +463,8 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
         m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
         m_dmdFrameReady.store(true, std::memory_order_release);
 
-        // Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
-        // dmdUpdate->mode, dmdUpdate->depth);
+        Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
+            dmdUpdate->mode, dmdUpdate->depth);
 
         if (buffered)
         {
@@ -950,6 +963,7 @@ void DMD::SerumThread()
 
           if (result != IDENTIFY_NO_FRAME)
           {
+            Log(DMDUtil_LogLevel_DEBUG, "Got PUP scene %d, frame %d colorized", prevTriggerId, sceneCurrentFrame - 1);
             QueueSerumFrames(sceneUpdate);
           }
         }
@@ -1020,24 +1034,29 @@ void DMD::SerumThread()
             }
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
-            uint8_t flags = FLAG_REQUEST_32P_FRAMES;
+            uint8_t flags = 0;
             // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P saves
             // memory.
-            if (m_pZeDMD && m_pZeDMD->GetWidth() == 256)
+            if (m_pZeDMD)
             {
-              flags |= FLAG_REQUEST_64P_FRAMES;
+              if (m_pZeDMD->GetWidth() == 256)
+                flags |= FLAG_REQUEST_64P_FRAMES;
+              else
+                flags = FLAG_REQUEST_32P_FRAMES;
             }
-            else if (m_rgb24DMDs.size() > 0)
+
+            if (m_rgb24DMDs.size() > 0)
             {
               for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
               {
                 if (pRGB24DMD->GetWidth() == 256)
-                {
                   flags |= FLAG_REQUEST_64P_FRAMES;
-                  break;
-                }
+                else
+                  flags |= FLAG_REQUEST_32P_FRAMES;
               }
             }
+
+            if (m_pPixelcadeDMD) flags |= FLAG_REQUEST_32P_FRAMES;
 
             m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)
