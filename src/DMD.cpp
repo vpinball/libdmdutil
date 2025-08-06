@@ -880,6 +880,7 @@ void DMD::SerumThread()
     char csvPath[DMDUTIL_MAX_PATH_SIZE + DMDUTIL_MAX_NAME_SIZE + DMDUTIL_MAX_NAME_SIZE + 10] = {0};
     uint32_t nextRotation = 0;
     Update* lastDmdUpdate = nullptr;
+    uint8_t flags = 0;
 
     (void)m_dmdFrameReady.load(std::memory_order_acquire);
     (void)m_stopFlag.load(std::memory_order_acquire);
@@ -956,12 +957,9 @@ void DMD::SerumThread()
           if (result != IDENTIFY_NO_FRAME)
           {
             Log(DMDUtil_LogLevel_DEBUG, "Got PUP scene %d, frame %d colorized", prevTriggerId, sceneCurrentFrame - 1);
-            sceneUpdate->mode = Mode::Data;
             sceneUpdate->depth = m_pGenerator->getDepth();
-            sceneUpdate->width = 128;
-            sceneUpdate->height = 32;
             sceneUpdate->hasData = true;
-            QueueSerumFrames(sceneUpdate, result & 0x10000, result & 0x20000);
+            QueueSerumFrames(sceneUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
           }
         }
         nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
@@ -1031,7 +1029,7 @@ void DMD::SerumThread()
             }
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
-            uint8_t flags = 0;
+            flags = 0;
             // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P saves
             // memory.
             if (m_pZeDMD)
@@ -1053,9 +1051,11 @@ void DMD::SerumThread()
               }
             }
 
+#if !(                                                                                                                \
+    (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+    defined(__ANDROID__))
             if (m_pPixelcadeDMD) flags |= FLAG_REQUEST_32P_FRAMES;
-
-            // flags |= FLAG_REQUEST_32P_FRAMES;
+#endif
 
             m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)
@@ -1116,12 +1116,12 @@ void DMD::SerumThread()
                   else
                   {
                     nextSceneFrame = now + sceneDurationPerFrame;
-                    QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
+                    QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
                   }
                 }
                 else
                 {
-                  QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
+                  QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
                 }
 
                 HandleTrigger(m_pSerum->triggerID);
@@ -1130,7 +1130,7 @@ void DMD::SerumThread()
               else
               {
                 sceneFrameCount = 0;
-                QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
+                QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
               }
             }
             else if (showNotColorizedFrames || dumpNotColorizedFrames)
