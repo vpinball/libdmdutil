@@ -100,8 +100,8 @@ DMD::Update DMD::Update::toNetworkByteOrder() const
 {
   // uint8_t and bool are not converted, as they are already in network byte order.
   Update copy = *this;
-  copy.mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
-  copy.layout = static_cast<AlphaNumericLayout>(htonl(static_cast<uint32_t>(layout)));
+  copy.mode = static_cast<Mode>(htonl(static_cast<int>(mode)));
+  copy.layout = static_cast<AlphaNumericLayout>(htonl(static_cast<int>(layout)));
   copy.depth = htonl(depth);
   for (size_t i = 0; i < 256 * 64; i++)
   {
@@ -119,7 +119,7 @@ DMD::Update DMD::Update::toNetworkByteOrder() const
 void DMD::StreamHeader::convertToHostByteOrder()
 {
   // uint8_t and char are not converted, as they are already in host byte order.
-  mode = static_cast<Mode>(ntohl(static_cast<uint32_t>(mode)));
+  mode = static_cast<Mode>(ntohl(static_cast<int>(mode)));
   width = ntohs(width);
   height = ntohs(height);
   length = ntohl(length);
@@ -128,7 +128,7 @@ void DMD::StreamHeader::convertToHostByteOrder()
 void DMD::StreamHeader::convertToNetworkByteOrder()
 {
   // uint8_t and char are not converted, as they are already in network byte order.
-  mode = static_cast<Mode>(htonl(static_cast<uint32_t>(mode)));
+  mode = static_cast<Mode>(htonl(static_cast<int>(mode)));
   width = htons(width);
   height = htons(height);
   length = htonl(length);
@@ -1039,7 +1039,7 @@ void DMD::SerumThread()
               if (m_pZeDMD->GetWidth() == 256)
                 flags |= FLAG_REQUEST_64P_FRAMES;
               else
-                flags = FLAG_REQUEST_32P_FRAMES;
+                flags |= FLAG_REQUEST_32P_FRAMES;
             }
 
             if (m_rgb24DMDs.size() > 0)
@@ -1054,6 +1054,8 @@ void DMD::SerumThread()
             }
 
             if (m_pPixelcadeDMD) flags |= FLAG_REQUEST_32P_FRAMES;
+
+            // flags |= FLAG_REQUEST_32P_FRAMES;
 
             m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)

@@ -77,7 +77,7 @@ class DMDUTILAPI DMD
   DMD();
   ~DMD();
 
-  enum class Mode
+  enum class Mode : int
   {
     Unknown = 0,
     Data = 1,
