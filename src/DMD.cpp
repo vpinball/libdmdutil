@@ -949,14 +949,6 @@ void DMD::SerumThread()
       if (!m_stopFlag.load(std::memory_order_relaxed) && sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now)
       {
         Update* sceneUpdate = new Update();
-        sceneUpdate->mode = Mode::Data;
-        sceneUpdate->depth = 2;
-        sceneUpdate->width = 128;
-        sceneUpdate->height = 32;
-        sceneUpdate->hasData = true;
-        sceneUpdate->r = 0;
-        sceneUpdate->g = 0;
-        sceneUpdate->b = 0;
         if (m_pGenerator->generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
         {
           uint32_t result = Serum_Colorize(sceneUpdate->data);
@@ -964,7 +956,12 @@ void DMD::SerumThread()
           if (result != IDENTIFY_NO_FRAME)
           {
             Log(DMDUtil_LogLevel_DEBUG, "Got PUP scene %d, frame %d colorized", prevTriggerId, sceneCurrentFrame - 1);
-            QueueSerumFrames(sceneUpdate);
+            sceneUpdate->mode = Mode::Data;
+            sceneUpdate->depth = m_pGenerator->getDepth();
+            sceneUpdate->width = 128;
+            sceneUpdate->height = 32;
+            sceneUpdate->hasData = true;
+            QueueSerumFrames(sceneUpdate, result & 0x10000, result & 0x20000);
           }
         }
         nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
@@ -1004,7 +1001,7 @@ void DMD::SerumThread()
                 {
                   std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
-                QueueSerumFrames(lastDmdUpdate);
+                QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
               }
             }
           }
@@ -1117,12 +1114,12 @@ void DMD::SerumThread()
                   else
                   {
                     nextSceneFrame = now + sceneDurationPerFrame;
-                    QueueSerumFrames(lastDmdUpdate);
+                    QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
                   }
                 }
                 else
                 {
-                  QueueSerumFrames(lastDmdUpdate);
+                  QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
                 }
 
                 HandleTrigger(m_pSerum->triggerID);
@@ -1131,7 +1128,7 @@ void DMD::SerumThread()
               else
               {
                 sceneFrameCount = 0;
-                QueueSerumFrames(lastDmdUpdate);
+                QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
               }
             }
             else if (showNotColorizedFrames || dumpNotColorizedFrames)
@@ -1245,12 +1242,13 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
 
       if (render64)
       {
-        // We can't reuse the shared pointer from above.
+        // We can't reuse the shared pointer from above because it might have been sent already.
         auto serumUpdateHD = std::make_shared<Update>();
         serumUpdateHD->hasData = true;
         serumUpdateHD->hasSegData = false;
         serumUpdateHD->hasSegData2 = false;
         serumUpdateHD->mode = Mode::SerumV2_64_32;
+        serumUpdateHD->depth = 24;
         serumUpdateHD->width = m_pSerum->width64;
         serumUpdateHD->height = 64;
         memcpy(serumUpdateHD->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));

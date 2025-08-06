@@ -44,6 +44,7 @@ class DMDUTILAPI SceneGenerator
                     int& repeat, int& endFrame) const;
   bool generateFrame(int sceneId, int frameIndex, uint8_t* buffer, int group = -1);
   void setDepth(int depth);
+  int getDepth() const { return m_depth; }
   void Reset()
   {
     m_sceneData.clear();
