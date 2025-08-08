@@ -93,11 +93,11 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
   ssize_t n;
   // Disconnect others is only allowed once per client.
   bool handleDisconnectOthers = true;
-  uint32_t disconnectOtherClients = 0;
+  bool logged = false;
 
   DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: New DMD client %d connected", threadId, threadId);
 
-  while (threadId == m_currentThreadId || disconnectOtherClients == 0 || disconnectOtherClients <= threadId)
+  while (threadId == m_currentThreadId || m_disconnectOtherClients == 0 || m_disconnectOtherClients <= threadId)
   {
     n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader));
     // If the client disconnects or if a network error ocurres, exit the loop and terminate this thread.
@@ -118,7 +118,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
         if (handleDisconnectOthers && threadId == m_currentThreadId && pStreamHeader->disconnectOthers)
         {
           m_threadMutex.lock();
-          disconnectOtherClients = threadId;
+          m_disconnectOtherClients = threadId;
           m_threadMutex.unlock();
           handleDisconnectOthers = false;
           DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Other clients will be disconnected", threadId);
@@ -143,6 +143,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
                 auto data = std::make_shared<DMDUtil::DMD::Update>();
                 memcpy(data.get(), buffer, n);
                 data->convertToHostByteOrder();
+                logged = false;
 
                 if (data->width <= DMDSERVER_MAX_WIDTH && data->height <= DMDSERVER_MAX_HEIGHT)
                 {
@@ -159,6 +160,11 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
               }
               else if (threadId != m_currentThreadId)
               {
+                if (!logged)
+                {
+                  DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, m_currentThreadId);
+                  logged = true;
+                }
                 DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, m_currentThreadId);
               }
               else
@@ -179,13 +185,17 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
               {
                 pixelData[i] = ntohs(pixelData[i]);
               }
-
+              logged = false;
               m_dmd->UpdateRGB16Data((uint16_t*)buffer, pStreamHeader->width, pStreamHeader->height,
                                      pStreamHeader->buffered == 1);
             }
             else if (threadId != m_currentThreadId)
             {
-              DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, m_currentThreadId);
+              if (!logged)
+              {
+                DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, m_currentThreadId);
+                logged = true;
+              }
             }
             else
             {
@@ -198,11 +208,16 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
                 threadId == m_currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
                 pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
+              logged = false;
               m_dmd->UpdateRGB24Data(buffer, pStreamHeader->width, pStreamHeader->height, pStreamHeader->buffered == 1);
             }
             else if (threadId != m_currentThreadId)
             {
-              DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, m_currentThreadId);
+              if (!logged)
+              {
+                DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d blocks the DMD", threadId, m_currentThreadId);
+                logged = true;
+              }
             }
             else
             {
@@ -222,8 +237,8 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
     }
   }
 
-  if (disconnectOtherClients != 0 && disconnectOtherClients > threadId)
-    DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d requested disconnect", threadId, disconnectOtherClients);
+  if (m_disconnectOtherClients != 0 && m_disconnectOtherClients > threadId)
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Client %d requested disconnect", threadId, m_disconnectOtherClients);
 
   // Display a buffered frame or clear the display on disconnect of the current thread.
   if (threadId == m_currentThreadId && !pStreamHeader->buffered && !m_dmd->QueueBuffer())
@@ -239,7 +254,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
   m_threads.erase(remove(m_threads.begin(), m_threads.end(), threadId), m_threads.end());
   if (threadId == m_currentThreadId)
   {
-    if (disconnectOtherClients == threadId)
+    if (m_disconnectOtherClients == threadId)
     {
       // Wait until all other threads ended or a new client connnects in between.
       while (m_threads.size() >= 1 && m_currentThreadId == threadId)
@@ -251,7 +266,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
       }
 
       m_currentThreadId = 0;
-      disconnectOtherClients = 0;
+      m_disconnectOtherClients = 0;
     }
     else
     {
