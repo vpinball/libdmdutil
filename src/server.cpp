@@ -2,13 +2,8 @@
 #include "Logger.h"
 #include "cargs.h"
 
-#define DMDSERVER_MAX_WIDTH 256
-#define DMDSERVER_MAX_HEIGHT 64
-
 using namespace std;
 
-DMDUtil::DMD* pDmd;
-vector<uint32_t> threads;
 bool opt_verbose = false;
 bool opt_fixedAltColorPath = false;
 bool opt_fixedPupPath = false;
@@ -121,18 +116,7 @@ int main(int argc, char* argv[])
     }
   }
 
-  sockpp::initialize();
-  if (opt_verbose)
-    DMDUtil::Log(DMDUtil_LogLevel_INFO, "Opening DMDServer, listening for TCP connections on %s:%d",
-                 pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
-  sockpp::tcp_acceptor acc({pConfig->GetDMDServerAddr(), (in_port_t)pConfig->GetDMDServerPort()});
-  if (!acc)
-  {
-    DMDUtil::Log(DMDUtil_LogLevel_INFO, "Error creating the DMDServer acceptor: %s", acc.last_error_str().c_str());
-    return 1;
-  }
-
-  pDmd = new DMDUtil::DMD();
+  DMDUtil::DMD* pDmd = new DMDUtil::DMD();
 
   while (true)
   {
