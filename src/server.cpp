@@ -1,0 +1,175 @@
+#include "DMDUtil/DMDUtil.h"
+#include "Logger.h"
+#include "cargs.h"
+
+#define DMDSERVER_MAX_WIDTH 256
+#define DMDSERVER_MAX_HEIGHT 64
+
+using namespace std;
+
+DMDUtil::DMD* pDmd;
+vector<uint32_t> threads;
+bool opt_verbose = false;
+bool opt_fixedAltColorPath = false;
+bool opt_fixedPupPath = false;
+
+static struct cag_option options[] = {
+    {.identifier = 'c',
+     .access_letters = "c",
+     .access_name = "config",
+     .value_name = "VALUE",
+     .description = "Config file (optional, default is no config file)"},
+    {.identifier = 'o',
+     .access_letters = "o",
+     .access_name = "alt-color-path",
+     .value_name = "VALUE",
+     .description = "Fixed alt color path, overwriting paths transmitted by DMDUpdates (optional)"},
+    {.identifier = 'u',
+     .access_letters = "u",
+     .access_name = "pup-videos-path",
+     .value_name = "VALUE",
+     .description = "Fixed PupVideos path, overwriting paths transmitted by DMDUpdates (optional)"},
+    {.identifier = 'a',
+     .access_letters = "a",
+     .access_name = "addr",
+     .value_name = "VALUE",
+     .description = "IP address or host name (optional, default is 'localhost')"},
+    {.identifier = 'p',
+     .access_letters = "p",
+     .access_name = "port",
+     .value_name = "VALUE",
+     .description = "Port (optional, default is '6789')"},
+    {.identifier = 'w',
+     .access_letters = "w",
+     .access_name = "wait-for-displays",
+     .value_name = NULL,
+     .description = "Don't terminate if no displays are connected (optional, default is to terminate the server "
+                    "process if no displays could be found)"},
+    {.identifier = 'l',
+     .access_letters = "l",
+     .access_name = "logging",
+     .value_name = NULL,
+     .description = "Enable logging to stderr (optional, default is no logging)"},
+    {.identifier = 'v',
+     .access_letters = "v",
+     .access_name = "verbose-logging",
+     .value_name = NULL,
+     .description = "Enables verbose logging, includes normal logging (optional, default is no logging)"},
+    {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
+
+void DMDUTILCALLBACK LogCallback(DMDUtil_LogLevel logLevel, const char* format, va_list args)
+{
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  fprintf(stderr, "%s\n", buffer);
+}
+
+int main(int argc, char* argv[])
+{
+  DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
+  pConfig->SetDMDServer(false);  // This is the server. It must not connect to a different server!
+
+  cag_option_context cag_context;
+  bool opt_wait = false;
+
+  cag_option_init(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
+  while (cag_option_fetch(&cag_context))
+  {
+    char identifier = cag_option_get_identifier(&cag_context);
+    if (identifier == 'c')
+    {
+      pConfig->parseConfigFile(cag_option_get_value(&cag_context));
+      if (opt_verbose) DMDUtil::Log(DMDUtil_LogLevel_INFO, "Loaded config file");
+    }
+    else if (identifier == 'o')
+    {
+      pConfig->SetAltColorPath(cag_option_get_value(&cag_context));
+    }
+    else if (identifier == 'u')
+    {
+      pConfig->SetPUPVideosPath(cag_option_get_value(&cag_context));
+    }
+    else if (identifier == 'a')
+    {
+      pConfig->SetDMDServerAddr(cag_option_get_value(&cag_context));
+    }
+    else if (identifier == 'p')
+    {
+      std::stringstream ssPort(cag_option_get_value(&cag_context));
+      in_port_t port;
+      ssPort >> port;
+      pConfig->SetDMDServerPort(port);
+    }
+    else if (identifier == 'w')
+    {
+      opt_wait = true;
+    }
+    else if (identifier == 'v')
+    {
+      opt_verbose = true;
+      pConfig->SetLogCallback(LogCallback);
+    }
+    else if (identifier == 'l')
+    {
+      pConfig->SetLogCallback(LogCallback);
+    }
+    else if (identifier == 'h')
+    {
+      cout << "Usage: dmdserver [OPTION]..." << endl;
+      cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
+      return 0;
+    }
+  }
+
+  sockpp::initialize();
+  if (opt_verbose)
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "Opening DMDServer, listening for TCP connections on %s:%d",
+                 pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort());
+  sockpp::tcp_acceptor acc({pConfig->GetDMDServerAddr(), (in_port_t)pConfig->GetDMDServerPort()});
+  if (!acc)
+  {
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "Error creating the DMDServer acceptor: %s", acc.last_error_str().c_str());
+    return 1;
+  }
+
+  pDmd = new DMDUtil::DMD();
+
+  while (true)
+  {
+    pDmd->FindDisplays();
+    while (DMDUtil::DMD::IsFinding()) this_thread::sleep_for(chrono::milliseconds(100));
+
+    if (pDmd->HasDisplay() || !opt_wait) break;
+    this_thread::sleep_for(chrono::milliseconds(1000));
+  }
+
+  if (!pDmd->HasDisplay())
+  {
+    DMDUtil::Log(DMDUtil_LogLevel_ERROR, "No DMD displays found.");
+    delete pDmd;
+    return 2;
+  }
+
+  std::string altColorPath = DMDUtil::Config::GetInstance()->GetAltColorPath();
+  if (!altColorPath.empty())
+  {
+    pDmd->SetAltColorPath(altColorPath.c_str());
+    opt_fixedAltColorPath = true;
+  }
+
+  DMDUtil::DMDServer server(pDmd);
+
+  if (!server.Start(pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort()))
+  {
+    return 1;
+  }
+
+  while (server.IsRunning() && pDmd->HasDisplay())
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  server.Stop();
+  delete pDmd;
+  return 0;
+}

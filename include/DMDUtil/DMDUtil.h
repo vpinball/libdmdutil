@@ -17,3 +17,4 @@
 #include "LevelDMD.h"
 #include "RGB24DMD.h"
 #include "SceneGenerator.h"
+#include "DMDServer.h"

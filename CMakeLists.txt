@@ -76,6 +76,7 @@ set(DMDUTIL_SOURCES
    src/Logger.cpp
    src/AlphaNumeric.cpp
    src/SceneGenerator.cpp
+   src/DMDServer.cpp
 )
 
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
@@ -144,7 +145,7 @@ if(BUILD_SHARED)
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdserver
-         src/dmdServer.cpp
+         src/server.cpp
          src/Logger.cpp
       )
       target_link_libraries(dmdserver PUBLIC dmdutil_shared)
