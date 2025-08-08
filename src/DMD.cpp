@@ -1491,6 +1491,7 @@ void DMD::RGB24DMDThread()
   uint8_t palette[PALETTE_SIZE] = {0};
   uint8_t renderBuffer[256 * 64] = {0};
   uint8_t rgb24Data[256 * 64 * 3] = {0};
+  uint8_t rgb24DataScaled[256 * 64 * 3] = {0};
 
   (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
@@ -1539,7 +1540,8 @@ void DMD::RGB24DMDThread()
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
             {
-              if (pRGB24DMD->GetLength() == length * 3) pRGB24DMD->Update(rgb24Data);
+              pRGB24DMD->Update(rgb24Data, m_pUpdateBufferQueue[bufferPosition]->width,
+                                m_pUpdateBufferQueue[bufferPosition]->height);
             }
             // Reset renderBuffer in case the mode changes for the next frame to ensure that memcmp() will detect it.
             memset(renderBuffer, 0, sizeof(renderBuffer));
@@ -1608,7 +1610,8 @@ void DMD::RGB24DMDThread()
 
             for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
             {
-              if (pRGB24DMD->GetLength() == length * 3) pRGB24DMD->Update(rgb24Data);
+              pRGB24DMD->Update(rgb24Data, m_pUpdateBufferQueue[bufferPosition]->width,
+                                m_pUpdateBufferQueue[bufferPosition]->height);
             }
           }
         }
@@ -1634,7 +1637,8 @@ void DMD::RGB24DMDThread()
                  (pRGB24DMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPosition]->mode == Mode::SerumV2_64_32)))
               continue;
 
-            if (pRGB24DMD->GetLength() == length * 3) pRGB24DMD->Update(rgb24Data);
+            pRGB24DMD->Update(rgb24Data, m_pUpdateBufferQueue[bufferPosition]->width,
+                              m_pUpdateBufferQueue[bufferPosition]->height);
           }
         }
       }
