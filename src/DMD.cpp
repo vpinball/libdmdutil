@@ -1011,6 +1011,18 @@ void DMD::SerumThread()
       {
         if (++bufferPosition >= DMDUTIL_FRAME_BUFFER_SIZE) bufferPosition = 0;
 
+        if (m_pSerum && (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB24 ||
+                         m_pUpdateBufferQueue[bufferPosition]->mode == Mode::RGB16))
+        {
+          // DMDServer accepted a different connection, turn off Serum Colorization.
+          Serum_Dispose();
+          m_pSerum = nullptr;
+          lastDmdUpdate = nullptr;
+          m_pGenerator->Reset();
+          sceneFrameCount = 0;
+          continue;
+        }
+
         if (sceneCurrentFrame < sceneFrameCount && !sceneInterruptable) continue;
 
         if (m_pUpdateBufferQueue[bufferPosition]->mode == Mode::Data)
