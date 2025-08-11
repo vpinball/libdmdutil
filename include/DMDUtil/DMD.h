@@ -8,7 +8,7 @@
 #define DMDUTILCALLBACK
 #endif
 
-#define DMDUTIL_FRAME_BUFFER_SIZE 64 // Must be a divider of 65535!
+#define DMDUTIL_FRAME_BUFFER_SIZE 128 // Must be a divider of 65535! Must not exceed 256!
 #define DMDUTIL_MIN_FRAMES_BEHIND 4
 #define DMDUTIL_MAX_FRAMES_BEHIND 32
 #define DMDUTIL_MAX_NAME_SIZE 16
