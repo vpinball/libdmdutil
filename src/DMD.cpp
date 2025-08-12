@@ -291,7 +291,7 @@ bool DMD::IsFinding() { return m_finding; }
 
 bool DMD::HasDisplay() const
 {
-  if (m_pZeDMD != nullptr && m_rgb24DMDs.size() > 0)
+  if (m_pZeDMD != nullptr || m_rgb24DMDs.size() > 0)
   {
     return true;
   }
