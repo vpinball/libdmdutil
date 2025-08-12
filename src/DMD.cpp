@@ -679,7 +679,7 @@ void DMD::FindDisplays()
   }
 }
 
-uint8_t DMD::GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t updateBufferQueuePosition)
+uint16_t DMD::GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t updateBufferQueuePosition)
 {
   if (bufferPosition == updateBufferQueuePosition)
   {
