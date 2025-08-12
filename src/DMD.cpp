@@ -291,13 +291,18 @@ bool DMD::IsFinding() { return m_finding; }
 
 bool DMD::HasDisplay() const
 {
+  if (m_pZeDMD != nullptr && m_rgb24DMDs.size() > 0)
+  {
+    return true;
+  }
+
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-  return (m_pZeDMD != nullptr) || (m_pPixelcadeDMD != nullptr);
-#else
-  return (m_pZeDMD != nullptr);
+  return (m_pPixelcadeDMD != nullptr);
 #endif
+
+  return false;
 }
 
 bool DMD::HasHDDisplay() const
@@ -793,7 +798,8 @@ void DMD::ZeDMDThread()
           m_pZeDMD->SetFrameSize(width, height);
         }
 
-        Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render frame buffer position %d at real buffer postion %d", bufferPosition, bufferPositionMod);
+        Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render frame buffer position %d at real buffer postion %d", bufferPosition,
+            bufferPositionMod);
 
         bool update = false;
         if (m_pUpdateBufferQueue[bufferPositionMod]->depth != 24)
@@ -958,7 +964,8 @@ void DMD::SerumThread()
 
           if (result != IDENTIFY_NO_FRAME)
           {
-            Log(DMDUtil_LogLevel_DEBUG, "Serum: Got PUP scene %d, frame %d colorized", prevTriggerId, sceneCurrentFrame - 1);
+            Log(DMDUtil_LogLevel_DEBUG, "Serum: Got PUP scene %d, frame %d colorized", prevTriggerId,
+                sceneCurrentFrame - 1);
             sceneUpdate->depth = m_pGenerator->getDepth();
             sceneUpdate->hasData = true;
             QueueSerumFrames(sceneUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
