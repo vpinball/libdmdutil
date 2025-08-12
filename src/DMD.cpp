@@ -784,7 +784,7 @@ void DMD::ZeDMDThread()
         if (m_pUpdateBufferQueue[bufferPositionMod]->width != width ||
             m_pUpdateBufferQueue[bufferPositionMod]->height != height)
         {
-          Log(DMDUtil_LogLevel_INFO, "Change frame size from %dx%d to %dx%d", width, height,
+          Log(DMDUtil_LogLevel_INFO, "ZeDMD: Change frame size from %dx%d to %dx%d", width, height,
               m_pUpdateBufferQueue[bufferPositionMod]->width, m_pUpdateBufferQueue[bufferPositionMod]->height);
           width = m_pUpdateBufferQueue[bufferPositionMod]->width;
           height = m_pUpdateBufferQueue[bufferPositionMod]->height;
@@ -792,6 +792,8 @@ void DMD::ZeDMDThread()
           // Activate the correct scaling mode.
           m_pZeDMD->SetFrameSize(width, height);
         }
+
+        Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render frame buffer position %d at real buffer postion %d", bufferPosition, bufferPositionMod);
 
         bool update = false;
         if (m_pUpdateBufferQueue[bufferPositionMod]->depth != 24)
@@ -903,15 +905,17 @@ void DMD::SerumThread()
 
     while (true)
     {
-      if (nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
+      if (m_stopFlag.load(std::memory_order_acquire))
       {
-        std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-        m_dmdCV.wait(
-            sl, [&]()
-            { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
-        sl.unlock();
+        if (m_pSerum)
+        {
+          Serum_Dispose();
+        }
+
+        return;
       }
-      else
+
+      if (m_pSerum && nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
       {
         uint16_t sceneId = m_pupSceneId.load(std::memory_order_relaxed);
         if (sceneId > 0)
@@ -930,27 +934,22 @@ void DMD::SerumThread()
           // Reset the trigger after processing
           m_pupSceneId.store(0, std::memory_order_release);
         }
-        else
-        {
-          std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
       }
 
-      if (m_stopFlag.load(std::memory_order_acquire))
+      if (nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
       {
-        if (m_pSerum)
-        {
-          Serum_Dispose();
-        }
-
-        return;
+        std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+        m_dmdCV.wait(
+            sl, [&]()
+            { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+        sl.unlock();
       }
 
       uint32_t now =
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
               .count();
 
-      if (!m_stopFlag.load(std::memory_order_relaxed) && sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now)
+      if (m_pSerum && sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now)
       {
         Update* sceneUpdate = new Update();
         if (m_pGenerator->generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
@@ -959,7 +958,7 @@ void DMD::SerumThread()
 
           if (result != IDENTIFY_NO_FRAME)
           {
-            Log(DMDUtil_LogLevel_DEBUG, "Got PUP scene %d, frame %d colorized", prevTriggerId, sceneCurrentFrame - 1);
+            Log(DMDUtil_LogLevel_DEBUG, "Serum: Got PUP scene %d, frame %d colorized", prevTriggerId, sceneCurrentFrame - 1);
             sceneUpdate->depth = m_pGenerator->getDepth();
             sceneUpdate->hasData = true;
             QueueSerumFrames(sceneUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
@@ -1010,7 +1009,7 @@ void DMD::SerumThread()
       }
 
       const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
-      while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
+      while (bufferPosition != updateBufferQueuePosition)
       {
         // Don't use GetNextBufferPosition() here, we need all frames for PUP triggers!
         ++bufferPosition;  // 65635 + 1 = 0
@@ -1028,7 +1027,7 @@ void DMD::SerumThread()
           continue;
         }
 
-        if (sceneCurrentFrame < sceneFrameCount && !sceneInterruptable) continue;
+        if (m_pSerum && sceneCurrentFrame < sceneFrameCount && !sceneInterruptable) continue;
 
         if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data)
         {
@@ -1047,8 +1046,8 @@ void DMD::SerumThread()
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
             flags = 0;
-            // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P saves
-            // memory.
+            // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P
+            // saves memory.
             if (m_pZeDMD)
             {
               if (m_pZeDMD->GetWidth() == 256)
@@ -1077,7 +1076,7 @@ void DMD::SerumThread()
             m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)
             {
-              Log(DMDUtil_LogLevel_INFO, "Loaded Serum v%d colorization for %s", m_pSerum->SerumVersion, m_romName);
+              Log(DMDUtil_LogLevel_INFO, "Serum: Loaded v%d colorization for %s", m_pSerum->SerumVersion, m_romName);
 
               Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
@@ -1090,12 +1089,12 @@ void DMD::SerumThread()
               {
                 snprintf(csvPath, sizeof(csvPath), "%s/%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
               }
-              Log(DMDUtil_LogLevel_INFO, "Check for PUP scenes for %s at %s", m_romName, csvPath);
+              Log(DMDUtil_LogLevel_INFO, "Serum: Check for PUP scenes for %s at %s", m_romName, csvPath);
 
               if (m_pGenerator->parseCSV(csvPath))
               {
                 m_pGenerator->setDepth(m_pUpdateBufferQueue[bufferPositionMod]->depth);
-                Log(DMDUtil_LogLevel_INFO, "Loaded PUP scenes for %s, bit depth %d", m_romName,
+                Log(DMDUtil_LogLevel_INFO, "Serum: Loaded PUP scenes for %s, bit depth %d", m_romName,
                     m_pUpdateBufferQueue[bufferPositionMod]->depth);
               }
             }
@@ -1172,27 +1171,29 @@ void DMD::SerumThread()
         }
       }
 
-      if (sceneCurrentFrame < sceneFrameCount)
+      if (m_pSerum)
       {
-        nextRotation = 0;
-        continue;
-      }
-
-      if (!m_stopFlag.load(std::memory_order_acquire) && m_pSerum && nextRotation > 0 && m_pSerum->rotationtimer > 0 &&
-          lastDmdUpdate && now > nextRotation)
-      {
-        uint32_t result = Serum_Rotate();
-
-        // Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
-
-        QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
-
-        if (result > 0 && ((result & 0xffff) < 2048))
+        if (sceneCurrentFrame < sceneFrameCount)
         {
-          nextRotation = now + m_pSerum->rotationtimer;
-        }
-        else
           nextRotation = 0;
+          continue;
+        }
+
+        if (nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate && now > nextRotation)
+        {
+          uint32_t result = Serum_Rotate();
+
+          // Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
+
+          QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
+
+          if (result > 0 && ((result & 0xffff) < 2048))
+          {
+            nextRotation = now + m_pSerum->rotationtimer;
+          }
+          else
+            nextRotation = 0;
+        }
       }
     }
   }
