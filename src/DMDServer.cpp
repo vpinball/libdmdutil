@@ -27,7 +27,7 @@ DMDServer::~DMDServer() { Stop(); }
 
 bool DMDServer::Start(const char* addr, in_port_t port)
 {
-  if (m_running) return false;
+  if (m_running.load(std::memory_order_acquire) || !m_dmd->HasDisplay()) return false;
 
   sockpp::initialize();
   m_acceptor = sockpp::tcp_acceptor({addr, port});
@@ -37,14 +37,14 @@ bool DMDServer::Start(const char* addr, in_port_t port)
     return false;
   }
 
-  m_running = true;
+  m_running.store(true, std::memory_order_release);
   m_acceptThread = new std::thread(&DMDServer::AcceptLoop, this);
   return true;
 }
 
 void DMDServer::Stop()
 {
-  m_running = false;
+  m_running.store(false, std::memory_order_release);
 
   if (m_acceptThread)
   {
@@ -62,7 +62,9 @@ void DMDServer::AcceptLoop()
 {
   uint32_t threadId = 0;
 
-  while (m_running && m_dmd->HasDisplay())
+  (void)m_running.load(std::memory_order_acquire);
+
+  while (m_running.load(std::memory_order_relaxed))
   {
     sockpp::inet_address peer;
     sockpp::tcp_socket sock = m_acceptor.accept(&peer);

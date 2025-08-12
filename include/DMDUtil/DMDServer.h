@@ -22,7 +22,7 @@ class DMDUTILAPI DMDServer
 
   bool Start(const char* addr, in_port_t port);
   void Stop();
-  bool IsRunning() const { return m_running; }
+  bool IsRunning() const { return m_running.load(std::memory_order_acquire); }
 
  private:
   void AcceptLoop();
