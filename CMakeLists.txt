@@ -6,6 +6,7 @@ set(ARCH "x64" CACHE STRING "Arch")
 option(BUILD_SHARED "Option to build shared library" ON)
 option(BUILD_STATIC "Option to build static library" ON)
 option(POST_BUILD_COPY_EXT_LIBS "Option to copy external libraries to build directory" ON)
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan for Debug builds" OFF)
 
 message(STATUS "PLATFORM: ${PLATFORM}")
 message(STATUS "ARCH: ${ARCH}")
@@ -66,6 +67,16 @@ set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+   if(ENABLE_SANITIZERS AND (PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux"))
+      add_compile_options(-fsanitize=address)
+      add_link_options(-fsanitize=address)
+
+      add_compile_options(-fsanitize=undefined)
+      add_link_options(-fsanitize=undefined)
+   endif()
+endif()
 
 set(DMDUTIL_SOURCES
    src/Config.cpp
