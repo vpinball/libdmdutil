@@ -75,6 +75,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
       add_compile_options(-fsanitize=undefined)
       add_link_options(-fsanitize=undefined)
+
+      add_compile_options(-fno-omit-frame-pointer)
    endif()
 endif()
 

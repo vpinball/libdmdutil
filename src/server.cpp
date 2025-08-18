@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include "DMDUtil/DMDUtil.h"
 #include "Logger.h"
 #include "cargs.h"
@@ -7,6 +9,7 @@ using namespace std;
 bool opt_verbose = false;
 bool opt_fixedAltColorPath = false;
 bool opt_fixedPupPath = false;
+static volatile bool running = true;
 
 static struct cag_option options[] = {
     {.identifier = 'c',
@@ -59,13 +62,28 @@ void DMDUTILCALLBACK LogCallback(DMDUtil_LogLevel logLevel, const char* format, 
   fprintf(stderr, "%s\n", buffer);
 }
 
+// Signal Handler für graceful shutdown
+void SignalHandler(int signum)
+{
+  if (signum == SIGTERM)
+  {
+    DMDUtil::Log(DMDUtil_LogLevel_INFO, "Received SIGTERM, shutting down...");
+    running = false;
+  }
+}
+
 int main(int argc, char* argv[])
 {
+  // Signal Handler registrieren
+  signal(SIGTERM, SignalHandler);
+
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
   pConfig->SetDMDServer(false);  // This is the server. It must not connect to a different server!
 
   cag_option_context cag_context;
   bool opt_wait = false;
+  bool opt_fixedAltColorPath = false;
+  bool opt_fixedPupPath = false;
 
   cag_option_init(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
   while (cag_option_fetch(&cag_context))
@@ -79,10 +97,12 @@ int main(int argc, char* argv[])
     else if (identifier == 'o')
     {
       pConfig->SetAltColorPath(cag_option_get_value(&cag_context));
+      opt_fixedAltColorPath = true;
     }
     else if (identifier == 'u')
     {
       pConfig->SetPUPVideosPath(cag_option_get_value(&cag_context));
+      opt_fixedPupPath = true;
     }
     else if (identifier == 'a')
     {
@@ -141,14 +161,14 @@ int main(int argc, char* argv[])
     opt_fixedAltColorPath = true;
   }
 
-  DMDUtil::DMDServer server(pDmd);
+  DMDUtil::DMDServer server(pDmd, opt_fixedAltColorPath, opt_fixedPupPath);
 
   if (!server.Start(pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort()))
   {
     return 1;
   }
 
-  while (server.IsRunning() && pDmd->HasDisplay())
+  while (running && server.IsRunning() && pDmd->HasDisplay())
   {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }

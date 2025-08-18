@@ -1088,7 +1088,12 @@ void DMD::SerumThread()
               Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
 
-              if (m_dumpPath[strlen(m_altColorPath) - 1] == '/' || m_dumpPath[strlen(m_altColorPath) - 1] == '\\')
+              size_t pathLen = strlen(m_altColorPath);
+              if (pathLen == 0)
+              {
+                snprintf(csvPath, sizeof(csvPath), "./%s.pup.csv", m_romName);
+              }
+              else if (m_altColorPath[pathLen - 1] == '/' || m_altColorPath[pathLen - 1] == '\\')
               {
                 snprintf(csvPath, sizeof(csvPath), "%s%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
               }
@@ -1859,7 +1864,12 @@ void DMD::DumpDMDTxtThread()
             char suffix[9];  // 8 chars + null terminator
             GenerateRandomSuffix(suffix, 8);
             if (m_dumpPath[0] == '\0') strcpy(m_dumpPath, Config::GetInstance()->GetDumpPath());
-            if (m_dumpPath[strlen(m_dumpPath) - 1] == '/' || m_dumpPath[strlen(m_dumpPath) - 1] == '\\')
+            size_t pathLen = strlen(m_dumpPath);
+            if (pathLen == 0)
+            {
+              snprintf(filename, sizeof(filename), "./%s-%s.txt", m_dumpPath, name, suffix);
+            }
+            else if (m_dumpPath[pathLen - 1] == '/' || m_dumpPath[pathLen - 1] == '\\')
             {
               snprintf(filename, sizeof(filename), "%s%s-%s.txt", m_dumpPath, name, suffix);
             }

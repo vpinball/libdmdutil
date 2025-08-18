@@ -37,6 +37,8 @@ bool DMDServer::Start(const char* addr, in_port_t port)
     return false;
   }
 
+  m_acceptor.set_non_blocking();
+
   m_running.store(true, std::memory_order_release);
   m_acceptThread = new std::thread(&DMDServer::AcceptLoop, this);
   return true;
@@ -56,13 +58,12 @@ void DMDServer::Stop()
   std::unique_lock<std::mutex> lock(m_threadMutex);
   m_currentThreadId = 0;
   m_disconnectOtherClients = 0;
+  lock.unlock();
 }
 
 void DMDServer::AcceptLoop()
 {
   uint32_t threadId = 0;
-
-  (void)m_running.load(std::memory_order_acquire);
 
   while (m_running.load(std::memory_order_relaxed))
   {
@@ -71,10 +72,13 @@ void DMDServer::AcceptLoop()
 
     if (!sock)
     {
-      if (m_acceptor.last_error() != EWOULDBLOCK)
+      if (m_acceptor.last_error() == EWOULDBLOCK)
       {
-        Log(DMDUtil_LogLevel_ERROR, "Error accepting connection: %s", m_acceptor.last_error_str().c_str());
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        continue;
       }
+
+      Log(DMDUtil_LogLevel_ERROR, "Error accepting connection: %s", m_acceptor.last_error_str().c_str());
       continue;
     }
 
@@ -90,20 +94,38 @@ void DMDServer::AcceptLoop()
 
 void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
 {
+  // Socket auf non-blocking setzen
+  sock.set_non_blocking();
+
   uint8_t buffer[sizeof(DMDUtil::DMD::Update)];
   DMDUtil::DMD::StreamHeader* pStreamHeader = (DMDUtil::DMD::StreamHeader*)malloc(sizeof(DMDUtil::DMD::StreamHeader));
   ssize_t n;
-  // Disconnect others is only allowed once per client.
   bool handleDisconnectOthers = true;
   bool logged = false;
 
   DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: New DMD client %d connected", threadId, threadId);
 
-  while (threadId == m_currentThreadId || m_disconnectOtherClients == 0 || m_disconnectOtherClients <= threadId)
+  while (m_running.load(std::memory_order_relaxed) &&
+         (threadId == m_currentThreadId || m_disconnectOtherClients == 0 || m_disconnectOtherClients <= threadId))
   {
     n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader));
-    // If the client disconnects or if a network error ocurres, exit the loop and terminate this thread.
-    if (n <= 0) break;
+
+    if (n < 0)
+    {
+      if (sock.last_error() == EWOULDBLOCK)
+      {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        continue;
+      }
+
+      // network error or connection closed
+      break;
+    }
+    else if (n == 0)
+    {
+      // connection closed by client
+      break;
+    }
 
     if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
