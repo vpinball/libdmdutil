@@ -7,8 +7,6 @@
 using namespace std;
 
 bool opt_verbose = false;
-bool opt_fixedAltColorPath = false;
-bool opt_fixedPupPath = false;
 static volatile bool running = true;
 
 static struct cag_option options[] = {
@@ -97,12 +95,10 @@ int main(int argc, char* argv[])
     else if (identifier == 'o')
     {
       pConfig->SetAltColorPath(cag_option_get_value(&cag_context));
-      opt_fixedAltColorPath = true;
     }
     else if (identifier == 'u')
     {
       pConfig->SetPUPVideosPath(cag_option_get_value(&cag_context));
-      opt_fixedPupPath = true;
     }
     else if (identifier == 'a')
     {
@@ -155,13 +151,9 @@ int main(int argc, char* argv[])
   }
 
   std::string altColorPath = DMDUtil::Config::GetInstance()->GetAltColorPath();
-  if (!altColorPath.empty())
-  {
-    pDmd->SetAltColorPath(altColorPath.c_str());
-    opt_fixedAltColorPath = true;
-  }
+  std::string pupVideosPath = DMDUtil::Config::GetInstance()->GetPUPVideosPath();
 
-  DMDUtil::DMDServer server(pDmd, opt_fixedAltColorPath, opt_fixedPupPath);
+  DMDUtil::DMDServer server(pDmd, !altColorPath.empty(), !pupVideosPath.empty());
 
   if (!server.Start(pConfig->GetDMDServerAddr(), pConfig->GetDMDServerPort()))
   {
