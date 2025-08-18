@@ -44,7 +44,7 @@ void RGB24DMD::Update(uint8_t* pData, uint16_t width, uint16_t height)
     FrameUtil::Helper::ScaleDown(m_pData, 128, 32, pData, width, height, 24);
     m_update = true;
   }
-  else if (height == 32 && m_height == 64)
+  else if (width == 128 && height == 32 && m_width == 256 && m_height == 64)
   {
     FrameUtil::Helper::ScaleUp(m_pData, pData, width, height, 24);
     m_update = true;
