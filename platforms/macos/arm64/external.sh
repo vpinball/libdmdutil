@@ -59,7 +59,6 @@ cmake \
    -DARCH=arm64 \
    -DBUILD_SHARED=ON \
    -DBUILD_STATIC=OFF \
-   -DENABLE_SANITIZERS=ON \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}

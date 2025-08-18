@@ -267,6 +267,11 @@ DMD::~DMD()
     delete m_pDMDServerConnector;
     m_pDMDServerConnector = nullptr;
   }
+
+  for (uint8_t i = 0; i < DMDUTIL_FRAME_BUFFER_SIZE; i++)
+  {
+    delete m_pUpdateBufferQueue[i];
+  }
 }
 
 bool DMD::ConnectDMDServer()
