@@ -126,8 +126,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
       // connection closed by client
       break;
     }
-
-    if (n == sizeof(DMDUtil::DMD::StreamHeader))
+    else if (n == sizeof(DMDUtil::DMD::StreamHeader))
     {
       memcpy(pStreamHeader, buffer, n);
       pStreamHeader->convertToHostByteOrder();
@@ -256,7 +255,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
       }
       else if (threadId == m_currentThreadId)
       {
-        DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Received unknown TCP package", threadId);
+        DMDUtil::Log(DMDUtil_LogLevel_DEBUG, "%d: Received unknown TCP package", threadId);
       }
     }
   }
