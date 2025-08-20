@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "Logger.h"
+
 namespace DMDUtil
 {
 
@@ -52,7 +54,7 @@ bool SceneGenerator::parseCSV(const std::string& csv_filename)
   std::ifstream in_csv(csv_filename);
   if (!in_csv.is_open())
   {
-    std::cerr << "Error: Could not open CSV file: " << csv_filename << std::endl;
+    Log(DMDUtil_LogLevel_ERROR, "SceneGenerator: Could not open CSV file: %s", csv_filename.c_str());
     return false;
   }
 
@@ -87,7 +89,7 @@ bool SceneGenerator::parseCSV(const std::string& csv_filename)
     // Need at least 3 columns, accept up to 4
     if (row.size() < 3)
     {
-      std::cerr << "Warning: Skipping invalid line " << lineNum << " - expected at least 3 columns" << std::endl;
+      Log(DMDUtil_LogLevel_ERROR, "SceneGenerator: Skipping invalid line %d - expected at least 3 columns", lineNum);
       continue;
     }
 
@@ -109,7 +111,7 @@ bool SceneGenerator::parseCSV(const std::string& csv_filename)
     }
     catch (...)
     {
-      std::cerr << "Warning: Skipping invalid line " << lineNum << " - non-integer value" << std::endl;
+      Log(DMDUtil_LogLevel_ERROR, "SceneGenerator: Skipping invalid line %d - non-integer value", lineNum);
       continue;
     }
   }
@@ -122,7 +124,7 @@ bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
   std::ofstream out_dump(dump_filename, std::ios::binary);
   if (!out_dump.is_open())
   {
-    std::cerr << "Error: Could not create dump file: " << dump_filename << std::endl;
+    Log(DMDUtil_LogLevel_ERROR, "SceneGenerator: Could not create dump file: %s", dump_filename.c_str());
     return false;
   }
 
@@ -149,7 +151,8 @@ bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
         uint8_t frameBuffer[4096];
         if (!generateFrame(scene.sceneId, frameIndex, frameBuffer, group))
         {
-          std::cerr << "Error generating frame " << frameIndex << " for scene " << scene.sceneId << std::endl;
+          Log(DMDUtil_LogLevel_ERROR, "SceneGenerator: Error generating frame %d for scene %d", frameIndex,
+              scene.sceneId);
           continue;
         }
 
@@ -174,17 +177,17 @@ bool SceneGenerator::generateDump(const std::string& dump_filename, int id)
 uint16_t SceneGenerator::getSceneId(char source, int event, int value) const
 {
   return 0;
-/*
-  auto it = std::find_if(m_sceneData.begin(), m_sceneData.end(), [source, event, value](const SceneData& data)
-                         { return data.source == source && data.sceneId == sceneId && data.value == value; });
+  /*
+    auto it = std::find_if(m_sceneData.begin(), m_sceneData.end(), [source, event, value](const SceneData& data)
+                           { return data.source == source && data.sceneId == sceneId && data.value == value; });
 
-  if (it == m_sceneData.end())
-  {
-    return false;
-  }
+    if (it == m_sceneData.end())
+    {
+      return false;
+    }
 
-  return true;
-*/
+    return true;
+  */
 }
 
 bool SceneGenerator::getSceneInfo(int sceneId, int& frameCount, int& durationPerFrame, bool& interruptable,
