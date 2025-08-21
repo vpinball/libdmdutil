@@ -58,6 +58,7 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
+cp src/SceneGenerator.h ../../third-party/include/
 cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp build/libserum.a ../../third-party/build-libs/tvos/arm64/

@@ -64,6 +64,7 @@ cmake \
    -DBUILD_STATIC=OFF \
    -B build
 cmake --build build --config ${BUILD_TYPE}
+cp src/SceneGenerator.h ../../third-party/include/
 cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp build/${BUILD_TYPE}/serum64.lib ../../third-party/build-libs/win/x64/

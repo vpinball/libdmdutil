@@ -62,6 +62,7 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
+cp src/SceneGenerator.h ../../third-party/include/
 cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp -a build/libserum.{dylib,*.dylib} ../../third-party/runtime-libs/macos/x64/
