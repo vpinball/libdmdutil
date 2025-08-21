@@ -4,7 +4,6 @@
 #include "DMDUtil/ConsoleDMD.h"
 #include "DMDUtil/LevelDMD.h"
 #include "DMDUtil/RGB24DMD.h"
-#include "DMDUtil/SceneGenerator.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <winsock2.h>  // Windows byte-order functions
@@ -146,7 +145,6 @@ DMD::DMD()
   m_updateBuffered = std::make_shared<Update>();
 
   m_pAlphaNumeric = new AlphaNumeric();
-  m_pGenerator = new SceneGenerator();
   m_pSerum = nullptr;
   m_pZeDMD = nullptr;
   m_pPUPDMD = nullptr;
@@ -248,7 +246,6 @@ DMD::~DMD()
   }
 #endif
   delete m_pAlphaNumeric;
-  delete m_pGenerator;
   delete m_pZeDMD;
   delete m_pPUPDMD;
 #if !(                                                                                                                \
@@ -905,15 +902,6 @@ void DMD::SerumThread()
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
     bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
 
-    int sceneFrameCount = 0;
-    int sceneCurrentFrame = 0;
-    int sceneDurationPerFrame = 0;
-    bool sceneInterruptable = false;
-    bool sceneStartImmediately = false;
-    int sceneRepeatCount = 0;
-    int sceneEndFrame = 0;
-    uint32_t nextSceneFrame = 0;
-
     while (true)
     {
       if (m_stopFlag.load(std::memory_order_acquire))
@@ -926,28 +914,19 @@ void DMD::SerumThread()
         return;
       }
 
-      if (m_pSerum && nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
+      if (m_pSerum && nextRotation == 0)
       {
         uint16_t sceneId = m_pupSceneId.load(std::memory_order_relaxed);
         if (sceneId > 0)
         {
-          if (m_pGenerator->getSceneInfo(sceneId, sceneFrameCount, sceneDurationPerFrame, sceneInterruptable,
-                                         sceneStartImmediately, sceneRepeatCount, sceneEndFrame))
-          {
-            Log(DMDUtil_LogLevel_DEBUG, "Serum: PUP Scene ID %lu found in scenes, frame count=%d, duration=%dms",
-                sceneId, sceneFrameCount, sceneDurationPerFrame);
-            sceneCurrentFrame = 0;
-            nextSceneFrame = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::system_clock::now().time_since_epoch())
-                                 .count() +
-                             (sceneStartImmediately ? 0 : sceneDurationPerFrame);
-          }
+          // @todo
+
           // Reset the trigger after processing
           m_pupSceneId.store(0, std::memory_order_release);
         }
       }
 
-      if (nextRotation == 0 && sceneCurrentFrame >= sceneFrameCount)
+      if (nextRotation == 0)
       {
         std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
         m_dmdCV.wait(
@@ -959,66 +938,6 @@ void DMD::SerumThread()
       uint32_t now =
           std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
               .count();
-
-      if (m_pSerum && sceneCurrentFrame < sceneFrameCount && nextSceneFrame <= now)
-      {
-        Update* sceneUpdate = new Update();
-        if (m_pGenerator->generateFrame(prevTriggerId, sceneCurrentFrame++, sceneUpdate->data))
-        {
-          uint32_t result = Serum_Colorize(sceneUpdate->data);
-
-          if (result != IDENTIFY_NO_FRAME)
-          {
-            Log(DMDUtil_LogLevel_DEBUG, "Serum: Got PUP scene %d, frame %d colorized", prevTriggerId,
-                sceneCurrentFrame - 1);
-            sceneUpdate->depth = m_pGenerator->getDepth();
-            sceneUpdate->hasData = true;
-            QueueSerumFrames(sceneUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
-          }
-        }
-        nextSceneFrame = nextSceneFrame + sceneDurationPerFrame;
-        delete sceneUpdate;
-
-        // If the scene is finished.
-        if (sceneCurrentFrame >= sceneFrameCount)
-        {
-          if (sceneRepeatCount > 1)
-          {
-            sceneCurrentFrame = 0;
-            if (--sceneRepeatCount == 1) sceneRepeatCount = 0;
-          }
-          else if (sceneRepeatCount == 1)
-          {
-            // loop
-            sceneCurrentFrame = 0;
-          }
-          else
-          {
-            sceneFrameCount = 0;
-            if (lastDmdUpdate && sceneEndFrame >= 0)
-            {
-              uint32_t result = Serum_Colorize(lastDmdUpdate->data);
-              if (result != IDENTIFY_NO_FRAME)
-              {
-                if (sceneEndFrame == 1)
-                {
-                  // Black frame.
-                  memset(m_pSerum->palette, 0, PALETTE_SIZE);
-                  if (m_pSerum->width32 > 0) memset(m_pSerum->frame32, 0, m_pSerum->width32 * 32 * sizeof(uint16_t));
-                  if (m_pSerum->width64 > 0) memset(m_pSerum->frame64, 0, m_pSerum->width64 * 64 * sizeof(uint16_t));
-                }
-                while (std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::system_clock::now().time_since_epoch())
-                           .count() < nextSceneFrame)
-                {
-                  std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                }
-                QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
-              }
-            }
-          }
-        }
-      }
 
       const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
       while (bufferPosition != updateBufferQueuePosition)
@@ -1034,12 +953,8 @@ void DMD::SerumThread()
           Serum_Dispose();
           m_pSerum = nullptr;
           lastDmdUpdate = nullptr;
-          m_pGenerator->Reset();
-          sceneFrameCount = 0;
           continue;
         }
-
-        if (m_pSerum && sceneCurrentFrame < sceneFrameCount && !sceneInterruptable) continue;
 
         if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data)
         {
@@ -1052,8 +967,6 @@ void DMD::SerumThread()
               Serum_Dispose();
               m_pSerum = nullptr;
               lastDmdUpdate = nullptr;
-              m_pGenerator->Reset();
-              sceneFrameCount = 0;
             }
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
@@ -1092,28 +1005,6 @@ void DMD::SerumThread()
 
               Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
-
-              size_t pathLen = strlen(m_altColorPath);
-              if (pathLen == 0)
-              {
-                snprintf(csvPath, sizeof(csvPath), "./%s.pup.csv", m_romName);
-              }
-              else if (m_altColorPath[pathLen - 1] == '/' || m_altColorPath[pathLen - 1] == '\\')
-              {
-                snprintf(csvPath, sizeof(csvPath), "%s%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
-              }
-              else
-              {
-                snprintf(csvPath, sizeof(csvPath), "%s/%s/%s.pup.csv", m_altColorPath, m_romName, m_romName);
-              }
-              Log(DMDUtil_LogLevel_INFO, "Serum: Check for PUP scenes for %s at %s", m_romName, csvPath);
-
-              if (m_pGenerator->parseCSV(csvPath))
-              {
-                m_pGenerator->setDepth(m_pUpdateBufferQueue[bufferPositionMod]->depth);
-                Log(DMDUtil_LogLevel_INFO, "Serum: Loaded PUP scenes for %s, bit depth %d", m_romName,
-                    m_pUpdateBufferQueue[bufferPositionMod]->depth);
-              }
             }
           }
 
@@ -1128,6 +1019,8 @@ void DMD::SerumThread()
 
               lastDmdUpdate = m_pUpdateBufferQueue[bufferPositionMod];
 
+              QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
+
               if (result > 0 && ((result & 0xffff) < 2048))
                 nextRotation = now + m_pSerum->rotationtimer;
               else
@@ -1135,35 +1028,8 @@ void DMD::SerumThread()
 
               if (m_pSerum->triggerID < 0xffffffff)
               {
-                if (m_pGenerator->getSceneInfo(m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame,
-                                               sceneInterruptable, sceneStartImmediately, sceneRepeatCount,
-                                               sceneEndFrame))
-                {
-                  Log(DMDUtil_LogLevel_DEBUG, "Serum: trigger ID %lu found in scenes, frame count=%d, duration=%dms",
-                      m_pSerum->triggerID, sceneFrameCount, sceneDurationPerFrame);
-                  sceneCurrentFrame = 0;
-                  if (sceneStartImmediately)
-                  {
-                    nextSceneFrame = now;
-                  }
-                  else
-                  {
-                    nextSceneFrame = now + sceneDurationPerFrame;
-                    QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
-                  }
-                }
-                else
-                {
-                  QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
-                }
-
                 HandleTrigger(m_pSerum->triggerID);
                 prevTriggerId = m_pSerum->triggerID;
-              }
-              else
-              {
-                sceneFrameCount = 0;
-                QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
               }
             }
             else if (showNotColorizedFrames || dumpNotColorizedFrames)
@@ -1190,12 +1056,6 @@ void DMD::SerumThread()
 
       if (m_pSerum)
       {
-        if (sceneCurrentFrame < sceneFrameCount)
-        {
-          nextRotation = 0;
-          continue;
-        }
-
         if (nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate && now > nextRotation)
         {
           uint32_t result = Serum_Rotate();
@@ -2165,15 +2025,15 @@ void DMD::SetPUPTrigger(const char source, const uint16_t event, const uint8_t v
 {
   if (m_pSerum)
   {
-    uint16_t id = m_pGenerator->getSceneId(source, event, value);
-    if (id > 0)
-    {
-      while (m_pupSceneId.load(std::memory_order_acquire) != 0)
-      {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      }
-      m_pupSceneId.store(id, std::memory_order_release);
-    }
+    //    uint16_t id = m_pGenerator->getSceneId(source, event, value);
+    //    if (id > 0)
+    //    {
+    //      while (m_pupSceneId.load(std::memory_order_acquire) != 0)
+    //      {
+    //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    //      }
+    //      m_pupSceneId.store(id, std::memory_order_release);
+    //    }
   }
 }
 

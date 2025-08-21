@@ -89,7 +89,6 @@ set(DMDUTIL_SOURCES
    src/ConsoleDMD.cpp
    src/Logger.cpp
    src/AlphaNumeric.cpp
-   src/SceneGenerator.cpp
    src/DMDServer.cpp
 )
 

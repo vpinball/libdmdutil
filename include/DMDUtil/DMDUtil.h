@@ -14,7 +14,6 @@
 #include "Config.h"
 #include "ConsoleDMD.h"
 #include "DMD.h"
+#include "DMDServer.h"
 #include "LevelDMD.h"
 #include "RGB24DMD.h"
-#include "SceneGenerator.h"
-#include "DMDServer.h"

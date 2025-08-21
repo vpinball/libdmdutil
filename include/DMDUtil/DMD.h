@@ -8,7 +8,7 @@
 #define DMDUTILCALLBACK
 #endif
 
-#define DMDUTIL_FRAME_BUFFER_SIZE 128 // Must be a divider of 65535! Must not exceed 256!
+#define DMDUTIL_FRAME_BUFFER_SIZE 128  // Must be a divider of 65535! Must not exceed 256!
 #define DMDUTIL_MIN_FRAMES_BEHIND 4
 #define DMDUTIL_MAX_FRAMES_BEHIND 32
 #define DMDUTIL_MAX_NAME_SIZE 16
@@ -68,7 +68,6 @@ class PixelcadeDMD;
 class LevelDMD;
 class RGB24DMD;
 class ConsoleDMD;
-class SceneGenerator;
 class DMDServerConnector;
 
 class DMDUTILAPI DMD
@@ -108,7 +107,7 @@ class DMDUTILAPI DMD
 #pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
   struct Update
   {
-    Mode mode = Mode::Data;  // int
+    Mode mode = Mode::Data;                                    // int
     AlphaNumericLayout layout = AlphaNumericLayout::NoLayout;  // int
     int depth = 2;
     uint8_t data[256 * 64 * 3] = {0};
@@ -214,7 +213,6 @@ class DMDUTILAPI DMD
   SerumFrameStruct* m_pSerum;
   ZeDMD* m_pZeDMD;
   PUPDMD::DMD* m_pPUPDMD;
-  SceneGenerator* m_pGenerator;
   std::vector<LevelDMD*> m_levelDMDs;
   std::vector<RGB24DMD*> m_rgb24DMDs;
   std::vector<ConsoleDMD*> m_consoleDMDs;

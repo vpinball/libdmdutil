@@ -2,6 +2,7 @@
 
 #include "DMDUtil/DMDUtil.h"
 #include "cargs.h"
+#include "serum-decode.h"
 
 static struct cag_option options[] = {
     {.identifier = 'c',
@@ -61,16 +62,15 @@ int main(int argc, char* argv[])
     }
   }
 
-  DMDUtil::SceneGenerator generator;
-  generator.setDepth(opt_depth);
+  Serum_Scene_SetDepth(opt_depth);
 
-  if (!generator.parseCSV(opt_csv_file))
+  if (!Serum_Scene_ParseCSV(opt_csv_file))
   {
     std::cerr << "Error: Failed to parse CSV file\n";
     return 1;
   }
 
-  if (!generator.generateDump(opt_output_file, opt_id))
+  if (!Serum_Scene_GenerateDump(opt_output_file, opt_id))
   {
     std::cerr << "Error: Failed to generate dump file\n";
     return 1;
