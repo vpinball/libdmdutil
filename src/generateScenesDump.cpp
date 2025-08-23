@@ -62,6 +62,14 @@ int main(int argc, char* argv[])
     }
   }
 
+  if (!opt_csv_file || !opt_output_file)
+  {
+    std::cerr << "Error: Missing required options\n";
+    std::cerr << "Usage: " << argv[0] << " -c MY_PUP_SCENES.csv -o MY_DUMP_FILE.txt\n";
+    cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
+    return 1;
+  }
+
   Serum_Scene_SetDepth(opt_depth);
 
   if (!Serum_Scene_ParseCSV(opt_csv_file))
