@@ -17,4 +17,6 @@ third-party/include/SceneGenerator.h
 third-party/include/serum.h
 third-party/include/serum-decode.h
 third-party/include/ZeDMD.h
+third-party/include/LZ4Stream.h
+third-party/include/lz4
 .DS_Store
