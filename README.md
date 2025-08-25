@@ -47,35 +47,17 @@ void test()
 Per default it listens on port 6789 on localhost and accepts "raw" TCP connections.
 
 `dmdserver` accepts these command line options:
-* -c --config
-    * Config file
-    * optional
-    * default is no config file
-* -o --alt-color-path
-    * "Fixed alt color path, overwriting paths transmitted by DMDUpdates
-    * optional
-* -a --addr
-    * IP address or host name
-    * optional
-    * default is `localhost`
-* -p --port
-    * Port
-    * optional
-    * default is `6789`
-* -w --wait-for-displays
-    * Don't terminate if no displays are connected
-    * optional
-    * default is to terminate the server process if no displays could be found
-* -l --logging
-    * Enable logging to stderr
-    * optional
-    * default is no logging
-* -v --verbose
-    * Enables verbose logging, includes normal logging
-    * optional
-    * default is no logging
-* -h --help
-    * Show help
+```
+  -c, --config=VALUE              Config file (optional, default is no config file)
+  -o, --alt-color-path=VALUE      Fixed alt color path, overwriting paths transmitted by DMDUpdates (optional)
+  -u, --pup-videos-path=VALUE     Fixed PupVideos path, overwriting paths transmitted by DMDUpdates (optional)
+  -a, --addr=VALUE                IP address or host name (optional, default is 'localhost')
+  -p, --port=VALUE                Port (optional, default is '6789')
+  -w, --wait-for-displays         Don't terminate if no displays are connected (optional, default is to terminate the server process if no displays could be found)
+  -l, --logging                   Enable logging to stderr (optional, default is no logging)
+  -v, --verbose-logging           Enables verbose logging, includes normal logging (optional, default is no logging)
+  -h, --help                      Show help
+```
 
 `dmdserver` expects two packages to render a DMD frame. The first one is a DmdStream header followed by the "data".
 
@@ -209,13 +191,31 @@ SaveSettings = 0
 # Set to 1 if ZeDMD-WiFi is available.
 Enabled = 0
 # Enter your ZeDMD WiFi IP address here
-WiFiAddr = 
+WiFiAddr =
 
 [Pixelcade]
 # Set to 1 if Pixelcade is attached
 Enabled = 1
 # Disable auto-detection and provide a fixed serial port
 Device =
+```
+
+## Serum PUP Scenes Generator
+
+Serum PUP Scenes are a new feature of libserum_concentrate.
+Such scenes base on a defined number of fake frames at a given frame rate.
+These frames can be added to the ROM's original frames or overlay some original frames.
+The purpose is to add new animations or to replace existing frames with smoother aniations.
+Therefore, a colorization other needs a set of scene frames that could be colorized in the colorization editor.
+The `dmdutil-generate-scenes` tool generates a dump of such scene frames according to the PUP Scenes specification CSV file.
+
+`dmdutil-generate-scenes` accepts these command line options:
+```
+  -c, --csv=VALUE        PUP scenes CSV file to parse
+  -o, --output=VALUE     Output dump file to generate
+  -d, --depth=VALUE      Bit depth of the DMD frames (2 or 4) (optional, default is 2)
+  -i, --id=VALUE         PUP scene trigger ID to generate (optional, default is all scenes)
+  -h, --help             Show help
 ```
 
 ## Building:

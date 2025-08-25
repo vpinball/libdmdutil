@@ -8,9 +8,9 @@
 #define DMDUTILCALLBACK
 #endif
 
-#define DMDUTIL_FRAME_BUFFER_SIZE 32
+#define DMDUTIL_FRAME_BUFFER_SIZE 128  // Must be a divider of 65535! Must not exceed 256!
 #define DMDUTIL_MIN_FRAMES_BEHIND 4
-#define DMDUTIL_MAX_FRAMES_BEHIND 16
+#define DMDUTIL_MAX_FRAMES_BEHIND 32
 #define DMDUTIL_MAX_NAME_SIZE 16
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
@@ -68,7 +68,6 @@ class PixelcadeDMD;
 class LevelDMD;
 class RGB24DMD;
 class ConsoleDMD;
-
 class DMDServerConnector;
 
 class DMDUTILAPI DMD
@@ -77,7 +76,7 @@ class DMDUTILAPI DMD
   DMD();
   ~DMD();
 
-  enum class Mode
+  enum class Mode : int
   {
     Unknown = 0,
     Data = 1,
@@ -108,20 +107,20 @@ class DMDUTILAPI DMD
 #pragma pack(push, 1)  // Align to 1-byte boundaries, important for sending over socket.
   struct Update
   {
-    Mode mode;
-    AlphaNumericLayout layout;
-    int depth;
-    uint8_t data[256 * 64 * 3];
-    uint16_t segData[256 * 64];  // RGB16 or segment data or SerumV1 palette
+    Mode mode = Mode::Data;                                    // int
+    AlphaNumericLayout layout = AlphaNumericLayout::NoLayout;  // int
+    int depth = 2;
+    uint8_t data[256 * 64 * 3] = {0};
+    uint16_t segData[256 * 64] = {0};  // RGB16 or segment data or SerumV1 palette
     uint16_t segData2[128];
-    bool hasData;
-    bool hasSegData;
-    bool hasSegData2;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    uint16_t width;
-    uint16_t height;
+    bool hasData = false;
+    bool hasSegData = false;
+    bool hasSegData2 = false;
+    uint8_t r = 255;
+    uint8_t g = 255;
+    uint8_t b = 255;
+    uint16_t width = 128;
+    uint16_t height = 32;
 
     DMDUTILAPI void convertToHostByteOrder();
     DMDUTILAPI Update toNetworkByteOrder() const;
@@ -161,6 +160,7 @@ class DMDUTILAPI DMD
   void SetRomName(const char* name);
   void SetAltColorPath(const char* path);
   void SetPUPVideosPath(const char* path);
+  void SetPUPTrigger(const char source, const uint16_t id, const uint8_t value = 1);
   void DumpDMDTxt();
   void DumpDMDRaw();
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
@@ -185,7 +185,7 @@ class DMDUTILAPI DMD
   Update* m_pUpdateBufferQueue[DMDUTIL_FRAME_BUFFER_SIZE];
   std::shared_ptr<Update> m_updateBuffered;
 
-  uint8_t GetNextBufferQueuePosition(uint8_t bufferPosition, const uint8_t updateBufferQueuePosition);
+  uint16_t GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t updateBufferQueuePosition);
   bool ConnectDMDServer();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
@@ -232,7 +232,8 @@ class DMDUTILAPI DMD
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_dmdFrameReady;
   std::atomic<bool> m_stopFlag;
-  std::atomic<uint8_t> m_updateBufferQueuePosition;
+  std::atomic<uint16_t> m_updateBufferQueuePosition;
+  std::atomic<uint16_t> m_pupSceneId;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;

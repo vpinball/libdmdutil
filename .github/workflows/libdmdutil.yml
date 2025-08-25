@@ -104,6 +104,7 @@ jobs:
              cp build/Release/dmdutil_static.lib tmp
              cp build/Release/dmdutil_test_s.exe tmp
              cp build/Release/dmdutil_test.exe tmp
+             cp build/Release/dmdutil-generate-scenes.exe tmp
              cp -r test tmp/
           else
             ARTIFACT_PATH="libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
@@ -114,6 +115,7 @@ jobs:
                cp build/dmdserver_test tmp
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
+               cp build/dmdutil-generate-scenes tmp
             elif [[ "${{ matrix.platform }}" == "linux" ]]; then
                cp build/libdmdutil.a tmp
                cp -a build/*.{so,so.*} tmp
@@ -121,6 +123,7 @@ jobs:
                cp build/dmdserver_test tmp
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
+               cp build/dmdutil-generate-scenes tmp
             elif [[ "${{ matrix.platform }}" == "ios" || "${{ matrix.platform }}" == "ios-simulator" || "${{ matrix.platform }}" == "tvos" ]]; then
                cp build/libdmdutil.a tmp
                cp -a build/*.dylib tmp

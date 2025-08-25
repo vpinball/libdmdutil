@@ -1,0 +1,47 @@
+# Format of a PUP scene line:
+#
+#  1: PUP scene ID
+#  2: number of frames
+#  3: duration of each frame
+#  4: 0 - not interruptable, 1 - interruptable by frame match or PUP event
+#  5: 0 - start immediately, replacing triggering frame, 1 - start after frame duration (see 3)
+#  6: 0 - play once, 1 - loop, >= 2 - repeat x times
+#  7: 0 - no frame groups, >= 2 - create x frame groups (you get x times the number of frames entered in 2 to play changing scenes)
+#  8: 0 - play frame group in order, 1 - play random frame group
+#  9: 0 - no autostart, >= 1 - start this scene after x seconds of inactivity (no new frames), only use once, could be combined with frame groups
+# 10: 0 - when scene is finished, show last frame of the scene until a new frame is matched, 1 - black screen, 2 - show last frame before scene started
+#
+# Postions 4 - 10 are optional. If not provided, the default is 0.
+
+# Format of a PUP event line:
+#
+#  1: PUP event source (D - DMD, W - Switch, S - Solenoid, L - Light, E - custom Event)
+#  2: PUP event ID
+#  3: PUP event value
+#  4: PUP scene ID to trigger
+
+# Scene 60001
+60001,38,16
+
+# Scene 61479, interruptable
+61479,52,20,1
+
+# Scene 63500, interruptable, starting delayed by frame duration, loop
+63500,40,20,1,1,1
+
+# Scene 63511, interruptable, starting delayed by frame duration, play once, 3 frame groups
+# This will generate 3 groups of 75 frames, so 225 frames in total.
+# Every time the PUP ID 63511 get triggered, only one of the three groups gets played (75 frames).
+# First occurrence of the PUP ID will play group 1, the second group 2. After the third group, it will start again with group 1.
+63511,75,20,1,1,0,3
+
+# This will generate 4 groups of 200 frames, so 800 frames in total.
+# If no frame is matched for 5 seconds, randomly one of the 4 groups gets played once.
+# When the 100 frames of the scene ended, the previous original frame will be shown.
+# The internal timer gets reseted and after 5 more seconds of inactivity, another group of 100 frames gets randomly played
+#
+# This way an attract mode for early electronic games with segment displays can be implemented.
+# Normally, the last scores are shown until someone starts a new game.
+# Now the scores are displayed for 5 seconds, than a random short video scene out of four gets played for 4 seconds.
+# Then the scores are shown again and so on until someone starts a game.
+63600,200,20,1,1,0,4,1,5,2

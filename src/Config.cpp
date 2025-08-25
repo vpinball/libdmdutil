@@ -47,33 +47,208 @@ void Config::parseConfigFile(const char* path)
   inih::INIReader r{path};
 
   // DMDServer
-  SetDMDServerAddr(r.Get<std::string>("DMDServer", "Addr", "localhost").c_str());
-  SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
-  SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
-  SetAltColorPath(r.Get<std::string>("DMDServer", "AltColorPath", "").c_str());
-  SetPUPCapture(r.Get<bool>("DMDServer", "PUPCapture", false));
-  SetPUPVideosPath(r.Get<std::string>("DMDServer", "PUPVideosPath", "").c_str());
-  SetPUPExactColorMatch(r.Get<bool>("DMDServer", "PUPExactColorMatch", false));
+  try
+  {
+    SetDMDServerAddr(r.Get<std::string>("DMDServer", "Addr", "localhost").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetDMDServerAddr("localhost");
+  }
+
+  try
+  {
+    SetDMDServerPort(r.Get<int>("DMDServer", "Port", 6789));
+  }
+  catch (const std::exception&)
+  {
+    SetDMDServerPort(6789);
+  }
+
+  try
+  {
+    SetAltColor(r.Get<bool>("DMDServer", "AltColor", true));
+  }
+  catch (const std::exception&)
+  {
+    SetAltColor(true);
+  }
+
+  try
+  {
+    SetAltColorPath(r.Get<std::string>("DMDServer", "AltColorPath", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetAltColorPath("");
+  }
+
+  try
+  {
+    SetPUPCapture(r.Get<bool>("DMDServer", "PUPCapture", false));
+  }
+  catch (const std::exception&)
+  {
+    SetPUPCapture(false);
+  }
+
+  try
+  {
+    SetPUPVideosPath(r.Get<std::string>("DMDServer", "PUPVideosPath", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetPUPVideosPath("");
+  }
+
+  try
+  {
+    SetPUPExactColorMatch(r.Get<bool>("DMDServer", "PUPExactColorMatch", false));
+  }
+  catch (const std::exception&)
+  {
+    SetPUPExactColorMatch(false);
+  }
+
   // ZeDMD
-  SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
-  SetZeDMDDevice(r.Get<std::string>("ZeDMD", "Device", "").c_str());
-  SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug", false));
-  SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness", -1));
+  try
+  {
+    SetZeDMD(r.Get<bool>("ZeDMD", "Enabled", true));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMD(true);
+  }
+
+  try
+  {
+    SetZeDMDDevice(r.Get<std::string>("ZeDMD", "Device", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDDevice("");
+  }
+
+  try
+  {
+    SetZeDMDDebug(r.Get<bool>("ZeDMD", "Debug", false));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDDebug(false);
+  }
+
+  try
+  {
+    SetZeDMDBrightness(r.Get<int>("ZeDMD", "Brightness", -1));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDBrightness(-1);
+  }
+
   // ZeDMD WiFi
-  SetZeDMDWiFiEnabled(r.Get<bool>("ZeDMD-WiFi", "Enabled", false));
-  SetZeDMDWiFiAddr(r.Get<std::string>("ZeDMD-WiFi", "WiFiAddr", "").c_str());
+  try
+  {
+    SetZeDMDWiFiEnabled(r.Get<bool>("ZeDMD-WiFi", "Enabled", false));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDWiFiEnabled(false);
+  }
+
+  try
+  {
+    SetZeDMDWiFiAddr(r.Get<std::string>("ZeDMD-WiFi", "WiFiAddr", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDWiFiAddr("");
+  }
+
   // Pixelcade
-  SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
-  SetPixelcadeDevice(r.Get<std::string>("Pixelcade", "Device", "").c_str());
+  try
+  {
+    SetPixelcade(r.Get<bool>("Pixelcade", "Enabled", true));
+  }
+  catch (const std::exception&)
+  {
+    SetPixelcade(true);
+  }
+
+  try
+  {
+    SetPixelcadeDevice(r.Get<std::string>("Pixelcade", "Device", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetPixelcadeDevice("");
+  }
+
   // Serum
-  SetIgnoreUnknownFramesTimeout(r.Get<int>("Serum", "IgnoreUnknownFramesTimeout", 0));
-  SetMaximumUnknownFramesToSkip(r.Get<int>("Serum", "MaximumUnknownFramesToSkip", 0));
-  SetShowNotColorizedFrames(r.Get<bool>("Serum", "ShowNotColorizedFrames", false));
+  try
+  {
+    SetIgnoreUnknownFramesTimeout(r.Get<int>("Serum", "IgnoreUnknownFramesTimeout", 0));
+  }
+  catch (const std::exception&)
+  {
+    SetIgnoreUnknownFramesTimeout(0);
+  }
+
+  try
+  {
+    SetMaximumUnknownFramesToSkip(r.Get<int>("Serum", "MaximumUnknownFramesToSkip", 0));
+  }
+  catch (const std::exception&)
+  {
+    SetMaximumUnknownFramesToSkip(0);
+  }
+
+  try
+  {
+    SetShowNotColorizedFrames(r.Get<bool>("Serum", "ShowNotColorizedFrames", false));
+  }
+  catch (const std::exception&)
+  {
+    SetShowNotColorizedFrames(false);
+  }
+
   // Dump
-  SetDumpNotColorizedFrames(r.Get<bool>("Dump", "DumpNotColorizedFrames", false));
-  SetDumpFrames(r.Get<bool>("Dump", "DumpFrames", false));
-  SetDumpPath(r.Get<std::string>("Dump", "DumpPath", "").c_str());
-  SetFilterTransitionalFrames(r.Get<bool>("Dump", "FilterTransitionalFrames", false));
+  try
+  {
+    SetDumpNotColorizedFrames(r.Get<bool>("Dump", "DumpNotColorizedFrames", false));
+  }
+  catch (const std::exception&)
+  {
+    SetDumpNotColorizedFrames(false);
+  }
+
+  try
+  {
+    SetDumpFrames(r.Get<bool>("Dump", "DumpFrames", false));
+  }
+  catch (const std::exception&)
+  {
+    SetDumpFrames(false);
+  }
+
+  try
+  {
+    SetDumpPath(r.Get<std::string>("Dump", "DumpPath", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetDumpPath("");
+  }
+
+  try
+  {
+    SetFilterTransitionalFrames(r.Get<bool>("Dump", "FilterTransitionalFrames", false));
+  }
+  catch (const std::exception&)
+  {
+    SetFilterTransitionalFrames(false);
+  }
 }
 
 }  // namespace DMDUtil

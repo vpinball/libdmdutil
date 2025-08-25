@@ -6,6 +6,7 @@ set(ARCH "x64" CACHE STRING "Arch")
 option(BUILD_SHARED "Option to build shared library" ON)
 option(BUILD_STATIC "Option to build static library" ON)
 option(POST_BUILD_COPY_EXT_LIBS "Option to copy external libraries to build directory" ON)
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan for Debug builds" OFF)
 
 message(STATUS "PLATFORM: ${PLATFORM}")
 message(STATUS "ARCH: ${ARCH}")
@@ -13,6 +14,7 @@ message(STATUS "ARCH: ${ARCH}")
 message(STATUS "BUILD_SHARED: ${BUILD_SHARED}")
 message(STATUS "BUILD_STATIC: ${BUILD_STATIC}")
 message(STATUS "POST_BUILD_COPY_EXT_LIBS: ${POST_BUILD_COPY_EXT_LIBS}")
+message(STATUS "ENABLE_SANITIZERS: ${ENABLE_SANITIZERS}")
 
 if(PLATFORM STREQUAL "macos")
    set(CMAKE_OSX_DEPLOYMENT_TARGET 14.0)
@@ -67,6 +69,18 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+   if(ENABLE_SANITIZERS AND (PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux"))
+      add_compile_options(-fsanitize=address)
+      add_link_options(-fsanitize=address)
+
+      add_compile_options(-fsanitize=undefined)
+      add_link_options(-fsanitize=undefined)
+
+      add_compile_options(-fno-omit-frame-pointer)
+   endif()
+endif()
+
 set(DMDUTIL_SOURCES
    src/Config.cpp
    src/DMD.cpp
@@ -75,6 +89,7 @@ set(DMDUTIL_SOURCES
    src/ConsoleDMD.cpp
    src/Logger.cpp
    src/AlphaNumeric.cpp
+   src/DMDServer.cpp
 )
 
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
@@ -143,7 +158,7 @@ if(BUILD_SHARED)
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdserver
-         src/dmdServer.cpp
+         src/server.cpp
          src/Logger.cpp
       )
       target_link_libraries(dmdserver PUBLIC dmdutil_shared)
@@ -157,6 +172,11 @@ if(BUILD_SHARED)
          src/test.cpp
       )
       target_link_libraries(dmdutil_test PUBLIC dmdutil_shared)
+
+      add_executable(dmdutil-generate-scenes
+         src/generateScenesDump.cpp
+      )
+      target_link_libraries(dmdutil-generate-scenes PUBLIC dmdutil_shared)
 
       if(POST_BUILD_COPY_EXT_LIBS)
          if(PLATFORM STREQUAL "win")

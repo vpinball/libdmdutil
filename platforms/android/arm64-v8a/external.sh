@@ -64,6 +64,9 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
+cp -r third-party/include/lz4 ../../third-party/include/
+cp src/LZ4Stream.h ../../third-party/include/
+cp src/SceneGenerator.h ../../third-party/include/
 cp src/serum.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp build/libserum.so ../../third-party/runtime-libs/android/arm64-v8a/
