@@ -953,6 +953,8 @@ void DMD::SerumThread()
           Serum_Dispose();
           m_pSerum = nullptr;
           lastDmdUpdate = nullptr;
+          strcpy(name, "");
+          QueueBuffer();
           continue;
         }
 

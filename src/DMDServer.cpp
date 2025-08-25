@@ -266,11 +266,12 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
   // Display a buffered frame or clear the display on disconnect of the current thread.
   if (threadId == m_currentThreadId && !pStreamHeader->buffered && !m_dmd->QueueBuffer())
   {
+    m_dmd->SetRomName("");
     DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: Clear screen on disconnect", threadId);
     // Clear the DMD by sending a black screen.
     // Fixed dimension of 128x32 should be OK for all devices.
     memset(buffer, 0, 128 * 32 * 3);
-    m_dmd->UpdateRGB24Data(buffer, 128, 32);
+    m_dmd->UpdateRGB24Data(buffer, 128, 32, true);
   }
 
   m_threadMutex.lock();
