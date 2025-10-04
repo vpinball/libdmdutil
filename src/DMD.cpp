@@ -676,7 +676,7 @@ void DMD::FindDisplays()
 
           if (pConfig->IsPixelcade())
           {
-            pPixelcadeDMD = PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice(), 128, 32);
+            pPixelcadeDMD = PixelcadeDMD::Connect(pConfig->GetPixelcadeDevice());
             if (pPixelcadeDMD) m_pPixelcadeDMDThread = new std::thread(&DMD::PixelcadeDMDThread, this);
           }
 
@@ -1182,7 +1182,12 @@ void DMD::PixelcadeDMDThread()
   uint16_t segData1[128] = {0};
   uint16_t segData2[128] = {0};
   uint8_t palette[PALETTE_SIZE] = {0};
-  uint16_t rgb565Data[128 * 32] = {0};
+
+  const int targetWidth = m_pPixelcadeDMD->GetWidth();
+  const int targetHeight = m_pPixelcadeDMD->GetHeight();
+  const int targetLength = targetWidth * targetHeight;
+  uint16_t* rgb565Data = new uint16_t[targetLength];
+  memset(rgb565Data, 0, targetLength * sizeof(uint16_t));
 
   (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
@@ -1199,6 +1204,7 @@ void DMD::PixelcadeDMDThread()
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
+      delete[] rgb565Data;
       return;
     }
 
@@ -1230,36 +1236,43 @@ void DMD::PixelcadeDMDThread()
           AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPositionMod]->data, rgb24Data, length, palette,
                            m_pUpdateBufferQueue[bufferPositionMod]->depth);
 
-          uint8_t scaledBuffer[128 * 32 * 3];
-          if (width == 128 && height == 32)
-            memcpy(scaledBuffer, rgb24Data, 128 * 32 * 3);
-          else if (width == 128 && height == 16)
-            FrameUtil::Helper::Center(scaledBuffer, 128, 32, rgb24Data, 128, 16, 24);
+          uint8_t* scaledBuffer = new uint8_t[targetLength * 3];
+          if (width == targetWidth && height == targetHeight)
+            memcpy(scaledBuffer, rgb24Data, targetLength * 3);
+          else if (width == targetWidth && height == 16)
+            FrameUtil::Helper::Center(scaledBuffer, targetWidth, targetHeight, rgb24Data, targetWidth, 16, 24);
           else if (height == 64)
-            FrameUtil::Helper::ScaleDown(scaledBuffer, 128, 32, rgb24Data, width, 64, 24);
+            FrameUtil::Helper::ScaleDown(scaledBuffer, targetWidth, targetHeight, rgb24Data, width, 64, 24);
           else
             continue;
 
-          for (int i = 0; i < 128 * 32; i++)
+          //if (m_pPixelcadeDMD->GetIsV2())
+          //{
+          //  m_pPixelcadeDMD->UpdateRGB24(scaledBuffer);
+          //}
+          //else
           {
-            int pos = i * 3;
-            uint32_t r = scaledBuffer[pos];
-            uint32_t g = scaledBuffer[pos + 1];
-            uint32_t b = scaledBuffer[pos + 2];
+            for (int i = 0; i < targetLength; i++)
+            {
+              int pos = i * 3;
+              uint32_t r = scaledBuffer[pos];
+              uint32_t g = scaledBuffer[pos + 1];
+              uint32_t b = scaledBuffer[pos + 2];
 
-            rgb565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
+              rgb565Data[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
+            }
+            update = true;
           }
-          update = true;
         }
         else if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::RGB16)
         {
-          if (width == 128 && height == 32)
-            memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPositionMod]->segData, 128 * 32 * 2);
-          else if (width == 128 && height == 16)
-            FrameUtil::Helper::Center((uint8_t*)rgb565Data, 128, 32,
-                                      (uint8_t*)m_pUpdateBufferQueue[bufferPositionMod]->segData, 128, 16, 16);
+          if (width == targetWidth && height == targetHeight)
+            memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPositionMod]->segData, targetLength * 2);
+          else if (width == targetWidth && height == 16)
+            FrameUtil::Helper::Center((uint8_t*)rgb565Data, targetWidth, targetHeight,
+                                      (uint8_t*)m_pUpdateBufferQueue[bufferPositionMod]->segData, targetWidth, 16, 16);
           else if (height == 64)
-            FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, 128, 32,
+            FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, targetWidth, targetHeight,
                                          (uint8_t*)m_pUpdateBufferQueue[bufferPositionMod]->segData, width, 64, 16);
           else
             continue;
@@ -1270,9 +1283,9 @@ void DMD::PixelcadeDMDThread()
         {
           if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_32 ||
               m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_32_64)
-            memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPositionMod]->segData, 128 * 32 * 2);
+            memcpy(rgb565Data, m_pUpdateBufferQueue[bufferPositionMod]->segData, targetLength * 2);
           else if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_64)
-            FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, 128, 32,
+            FrameUtil::Helper::ScaleDown((uint8_t*)rgb565Data, targetWidth, targetHeight,
                                          (uint8_t*)m_pUpdateBufferQueue[bufferPositionMod]->segData, width, 64, 16);
           else
             continue;
@@ -1323,18 +1336,18 @@ void DMD::PixelcadeDMDThread()
           if (update)
           {
             uint8_t scaledBuffer[128 * 32];
-            if (width == 128 && height == 32)
-              memcpy(scaledBuffer, renderBuffer, 128 * 32);
-            else if (width == 128 && height == 16)
-              FrameUtil::Helper::CenterIndexed(scaledBuffer, 128, 32, renderBuffer, 128, 16);
+            if (width == targetWidth && height == targetHeight)
+              memcpy(scaledBuffer, renderBuffer, targetLength);
+            else if (width == targetWidth && height == 16)
+              FrameUtil::Helper::CenterIndexed(scaledBuffer, targetWidth, targetHeight, renderBuffer, targetWidth, 16);
             else if (width == 192 && height == 64)
-              FrameUtil::Helper::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 192, 64);
+              FrameUtil::Helper::ScaleDownIndexed(scaledBuffer, targetWidth, targetHeight, renderBuffer, 192, 64);
             else if (width == 256 && height == 64)
-              FrameUtil::Helper::ScaleDownIndexed(scaledBuffer, 128, 32, renderBuffer, 256, 64);
+              FrameUtil::Helper::ScaleDownIndexed(scaledBuffer, targetWidth, targetHeight, renderBuffer, 256, 64);
             else
               continue;
 
-            for (int i = 0; i < 128 * 32; i++)
+            for (int i = 0; i < targetLength; i++)
             {
               int pos = scaledBuffer[i] * 3;
               uint32_t r = palette[pos];
