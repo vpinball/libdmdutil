@@ -16,12 +16,13 @@
 namespace DMDUtil
 {
 
-PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap)
+PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2)
 {
   m_pSerialPort = pSerialPort;
   m_width = width;
   m_height = height;
   m_colorSwap = colorSwap;
+  m_isV2 = isV2;
   m_length = width * height;
   m_pThread = nullptr;
   m_running = false;
@@ -42,12 +43,12 @@ PixelcadeDMD::~PixelcadeDMD()
 
   while (!m_frames.empty())
   {
-    free(m_frames.front());
+    free(m_frames.front().pData);
     m_frames.pop();
   }
 }
 
-PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice)
 {
   PixelcadeDMD* pPixelcadeDMD = nullptr;
 
@@ -55,7 +56,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
   {
     Log(DMDUtil_LogLevel_INFO, "Connecting to Pixelcade on %s...", pDevice);
 
-    pPixelcadeDMD = Open(pDevice, width, height);
+    pPixelcadeDMD = Open(pDevice);
 
     if (!pPixelcadeDMD) Log(DMDUtil_LogLevel_INFO, "Unable to connect to Pixelcade on %s", pDevice);
   }
@@ -69,7 +70,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
     {
       for (int i = 0; ppPorts[i]; i++)
       {
-        pPixelcadeDMD = Open(sp_get_port_name(ppPorts[i]), width, height);
+        pPixelcadeDMD = Open(sp_get_port_name(ppPorts[i]));
         if (pPixelcadeDMD) break;
       }
       sp_free_port_list(ppPorts);
@@ -81,7 +82,7 @@ PixelcadeDMD* PixelcadeDMD::Connect(const char* pDevice, int width, int height)
   return pPixelcadeDMD;
 }
 
-PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
+PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice)
 {
   struct sp_port* pSerialPort = nullptr;
   enum sp_return result = sp_get_port_by_name(pDevice, &pSerialPort);
@@ -116,7 +117,6 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
   {
     sp_close(pSerialPort);
     sp_free_port(pSerialPort);
-    // Log(DMDUtil_LogLevel_INFO, "Pixelcade expected new connection to return 0x0, but got 0x%02d", response[0]);
     return nullptr;
   }
 
@@ -124,8 +124,6 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
   {
     sp_close(pSerialPort);
     sp_free_port(pSerialPort);
-    // Log(DMDUtil_LogLevel_INFO, "Pixelcade expected magic code to equal IOIO but got %c%c%c%c", response[1],
-    // response[2], response[3], response[4]);
     return nullptr;
   }
 
@@ -138,10 +136,34 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice, int width, int height)
   char firmware[9] = {0};
   memcpy(firmware, response + 21, 8);
 
-  Log(DMDUtil_LogLevel_INFO, "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s", pDevice,
-      hardwareId, bootloaderId, firmware);
+  int width = 128;
+  int height = 32;
+  bool isV2 = false;
+  bool colorSwap = false;
 
-  return new PixelcadeDMD(pSerialPort, width, height, (firmware[4] == 'C'));
+  if (firmware[0] == 'P' && firmware[1] != 0 && firmware[2] != 0 && firmware[3] != 0)
+  {
+    if (firmware[2] == 'X')
+    {
+      width = 128;
+      height = 32;
+    }
+    else if (firmware[2] == 'M')
+    {
+      width = 64;
+      height = 32;
+    }
+
+    isV2 = (firmware[3] == 'R');
+
+    colorSwap = (firmware[4] == 'C') && !isV2;
+  }
+
+  Log(DMDUtil_LogLevel_INFO,
+      "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s, Size=%dx%d, V2=%d, ColorSwap=%d",
+      pDevice, hardwareId, bootloaderId, firmware, width, height, isV2, colorSwap);
+
+  return new PixelcadeDMD(pSerialPort, width, height, colorSwap, isV2);
 }
 
 void PixelcadeDMD::Update(uint16_t* pData)
@@ -149,17 +171,68 @@ void PixelcadeDMD::Update(uint16_t* pData)
   uint16_t* pFrame = (uint16_t*)malloc(m_length * sizeof(uint16_t));
   memcpy(pFrame, pData, m_length * sizeof(uint16_t));
 
+  PixelcadeFrame frame;
+  frame.pData = pFrame;
+  frame.format = PixelcadeFrameFormat::RGB565;
+
   {
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_frames.push(pFrame);
+    m_frames.push(frame);
   }
+}
+
+void PixelcadeDMD::UpdateRGB24(uint8_t* pData)
+{
+  uint8_t* pFrame = (uint8_t*)malloc(m_length * 3);
+  memcpy(pFrame, pData, m_length * 3);
+
+  PixelcadeFrame frame;
+  frame.pData = pFrame;
+  frame.format = PixelcadeFrameFormat::RGB888;
+
+  {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_frames.push(frame);
+  }
+}
+
+int PixelcadeDMD::BuildFrame(uint8_t* pFrameBuffer, size_t bufferSize, uint8_t command, const uint8_t* pData,
+                             uint16_t dataLength)
+{
+  const size_t frameSize = 6 + dataLength;
+
+  if (frameSize > bufferSize || dataLength > PIXELCADE_MAX_DATA_SIZE) return -1;
+
+  uint16_t payloadLength = 1 + dataLength;
+
+  pFrameBuffer[0] = PIXELCADE_FRAME_START_MARKER;
+  pFrameBuffer[1] = PIXELCADE_FRAME_START_MARKER;
+  pFrameBuffer[2] = payloadLength & 0xFF;
+  pFrameBuffer[3] = (payloadLength >> 8) & 0xFF;
+  pFrameBuffer[4] = command;
+
+  if (dataLength > 0 && pData) memcpy(pFrameBuffer + 5, pData, dataLength);
+
+  pFrameBuffer[5 + dataLength] = PIXELCADE_FRAME_END_DELIMITER;
+
+  return frameSize;
 }
 
 void PixelcadeDMD::EnableRgbLedMatrix(int shifterLen32, int rows)
 {
-  uint8_t data[2] = {PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE,
-                     (uint8_t)((shifterLen32 & 0x0F) | ((rows == 8 ? 0 : 1) << 4))};
-  sp_blocking_write(m_pSerialPort, data, 2, 0);
+  uint8_t configData = (uint8_t)((shifterLen32 & 0x0F) | ((rows == 8 ? 0 : 1) << 4));
+
+  if (m_isV2)
+  {
+    uint8_t frame[8];
+    int frameSize = BuildFrame(frame, sizeof(frame), PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE, &configData, 1);
+    if (frameSize > 0) sp_blocking_write(m_pSerialPort, frame, frameSize, 0);
+  }
+  else
+  {
+    uint8_t data[2] = {PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE, configData};
+    sp_blocking_write(m_pSerialPort, data, 2, 0);
+  }
 }
 
 void PixelcadeDMD::Run()
@@ -172,41 +245,72 @@ void PixelcadeDMD::Run()
       [this]()
       {
         Log(DMDUtil_LogLevel_INFO, "PixelcadeDMD run thread starting");
-        EnableRgbLedMatrix(4, 16);
+
+        int shifterLen32 = m_width / 32;
+        int rows = m_height;
+        EnableRgbLedMatrix(shifterLen32, rows);
 
         int errors = 0;
         FrameUtil::ColorMatrix colorMatrix =
             (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
 
+        const int maxFrameDataSize = m_length * 3;
+        uint8_t* pFrameData = new uint8_t[maxFrameDataSize + 10];
+
         while (m_running)
         {
-          uint16_t* pFrame = nullptr;
+          PixelcadeFrame frame;
+          frame.pData = nullptr;
 
           {
             std::lock_guard<std::mutex> lock(m_mutex);
             if (!m_frames.empty())
             {
-              pFrame = m_frames.front();
+              frame = m_frames.front();
               m_frames.pop();
             }
 
             while (m_frames.size() > PIXELCADE_MAX_QUEUE_FRAMES)
             {
-              free(m_frames.front());
+              free(m_frames.front().pData);
               m_frames.pop();
             }
           }
 
-          if (pFrame)
+          if (frame.pData)
           {
-            uint8_t planes[128 * 32 * 3 / 2];
-            FrameUtil::Helper::SplitIntoRgbPlanes(pFrame, 128 * 32, 128, 16, (uint8_t*)planes, colorMatrix);
+            int payloadSize = 0;
+            uint8_t command = 0;
+            enum sp_return response = SP_ERR_FAIL;
 
-            static uint8_t command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
-            sp_blocking_write(m_pSerialPort, &command, 1, PIXELCADE_COMMAND_WRITE_TIMEOUT);
+            if (m_isV2)
+            {
+              if (frame.format == PixelcadeFrameFormat::RGB565)
+              {
+                command = PIXELCADE_COMMAND_RGB565;
+                payloadSize = m_length * 2;
+                memcpy(pFrameData + 5, frame.pData, payloadSize);
+              }
+              else if (frame.format == PixelcadeFrameFormat::RGB888)
+              {
+                command = PIXELCADE_COMMAND_RGB888;
+                payloadSize = m_length * 3;
+                memcpy(pFrameData + 5, frame.pData, payloadSize);
+              }
 
-            enum sp_return response =
-                sp_blocking_write(m_pSerialPort, planes, 128 * 32 * 3 / 2, PIXELCADE_COMMAND_WRITE_TIMEOUT);
+              int frameSize = BuildFrame(pFrameData, maxFrameDataSize + 10, command, pFrameData + 5, payloadSize);
+              if (frameSize > 0)
+                response = sp_blocking_write(m_pSerialPort, pFrameData, frameSize, PIXELCADE_COMMAND_WRITE_TIMEOUT);
+            }
+            else
+            {
+              command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
+              payloadSize = m_length * 3 / 2;
+              pFrameData[0] = command;
+              FrameUtil::Helper::SplitIntoRgbPlanes((uint16_t*)frame.pData, m_length, m_width, rows / 2,
+                                                     pFrameData + 1, colorMatrix);
+              response = sp_blocking_write(m_pSerialPort, pFrameData, 1 + payloadSize, PIXELCADE_COMMAND_WRITE_TIMEOUT);
+            }
 
             if (response > 0)
             {
@@ -232,10 +336,14 @@ void PixelcadeDMD::Run()
               sp_free_error_message(pMessage);
               m_running = false;
             }
+
+            free(frame.pData);
           }
           else
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
+
+        delete[] pFrameData;
 
         sp_flush(m_pSerialPort, SP_BUF_BOTH);
 
