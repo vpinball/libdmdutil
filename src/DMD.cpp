@@ -1246,7 +1246,7 @@ void DMD::PixelcadeDMDThread()
           else
             continue;
 
-          if (m_pPixelcadeDMD->GetIsV23())
+          if (m_pPixelcadeDMD->GetIsV2())
           {
             m_pPixelcadeDMD->UpdateRGB24(scaledBuffer);
           }
@@ -1263,6 +1263,8 @@ void DMD::PixelcadeDMDThread()
             }
             update = true;
           }
+
+          delete[] scaledBuffer;
         }
         else if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::RGB16)
         {
@@ -1277,23 +1279,7 @@ void DMD::PixelcadeDMDThread()
           else
             continue;
 
-          if (m_pPixelcadeDMD->GetIsV23())
-          {
-            uint8_t* rgb24Data = new uint8_t[targetLength * 3];
-            for (int i = 0; i < targetLength; i++)
-            {
-              uint16_t pixel = rgb565Data[i];
-              rgb24Data[i * 3] = (pixel >> 8) & 0xF8;       // Red
-              rgb24Data[i * 3 + 1] = (pixel >> 3) & 0xFC;   // Green
-              rgb24Data[i * 3 + 2] = (pixel << 3) & 0xF8;   // Blue
-            }
-            m_pPixelcadeDMD->UpdateRGB24(rgb24Data);
-            delete[] rgb24Data;
-          }
-          else
-          {
-            update = true;
-          }
+          update = true;
         }
         else if (IsSerumV2Mode(m_pUpdateBufferQueue[bufferPositionMod]->mode))
         {
@@ -1375,26 +1361,7 @@ void DMD::PixelcadeDMDThread()
           }
         }
 
-        if (update)
-        {
-          if (m_pPixelcadeDMD->GetIsV23())
-          {
-            uint8_t* rgb24Data = new uint8_t[targetLength * 3];
-            for (int i = 0; i < targetLength; i++)
-            {
-              uint16_t pixel = rgb565Data[i];
-              rgb24Data[i * 3] = (pixel >> 8) & 0xF8;       // Red
-              rgb24Data[i * 3 + 1] = (pixel >> 3) & 0xFC;   // Green
-              rgb24Data[i * 3 + 2] = (pixel << 3) & 0xF8;   // Blue
-            }
-            m_pPixelcadeDMD->UpdateRGB24(rgb24Data);
-            delete[] rgb24Data;
-          }
-          else
-          {
-            m_pPixelcadeDMD->Update(rgb565Data);
-          }
-        }
+        if (update) m_pPixelcadeDMD->Update(rgb565Data);
       }
     }
   }
