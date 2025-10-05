@@ -46,7 +46,7 @@ struct PixelcadeFrame
 class PixelcadeDMD
 {
  public:
-  PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2, bool isV23);
+  PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2, int firmwareVersion);
   ~PixelcadeDMD();
 
   static PixelcadeDMD* Connect(const char* pDevice = nullptr);
@@ -56,7 +56,7 @@ class PixelcadeDMD
   int GetWidth() const { return m_width; }
   int GetHeight() const { return m_height; }
   bool GetIsV2() const { return m_isV2; }
-  bool GetIsV23() const { return m_isV23; }
+  int GetFirmwareVersion() const { return m_firmwareVersion; }
 
  private:
   static PixelcadeDMD* Open(const char* pDevice);
@@ -71,7 +71,7 @@ class PixelcadeDMD
   int m_height;
   bool m_colorSwap;
   bool m_isV2;
-  bool m_isV23;
+  int m_firmwareVersion;
   int m_length;
 
   std::thread* m_pThread;

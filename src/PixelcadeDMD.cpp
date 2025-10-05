@@ -16,14 +16,15 @@
 namespace DMDUtil
 {
 
-PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2, bool isV23)
+PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2,
+                           int firmwareVersion)
 {
   m_pSerialPort = pSerialPort;
   m_width = width;
   m_height = height;
   m_colorSwap = colorSwap;
   m_isV2 = isV2;
-  m_isV23 = isV23;
+  m_firmwareVersion = firmwareVersion;
   m_length = width * height;
   m_pThread = nullptr;
   m_running = false;
@@ -140,7 +141,7 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice)
   int width = 128;
   int height = 32;
   bool isV2 = false;
-  bool isV23 = false;
+  int firmwareVersion = 0;
   bool colorSwap = false;
 
   if (firmware[0] == 'P' && firmware[1] != 0 && firmware[2] != 0 && firmware[3] != 0)
@@ -160,19 +161,18 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice)
 
     if (firmware[6] != 0 && firmware[7] != 0)
     {
-      int version = (firmware[6] - '0') * 10 + (firmware[7] - '0');
-      isV23 = (version >= 23);
+      firmwareVersion = (firmware[6] - '0') * 10 + (firmware[7] - '0');
     }
 
     colorSwap = (firmware[4] == 'C') && !isV2;
   }
 
   Log(DMDUtil_LogLevel_INFO,
-      "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s, Size=%dx%d, V2=%d, V23=%d, "
+      "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s, Size=%dx%d, V2=%d, FW=%d, "
       "ColorSwap=%d",
-      pDevice, hardwareId, bootloaderId, firmware, width, height, isV2, isV23, colorSwap);
+      pDevice, hardwareId, bootloaderId, firmware, width, height, isV2, firmwareVersion, colorSwap);
 
-  return new PixelcadeDMD(pSerialPort, width, height, colorSwap, isV2, isV23);
+  return new PixelcadeDMD(pSerialPort, width, height, colorSwap, isV2, firmwareVersion);
 }
 
 void PixelcadeDMD::Update(uint16_t* pData)
@@ -247,11 +247,12 @@ void PixelcadeDMD::EnableRgbLedMatrix(int shifterLen32, int rows)
 
   if (m_isV2)
   {
-    uint8_t command = m_isV23 ? PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 : PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE;
+    uint8_t command =
+        (m_firmwareVersion >= 23) ? PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 : PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE;
     uint8_t frame[8];
     int frameSize;
 
-    if (m_isV23)
+    if (m_firmwareVersion >= 23)
     {
       frameSize = BuildFrame(frame, sizeof(frame), command, &configData, 1);
     }
@@ -280,7 +281,7 @@ void PixelcadeDMD::Run()
       {
         Log(DMDUtil_LogLevel_INFO, "PixelcadeDMD run thread starting");
 
-        if (m_isV23)
+        if (m_firmwareVersion >= 23)
         {
           uint8_t initCmd = PIXELCADE_COMMAND_V23_INIT;
           sp_blocking_write(m_pSerialPort, &initCmd, 1, 0);
@@ -337,7 +338,7 @@ void PixelcadeDMD::Run()
               }
 
               int frameSize;
-              if (m_isV23)
+              if (m_firmwareVersion >= 23)
               {
                 memcpy(pFrameData + 5, frame.pData, payloadSize);
                 frameSize = BuildFrame(pFrameData, maxFrameDataSize + 10, command, pFrameData + 5, payloadSize);
