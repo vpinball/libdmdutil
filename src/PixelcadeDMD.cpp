@@ -16,13 +16,14 @@
 namespace DMDUtil
 {
 
-PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2)
+PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2, bool isV23)
 {
   m_pSerialPort = pSerialPort;
   m_width = width;
   m_height = height;
   m_colorSwap = colorSwap;
   m_isV2 = isV2;
+  m_isV23 = isV23;
   m_length = width * height;
   m_pThread = nullptr;
   m_running = false;
@@ -139,6 +140,7 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice)
   int width = 128;
   int height = 32;
   bool isV2 = false;
+  bool isV23 = false;
   bool colorSwap = false;
 
   if (firmware[0] == 'P' && firmware[1] != 0 && firmware[2] != 0 && firmware[3] != 0)
@@ -156,14 +158,21 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice)
 
     isV2 = (firmware[3] == 'R');
 
+    if (firmware[6] != 0 && firmware[7] != 0)
+    {
+      int version = (firmware[6] - '0') * 10 + (firmware[7] - '0');
+      isV23 = (version >= 23);
+    }
+
     colorSwap = (firmware[4] == 'C') && !isV2;
   }
 
   Log(DMDUtil_LogLevel_INFO,
-      "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s, Size=%dx%d, V2=%d, ColorSwap=%d",
-      pDevice, hardwareId, bootloaderId, firmware, width, height, isV2, colorSwap);
+      "Pixelcade found: device=%s, Hardware ID=%s, Bootloader ID=%s, Firmware=%s, Size=%dx%d, V2=%d, V23=%d, "
+      "ColorSwap=%d",
+      pDevice, hardwareId, bootloaderId, firmware, width, height, isV2, isV23, colorSwap);
 
-  return new PixelcadeDMD(pSerialPort, width, height, colorSwap, isV2);
+  return new PixelcadeDMD(pSerialPort, width, height, colorSwap, isV2, isV23);
 }
 
 void PixelcadeDMD::Update(uint16_t* pData)
@@ -218,14 +227,39 @@ int PixelcadeDMD::BuildFrame(uint8_t* pFrameBuffer, size_t bufferSize, uint8_t c
   return frameSize;
 }
 
+int PixelcadeDMD::BuildRawCommand(uint8_t* pFrameBuffer, size_t bufferSize, uint8_t command, const uint8_t* pData,
+                                  uint16_t dataLength)
+{
+  const size_t commandSize = 1 + dataLength;
+
+  if (commandSize > bufferSize || dataLength > PIXELCADE_MAX_DATA_SIZE) return -1;
+
+  pFrameBuffer[0] = command;
+
+  if (dataLength > 0 && pData) memcpy(pFrameBuffer + 1, pData, dataLength);
+
+  return commandSize;
+}
+
 void PixelcadeDMD::EnableRgbLedMatrix(int shifterLen32, int rows)
 {
   uint8_t configData = (uint8_t)((shifterLen32 & 0x0F) | ((rows == 8 ? 0 : 1) << 4));
 
   if (m_isV2)
   {
+    uint8_t command = m_isV23 ? PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 : PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE;
     uint8_t frame[8];
-    int frameSize = BuildFrame(frame, sizeof(frame), PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE, &configData, 1);
+    int frameSize;
+
+    if (m_isV23)
+    {
+      frameSize = BuildFrame(frame, sizeof(frame), command, &configData, 1);
+    }
+    else
+    {
+      frameSize = BuildRawCommand(frame, sizeof(frame), command, &configData, 1);
+    }
+
     if (frameSize > 0) sp_blocking_write(m_pSerialPort, frame, frameSize, 0);
   }
   else
@@ -245,6 +279,12 @@ void PixelcadeDMD::Run()
       [this]()
       {
         Log(DMDUtil_LogLevel_INFO, "PixelcadeDMD run thread starting");
+
+        if (m_isV23)
+        {
+          uint8_t initCmd = PIXELCADE_COMMAND_V23_INIT;
+          sp_blocking_write(m_pSerialPort, &initCmd, 1, 0);
+        }
 
         int shifterLen32 = m_width / 32;
         int rows = m_height;
@@ -289,16 +329,25 @@ void PixelcadeDMD::Run()
               {
                 command = PIXELCADE_COMMAND_RGB565;
                 payloadSize = m_length * 2;
-                memcpy(pFrameData + 5, frame.pData, payloadSize);
               }
               else if (frame.format == PixelcadeFrameFormat::RGB888)
               {
                 command = PIXELCADE_COMMAND_RGB888;
                 payloadSize = m_length * 3;
-                memcpy(pFrameData + 5, frame.pData, payloadSize);
               }
 
-              int frameSize = BuildFrame(pFrameData, maxFrameDataSize + 10, command, pFrameData + 5, payloadSize);
+              int frameSize;
+              if (m_isV23)
+              {
+                memcpy(pFrameData + 5, frame.pData, payloadSize);
+                frameSize = BuildFrame(pFrameData, maxFrameDataSize + 10, command, pFrameData + 5, payloadSize);
+              }
+              else
+              {
+                memcpy(pFrameData + 1, frame.pData, payloadSize);
+                frameSize = BuildRawCommand(pFrameData, maxFrameDataSize + 10, command, pFrameData + 1, payloadSize);
+              }
+
               if (frameSize > 0)
                 response = sp_blocking_write(m_pSerialPort, pFrameData, frameSize, PIXELCADE_COMMAND_WRITE_TIMEOUT);
             }
