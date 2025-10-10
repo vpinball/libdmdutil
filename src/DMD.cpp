@@ -1014,7 +1014,7 @@ void DMD::SerumThread()
           {
             uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[bufferPositionMod]->data);
 
-            if (result != IDENTIFY_NO_FRAME)
+            if (result != IDENTIFY_NO_FRAME && result != IDENTIFY_SAME_FRAME)
             {
               // Log(DMDUtil_LogLevel_DEBUG, "Serum: frameID=%lu, rotation=%lu, flags=%lu", m_pSerum->frameID,
               // m_pSerum->rotationtimer, m_pSerum->flags);
@@ -1024,7 +1024,11 @@ void DMD::SerumThread()
               QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
 
               if (result > 0 && ((result & 0xffff) < 2048))
+              {
                 nextRotation = now + m_pSerum->rotationtimer;
+                if (result & 0x40000) Log(DMDUtil_LogLevel_DEBUG, "Serum: starting scene rotation, timer=%lu",
+                                          m_pSerum->rotationtimer);
+              }
               else
                 nextRotation = 0;
 
@@ -1058,11 +1062,11 @@ void DMD::SerumThread()
 
       if (m_pSerum)
       {
-        if (nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate && now > nextRotation)
+        if (nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate && now >= nextRotation)
         {
           uint32_t result = Serum_Rotate();
 
-          // Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
+          Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
 
           QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
 
