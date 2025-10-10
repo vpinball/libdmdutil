@@ -1,7 +1,7 @@
 #pragma once
 
 #define DMDUTIL_VERSION_MAJOR 0   // X Digits
-#define DMDUTIL_VERSION_MINOR 10  // Max 2 Digits
+#define DMDUTIL_VERSION_MINOR 11  // Max 2 Digits
 #define DMDUTIL_VERSION_PATCH 0   // Max 2 Digits
 
 #define _DMDUTIL_STR(x) #x
