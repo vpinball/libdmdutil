@@ -35,6 +35,14 @@
 namespace DMDUtil
 {
 
+void SERUM_CALLBACK Serum_LogCallback(const char* format, va_list args, const void* pUserData)
+{
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+
+  Log(DMDUtil_LogLevel_INFO, "%s", buffer);
+}
+
 void PUPDMDCALLBACK PUPDMDLogCallback(const char* format, va_list args, const void* pUserData)
 {
   char buffer[1024];
@@ -887,6 +895,8 @@ void DMD::SerumThread()
 {
   if (Config::GetInstance()->IsAltColor())
   {
+    Serum_SetLogCallback(Serum_LogCallback, nullptr);
+
     uint16_t bufferPosition = 0;
     uint32_t prevTriggerId = 0;
     char name[DMDUTIL_MAX_NAME_SIZE] = {0};
@@ -1026,8 +1036,8 @@ void DMD::SerumThread()
               if (result > 0 && ((result & 0xffff) < 2048))
               {
                 nextRotation = now + m_pSerum->rotationtimer;
-                if (result & 0x40000) Log(DMDUtil_LogLevel_DEBUG, "Serum: starting scene rotation, timer=%lu",
-                                          m_pSerum->rotationtimer);
+                if (result & 0x40000)
+                  Log(DMDUtil_LogLevel_DEBUG, "Serum: starting scene rotation, timer=%lu", m_pSerum->rotationtimer);
               }
               else
                 nextRotation = 0;
