@@ -24,7 +24,7 @@ mv libzedmd-${LIBZEDMD_SHA} libzedmd
 cd libzedmd
 BUILD_TYPE=${BUILD_TYPE} platforms/win/x64/external.sh
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
@@ -57,7 +57,7 @@ tar xzf libserum-${LIBSERUM_SHA}.tar.gz
 mv libserum_concentrate-${LIBSERUM_SHA} libserum
 cd libserum
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
@@ -82,7 +82,7 @@ tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
 mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
 cd libpupdmd
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
