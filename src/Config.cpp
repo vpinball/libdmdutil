@@ -177,7 +177,7 @@ void Config::parseConfigFile(const char* path)
 
   try
   {
-    SetZeDMDBWidth(r.Get<int>("ZeDMD", "Width", 128));
+    SetZeDMDWidth(r.Get<int>("ZeDMD", "Width", 128));
   }
   catch (const std::exception&)
   {
