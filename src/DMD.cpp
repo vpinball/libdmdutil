@@ -619,8 +619,9 @@ void DMD::FindDisplays()
 
           bool openSerial = false;
           bool openWiFi = false;
+          bool openSpi = false;
 
-          if (pConfig->IsZeDMD() || pConfig->IsZeDMDWiFiEnabled())
+          if (pConfig->IsZeDMD() || pConfig->IsZeDMDWiFiEnabled() || pConfig->IsZeDMDSpiEnabled())
           {
             pZeDMD = new ZeDMD();
             pZeDMD->SetLogCallback(ZeDMDLogCallback, nullptr);
@@ -655,7 +656,15 @@ void DMD::FindDisplays()
             }
           }
 
-          if (openSerial || openWiFi)
+          if (pConfig->IsZeDMDSpiEnabled())
+          {
+            if ((openSpi = pZeDMD->OpenSpi(pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
+            {
+              if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
+            }
+          }
+
+          if (openSerial || openWiFi || openSpi)
           {
             if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
             pZeDMD->EnableUpscaling();

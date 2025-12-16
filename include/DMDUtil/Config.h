@@ -76,6 +76,12 @@ class DMDUTILAPI Config
   void SetZeDMDWiFiEnabled(bool WiFiEnabled) { m_zedmdWiFiEnabled = WiFiEnabled; }
   const char* GetZeDMDWiFiAddr() const { return m_zedmdWiFiAddr.c_str(); }
   void SetZeDMDWiFiAddr(const char* ipaddr) { m_zedmdWiFiAddr = ipaddr; }
+  bool IsZeDMDSpiEnabled() const { return m_zedmdSpiEnabled; }
+  void SetZeDMDSpiEnabled(bool SpiEnabled) { m_zedmdSpiEnabled = SpiEnabled; }
+  int GetZeDMDWidth() const { return m_zedmdWitdth; }
+  void SetZeDMDWidth(int width) { m_zedmdWidth = width; }
+  int GetZeDMDHeight() const { return m_zedmdHeight; }
+  void SetZeDMDHeight(int height) { m_zedmdHeight = height; }
   bool IsPixelcade() const { return m_pixelcade; }
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
@@ -127,6 +133,9 @@ class DMDUTILAPI Config
   int m_zedmdBrightness;
   bool m_zedmdWiFiEnabled;
   std::string m_zedmdWiFiAddr;
+  bool m_zedmdSpiEnabled;
+  int m_zedmdWidth;
+  int m_zedmdHeight;
   bool m_dmdServer;
   bool m_localDisplaysActive;
   std::string m_dmdServerAddr;
