@@ -661,7 +661,7 @@ void DMD::FindDisplays()
             if ((openSpi =
                      pZeDMD->OpenSpi(pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
             {
-              Log(DMDUtil_LogLevel_DEBUG, "ZeDMD SPI: speed=%d, width=%d, height=%d", pConfig->GetZeDMDSpiSpeed(),
+              Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: speed=%d, width=%d, height=%d", pConfig->GetZeDMDSpiSpeed(),
                   pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight());
             }
           }
