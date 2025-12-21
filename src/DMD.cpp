@@ -658,7 +658,7 @@ void DMD::FindDisplays()
 
           if (pConfig->IsZeDMDSpiEnabled())
           {
-            if ((openSpi = pZeDMD->OpenSpi(pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
+            if ((openSpi = pZeDMD->OpenSpi(pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
             {
               if (pConfig->GetZeDMDBrightness() != -1) pZeDMD->SetBrightness(pConfig->GetZeDMDBrightness());
             }
@@ -817,7 +817,7 @@ void DMD::ZeDMDThread()
           m_pZeDMD->SetFrameSize(width, height);
         }
 
-        Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render frame buffer position %d at real buffer postion %d", bufferPosition,
+        Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render frame buffer position %d at real buffer position %d", bufferPosition,
             bufferPositionMod);
 
         bool update = false;

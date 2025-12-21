@@ -177,6 +177,15 @@ void Config::parseConfigFile(const char* path)
 
   try
   {
+    SetZeDMDSpiSpeed(r.Get<int>("ZeDMD-SPI", "Speed", 24000000));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDSpiSpeed(24000000);
+  }
+
+  try
+  {
     SetZeDMDWidth(r.Get<int>("ZeDMD-SPI", "Width", 128));
   }
   catch (const std::exception&)

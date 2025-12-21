@@ -78,6 +78,8 @@ class DMDUTILAPI Config
   void SetZeDMDWiFiAddr(const char* ipaddr) { m_zedmdWiFiAddr = ipaddr; }
   bool IsZeDMDSpiEnabled() const { return m_zedmdSpiEnabled; }
   void SetZeDMDSpiEnabled(bool SpiEnabled) { m_zedmdSpiEnabled = SpiEnabled; }
+  int GetZeDMDSpiSpeed() const { return m_zedmdSpiSpeed; }
+  void SetZeDMDSpiSpeed(int speed) { m_zedmdSpiSpeed = speed; }
   int GetZeDMDWidth() const { return m_zedmdWidth; }
   void SetZeDMDWidth(int width) { m_zedmdWidth = width; }
   int GetZeDMDHeight() const { return m_zedmdHeight; }
@@ -134,6 +136,7 @@ class DMDUTILAPI Config
   bool m_zedmdWiFiEnabled;
   std::string m_zedmdWiFiAddr;
   bool m_zedmdSpiEnabled;
+  int m_zedmdSpiSpeed;
   int m_zedmdWidth;
   int m_zedmdHeight;
   bool m_dmdServer;
