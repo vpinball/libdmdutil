@@ -805,7 +805,18 @@ void DMD::ZeDMDThread()
     const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
-      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+      uint16_t nextBufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+      if (nextBufferPosition > bufferPosition && (nextBufferPosition - bufferPosition) > 1)
+      {
+        Log(DMDUtil_LogLevel_WARNING, "ZeDMD: Skipping %d frame(s) from position %d to %d",
+            nextBufferPosition - bufferPosition - 1, bufferPosition, nextBufferPosition);
+      }
+      else if (nextBufferPosition < bufferPosition && (65535 - bufferPosition + nextBufferPosition) > 1)
+      {
+        Log(DMDUtil_LogLevel_WARNING, "ZeDMD: Skipping frames from position %d to %d (overflow)",
+            bufferPosition, nextBufferPosition);
+      }
+      bufferPosition = nextBufferPosition;
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
       if (m_pSerum &&
