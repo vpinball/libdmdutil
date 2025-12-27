@@ -658,11 +658,17 @@ void DMD::FindDisplays()
 
           if (pConfig->IsZeDMDSpiEnabled())
           {
+            Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: try to open with speed=%d, width=%d, height=%d",
+                pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight());
             if ((openSpi =
                      pZeDMD->OpenSpi(pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
             {
               Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: speed=%d, width=%d, height=%d", pConfig->GetZeDMDSpiSpeed(),
-                  pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight());
+                  pZeDMD->GetWidth, pZeDMD->GetHeight());
+            }
+            else
+            {
+              Log(DMDUtil_LogLevel_ERROR, "ZeDMD SPI failed");
             }
           }
 
@@ -718,7 +724,12 @@ uint16_t DMD::GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t
   }
   else if (bufferPosition > updateBufferQueuePosition)  // updateBufferQueuePosition crossed the overflow point
   {
-    return 0;  // Reset to 0 if we crossed the overflow point, this is good enough
+    if ((65535 - bufferPosition + updateBufferQueuePosition) > DMDUTIL_MAX_FRAMES_BEHIND)
+      // Too many frames behind, skip a lot, if the result is negative, it's fine, it
+      // will wrap around
+      return updateBufferQueuePosition - DMDUTIL_MIN_FRAMES_BEHIND;
+    else if ((65535 - bufferPosition + updateBufferQueuePosition) > (DMDUTIL_MAX_FRAMES_BEHIND / 2))
+      return ++bufferPosition;  // Skip one frame to avoid too many frames behind
   }
 
   return bufferPosition;
