@@ -808,12 +808,12 @@ void DMD::ZeDMDThread()
       uint16_t nextBufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
       if (nextBufferPosition > bufferPosition && (nextBufferPosition - bufferPosition) > 1)
       {
-        Log(DMDUtil_LogLevel_WARNING, "ZeDMD: Skipping %d frame(s) from position %d to %d",
+        Log(DMDUtil_LogLevel_INFO, "ZeDMD: Skipping %d frame(s) from position %d to %d",
             nextBufferPosition - bufferPosition - 1, bufferPosition, nextBufferPosition);
       }
       else if (nextBufferPosition < bufferPosition && (65535 - bufferPosition + nextBufferPosition) > 1)
       {
-        Log(DMDUtil_LogLevel_WARNING, "ZeDMD: Skipping frames from position %d to %d (overflow)",
+        Log(DMDUtil_LogLevel_INFO, "ZeDMD: Skipping frames from position %d to %d (overflow)",
             bufferPosition, nextBufferPosition);
       }
       bufferPosition = nextBufferPosition;
