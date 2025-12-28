@@ -676,6 +676,7 @@ void DMD::FindDisplays()
           {
             if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
             pZeDMD->EnableUpscaling();
+            pZeDMD->EnableVerbose();
             m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
           }
           else
