@@ -676,9 +676,12 @@ void DMD::FindDisplays()
 
           if (openSerial || openWiFi || openSpi)
           {
-            if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
+            if (pConfig->IsZeDMDDebug())
+            {
+              pZeDMD->EnableDebug();
+              pZeDMD->EnableVerbose();
+            }
             pZeDMD->EnableUpscaling();
-            pZeDMD->EnableVerbose();
             m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
           }
           else
