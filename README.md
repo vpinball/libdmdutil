@@ -193,6 +193,17 @@ Enabled = 0
 # Enter your ZeDMD WiFi IP address here
 WiFiAddr =
 
+[ZeDMD-SPI]
+# Set to 1 if ZeDMD-SPI is available.
+Enabled = 0
+# Frequency in hz
+Speed = 72000000
+# Forced pause between frames in microseconds
+FramePause = 2
+# Enter your panel layout as it is not detected automatically via SPI
+Width = 128
+Height = 32
+
 [Pixelcade]
 # Set to 1 if Pixelcade is attached
 Enabled = 1

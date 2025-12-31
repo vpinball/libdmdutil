@@ -658,13 +658,15 @@ void DMD::FindDisplays()
 
           if (pConfig->IsZeDMDSpiEnabled())
           {
-            Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: try to open with speed=%d, width=%d, height=%d",
-                pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight());
-            if ((openSpi =
-                     pZeDMD->OpenSpi(pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
+            Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: try to open with speed=%d, framePause=%d, width=%d, height=%d",
+                pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(), pConfig->GetZeDMDWidth(),
+                pConfig->GetZeDMDHeight());
+            if ((openSpi = pZeDMD->OpenSpi(pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(),
+                                           pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
             {
-              Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: speed=%d, width=%d, height=%d", pConfig->GetZeDMDSpiSpeed(),
-                  pZeDMD->GetWidth(), pZeDMD->GetHeight());
+              Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: speed=%d, framePause=%d, width=%d, height=%d",
+                  pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(), pZeDMD->GetWidth(),
+                  pZeDMD->GetHeight());
             }
             else
             {
@@ -814,8 +816,8 @@ void DMD::ZeDMDThread()
       }
       else if (nextBufferPosition < bufferPosition && (65535 - bufferPosition + nextBufferPosition) > 1)
       {
-        Log(DMDUtil_LogLevel_INFO, "ZeDMD: Skipping frames from position %d to %d (overflow)",
-            bufferPosition, nextBufferPosition);
+        Log(DMDUtil_LogLevel_INFO, "ZeDMD: Skipping frames from position %d to %d (overflow)", bufferPosition,
+            nextBufferPosition);
       }
       bufferPosition = nextBufferPosition;
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
