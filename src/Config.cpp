@@ -166,6 +166,51 @@ void Config::parseConfigFile(const char* path)
     SetZeDMDWiFiAddr("");
   }
 
+  try
+  {
+    SetZeDMDSpiEnabled(r.Get<bool>("ZeDMD-SPI", "Enabled", false));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDSpiEnabled(false);
+  }
+
+  try
+  {
+    SetZeDMDSpiSpeed(r.Get<int>("ZeDMD-SPI", "Speed", 72000000));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDSpiSpeed(72000000);
+  }
+
+  try
+  {
+    SetZeDMDSpiFramePause(r.Get<int>("ZeDMD-SPI", "FramePause", 2));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDSpiFramePause(2);
+  }
+
+  try
+  {
+    SetZeDMDWidth(r.Get<int>("ZeDMD-SPI", "Width", 128));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDWidth(128);
+  }
+
+  try
+  {
+    SetZeDMDHeight(r.Get<int>("ZeDMD-SPI", "Height", 32));
+  }
+  catch (const std::exception&)
+  {
+    SetZeDMDHeight(32);
+  }
+
   // Pixelcade
   try
   {

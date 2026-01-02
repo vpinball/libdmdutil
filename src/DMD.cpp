@@ -619,8 +619,9 @@ void DMD::FindDisplays()
 
           bool openSerial = false;
           bool openWiFi = false;
+          bool openSpi = false;
 
-          if (pConfig->IsZeDMD() || pConfig->IsZeDMDWiFiEnabled())
+          if (pConfig->IsZeDMD() || pConfig->IsZeDMDWiFiEnabled() || pConfig->IsZeDMDSpiEnabled())
           {
             pZeDMD = new ZeDMD();
             pZeDMD->SetLogCallback(ZeDMDLogCallback, nullptr);
@@ -655,9 +656,31 @@ void DMD::FindDisplays()
             }
           }
 
-          if (openSerial || openWiFi)
+          if (pConfig->IsZeDMDSpiEnabled())
           {
-            if (pConfig->IsZeDMDDebug()) pZeDMD->EnableDebug();
+            Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: try to open with speed=%d, framePause=%d, width=%d, height=%d",
+                pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(), pConfig->GetZeDMDWidth(),
+                pConfig->GetZeDMDHeight());
+            if ((openSpi = pZeDMD->OpenSpi(pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(),
+                                           pConfig->GetZeDMDWidth(), pConfig->GetZeDMDHeight())))
+            {
+              Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: speed=%d, framePause=%d, width=%d, height=%d",
+                  pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(), pZeDMD->GetWidth(),
+                  pZeDMD->GetHeight());
+            }
+            else
+            {
+              Log(DMDUtil_LogLevel_ERROR, "ZeDMD SPI failed");
+            }
+          }
+
+          if (openSerial || openWiFi || openSpi)
+          {
+            if (pConfig->IsZeDMDDebug())
+            {
+              pZeDMD->EnableDebug();
+              pZeDMD->EnableVerbose();
+            }
             pZeDMD->EnableUpscaling();
             m_pZeDMDThread = new std::thread(&DMD::ZeDMDThread, this);
           }
@@ -707,7 +730,12 @@ uint16_t DMD::GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t
   }
   else if (bufferPosition > updateBufferQueuePosition)  // updateBufferQueuePosition crossed the overflow point
   {
-    return 0;  // Reset to 0 if we crossed the overflow point, this is good enough
+    if ((65535 - bufferPosition + updateBufferQueuePosition) > DMDUTIL_MAX_FRAMES_BEHIND)
+      // Too many frames behind, skip a lot, if the result is negative, it's fine, it
+      // will wrap around
+      return updateBufferQueuePosition - DMDUTIL_MIN_FRAMES_BEHIND;
+    else if ((65535 - bufferPosition + updateBufferQueuePosition) > (DMDUTIL_MAX_FRAMES_BEHIND / 2))
+      return ++bufferPosition;  // Skip one frame to avoid too many frames behind
   }
 
   return bufferPosition;
@@ -783,7 +811,18 @@ void DMD::ZeDMDThread()
     const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
     while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
     {
-      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+      uint16_t nextBufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+      if (nextBufferPosition > bufferPosition && (nextBufferPosition - bufferPosition) > 1)
+      {
+        Log(DMDUtil_LogLevel_INFO, "ZeDMD: Skipping %d frame(s) from position %d to %d",
+            nextBufferPosition - bufferPosition - 1, bufferPosition, nextBufferPosition);
+      }
+      else if (nextBufferPosition < bufferPosition && (65535 - bufferPosition + nextBufferPosition) > 1)
+      {
+        Log(DMDUtil_LogLevel_INFO, "ZeDMD: Skipping frames from position %d to %d (overflow)", bufferPosition,
+            nextBufferPosition);
+      }
+      bufferPosition = nextBufferPosition;
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
       if (m_pSerum &&
@@ -808,7 +847,7 @@ void DMD::ZeDMDThread()
           m_pZeDMD->SetFrameSize(width, height);
         }
 
-        Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render frame buffer position %d at real buffer postion %d", bufferPosition,
+        Log(DMDUtil_LogLevel_DEBUG, "ZeDMD: Render frame buffer position %d at real buffer position %d", bufferPosition,
             bufferPositionMod);
 
         bool update = false;
