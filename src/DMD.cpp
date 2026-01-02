@@ -30,7 +30,7 @@
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
-#include "TimeUtil.h"
+#include "TimeUtils.h"
 #include "sockpp/tcp_connector.h"
 
 namespace DMDUtil
