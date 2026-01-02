@@ -2,7 +2,7 @@
 
 A cross platform library for performing DMD tasks.
 
-This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/zesinger/libserum), outputing to [ZeDMD](https://github.com/ppuc/zedmd) and [Pixelcade](https://pixelcade.org) devices, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
+This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/PPUC/libserum), outputing to [ZeDMD](https://github.com/PPUC/zedmd) and [Pixelcade](https://pixelcade.org) devices, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
 
 ## Usage:
 
@@ -213,7 +213,7 @@ Device =
 
 ## Serum PUP Scenes Generator
 
-Serum PUP Scenes are a new feature of libserum_concentrate.
+Serum PUP Scenes are a new feature of libserum.
 Such scenes base on a defined number of fake frames at a given frame rate.
 These frames can be added to the ROM's original frames or overlay some original frames.
 The purpose is to add new animations or to replace existing frames with smoother aniations.
