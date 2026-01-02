@@ -23,12 +23,12 @@
 
 ## libserum
 
-- Upstream: https://github.com/zesinger/libserum
+- Upstream: https://github.com/PPUC/libserum
 - License: GPL-2.0 license
 
 ## libpupdmd
 
-- Upstream: https://github.com/ppuc/libpupdmd
+- Upstream: https://github.com/PPUC/libpupdmd
 - License: GPL-3.0 license
 
 ## libframeutil

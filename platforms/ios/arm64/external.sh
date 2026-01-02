@@ -46,9 +46,9 @@ cd ..
 # build libserum and copy to external
 #
 
-curl -sL https://github.com/PPUC/libserum_concentrate/archive/${LIBSERUM_SHA}.tar.gz -o libserum-${LIBSERUM_SHA}.tar.gz
+curl -sL https://github.com/PPUC/libserum/archive/${LIBSERUM_SHA}.tar.gz -o libserum-${LIBSERUM_SHA}.tar.gz
 tar xzf libserum-${LIBSERUM_SHA}.tar.gz
-mv libserum_concentrate-${LIBSERUM_SHA} libserum
+mv libserum-${LIBSERUM_SHA} libserum
 cd libserum
 cmake \
    -DPLATFORM=ios \
@@ -70,7 +70,7 @@ cd ..
 # build libpupdmd and copy to external
 #
 
-curl -sL https://github.com/ppuc/libpupdmd/archive/${LIBPUPDMD_SHA}.tar.gz -o libpupdmd-${LIBPUPDMD_SHA}.tar.gz
+curl -sL https://github.com/PPUC/libpupdmd/archive/${LIBPUPDMD_SHA}.tar.gz -o libpupdmd-${LIBPUPDMD_SHA}.tar.gz
 tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
 mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
 cd libpupdmd
