@@ -30,6 +30,7 @@
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
+#include "TimeUtils.h"
 #include "sockpp/tcp_connector.h"
 
 namespace DMDUtil
@@ -984,9 +985,7 @@ void DMD::SerumThread()
         sl.unlock();
       }
 
-      uint32_t now =
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-              .count();
+      uint32_t now = GetMonotonicTimeMs();
 
       const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
       while (bufferPosition != updateBufferQueuePosition)

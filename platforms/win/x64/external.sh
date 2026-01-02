@@ -68,6 +68,7 @@ cp -r third-party/include/lz4 ../../third-party/include/
 cp src/LZ4Stream.h ../../third-party/include/
 cp src/SceneGenerator.h ../../third-party/include/
 cp src/serum.h ../../third-party/include/
+cp src/TimeUtils.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp build/${BUILD_TYPE}/serum64.lib ../../third-party/build-libs/win/x64/
 cp build/${BUILD_TYPE}/serum64.dll ../../third-party/runtime-libs/win/x64/
