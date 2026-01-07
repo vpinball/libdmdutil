@@ -230,7 +230,6 @@ class DMDUTILAPI DMD
   std::thread* m_pSerumThread;
   std::shared_mutex m_dmdSharedMutex;
   std::condition_variable_any m_dmdCV;
-  std::atomic<bool> m_dmdFrameReady;
   std::atomic<bool> m_stopFlag;
   std::atomic<uint16_t> m_updateBufferQueuePosition;
   std::atomic<uint16_t> m_pupSceneId;
