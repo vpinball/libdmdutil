@@ -124,7 +124,7 @@ class DMDUTILAPI Config
   bool m_altColor;
   std::string m_altColorPath;
   bool m_pupCapture;
-  bool m_serumPupTriggers
+  bool m_serumPupTriggers;
   std::string m_pupVideosPath;
   bool m_pupExactColorMatch;
   int m_framesTimeout;
