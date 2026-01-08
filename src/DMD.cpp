@@ -25,12 +25,12 @@
 #include "AlphaNumeric.h"
 #include "FrameUtil.h"
 #include "Logger.h"
+#include "TimeUtils.h"
 #include "ZeDMD.h"
 #include "komihash/komihash.h"
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
-#include "TimeUtils.h"
 #include "sockpp/tcp_connector.h"
 
 namespace DMDUtil
@@ -150,7 +150,6 @@ DMD::DMD()
   }
   m_updateBufferQueuePosition.store(0, std::memory_order_release);
   m_stopFlag.store(false, std::memory_order_release);
-  m_dmdFrameReady.store(false, std::memory_order_release);
   m_updateBuffered = std::make_shared<Update>();
 
   m_pAlphaNumeric = new AlphaNumeric();
@@ -477,7 +476,6 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
         memcpy(m_pUpdateBufferQueue[(++updateBufferQueuePosition) % DMDUTIL_FRAME_BUFFER_SIZE], dmdUpdate.get(),
                sizeof(Update));
         m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
-        m_dmdFrameReady.store(true, std::memory_order_release);
 
         Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
             dmdUpdate->mode, dmdUpdate->depth);
@@ -745,17 +743,22 @@ uint16_t DMD::GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t
 void DMD::DmdFrameThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
+  uint16_t bufferPosition = 0;
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
+
+    bufferPosition = m_updateBufferQueuePosition.load(std::memory_order_relaxed);
 
     if (strcmp(m_romName, name) != 0)
     {
@@ -766,10 +769,6 @@ void DMD::DmdFrameThread()
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-
-    std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
-    m_dmdFrameReady.store(false, std::memory_order_release);
-    ul.unlock();
 
     if (m_stopFlag)
     {
@@ -790,7 +789,6 @@ void DMD::ZeDMDThread()
   uint8_t indexBuffer[256 * 64] = {0};
   uint8_t renderBuffer[256 * 64 * 3] = {0};
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
@@ -799,9 +797,12 @@ void DMD::ZeDMDThread()
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
 
     if (m_stopFlag.load(std::memory_order_acquire))
@@ -933,7 +934,9 @@ void DMD::ZeDMDThread()
 
 void DMD::SerumThread()
 {
-  if (Config::GetInstance()->IsAltColor())
+  Config* const pConfig = Config::GetInstance();
+
+  if (pConfig->IsAltColor())
   {
     Serum_SetLogCallback(Serum_LogCallback, nullptr);
 
@@ -945,12 +948,11 @@ void DMD::SerumThread()
     Update* lastDmdUpdate = nullptr;
     uint8_t flags = 0;
 
-    (void)m_dmdFrameReady.load(std::memory_order_acquire);
     (void)m_stopFlag.load(std::memory_order_acquire);
 
-    Config* const pConfig = Config::GetInstance();
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
     bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+    if (pConfig->IsSerumPUPTriggers()) Serum_EnablePupTrigers();
 
     while (true)
     {
@@ -979,9 +981,12 @@ void DMD::SerumThread()
       if (nextRotation == 0)
       {
         std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-        m_dmdCV.wait(
-            sl, [&]()
-            { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+        m_dmdCV.wait(sl,
+                     [&]()
+                     {
+                       return m_stopFlag.load(std::memory_order_relaxed) ||
+                              (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                     });
         sl.unlock();
       }
 
@@ -1227,7 +1232,6 @@ void DMD::PixelcadeDMDThread()
   uint16_t* rgb565Data = new uint16_t[targetLength];
   memset(rgb565Data, 0, targetLength * sizeof(uint16_t));
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
@@ -1236,9 +1240,12 @@ void DMD::PixelcadeDMDThread()
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
@@ -1411,15 +1418,17 @@ void DMD::LevelDMDThread()
   uint16_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
@@ -1461,7 +1470,6 @@ void DMD::RGB24DMDThread()
   uint8_t rgb24Data[256 * 64 * 3] = {0};
   uint8_t rgb24DataScaled[256 * 64 * 3] = {0};
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
@@ -1470,9 +1478,12 @@ void DMD::RGB24DMDThread()
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
@@ -1622,15 +1633,17 @@ void DMD::ConsoleDMDThread()
   uint16_t bufferPosition = 0;
   uint8_t renderBuffer[256 * 64] = {0};
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
@@ -1744,7 +1757,6 @@ void DMD::DumpDMDTxtThread()
   FILE* f = nullptr;
   std::unordered_set<uint64_t> seenHashes;
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   Config* const pConfig = Config::GetInstance();
@@ -1754,9 +1766,12 @@ void DMD::DumpDMDTxtThread()
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
@@ -1903,15 +1918,17 @@ void DMD::DumpDMDRawThread()
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
@@ -1978,15 +1995,17 @@ void DMD::PupDMDThread()
   uint8_t palette[192] = {0};
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
 
-  (void)m_dmdFrameReady.load(std::memory_order_acquire);
   (void)m_stopFlag.load(std::memory_order_acquire);
 
   while (true)
   {
     std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-    m_dmdCV.wait(
-        sl, [&]()
-        { return m_dmdFrameReady.load(std::memory_order_relaxed) || m_stopFlag.load(std::memory_order_relaxed); });
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
