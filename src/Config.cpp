@@ -19,6 +19,7 @@ Config::Config()
   m_altColor = true;
   m_altColorPath.clear();
   m_pupCapture = false;
+  m_serumPupTriggers = false;
   m_pupVideosPath.clear();
   m_pupExactColorMatch = true;
   m_framesTimeout = 0;
@@ -90,6 +91,15 @@ void Config::parseConfigFile(const char* path)
   catch (const std::exception&)
   {
     SetPUPCapture(false);
+  }
+
+  try
+  {
+    SetSerumPUPTriggers(r.Get<bool>("DMDServer", "SerumPUPTriggers", false));
+  }
+  catch (const std::exception&)
+  {
+    SetSerumPUPTriggers(false);
   }
 
   try

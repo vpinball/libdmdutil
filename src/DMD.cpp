@@ -934,7 +934,9 @@ void DMD::ZeDMDThread()
 
 void DMD::SerumThread()
 {
-  if (Config::GetInstance()->IsAltColor())
+  Config* const pConfig = Config::GetInstance();
+
+  if (pConfig->IsAltColor())
   {
     Serum_SetLogCallback(Serum_LogCallback, nullptr);
 
@@ -948,9 +950,9 @@ void DMD::SerumThread()
 
     (void)m_stopFlag.load(std::memory_order_acquire);
 
-    Config* const pConfig = Config::GetInstance();
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
     bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
+    if (pConfig->IsSerumPUPTriggers()) Serum_EnablePupTrigers();
 
     while (true)
     {

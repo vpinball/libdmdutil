@@ -43,6 +43,8 @@ class DMDUTILAPI Config
   const char* GetAltColorPath() const { return m_altColorPath.c_str(); }
   bool IsPUPCapture() const { return m_pupCapture; }
   void SetPUPCapture(bool pupCapture) { m_pupCapture = pupCapture; }
+  bool IsSerumPUPTriggers() const { return m_serumPupTriggers; }
+  void SetSerumPUPTriggers(bool serumPupTriggers) { m_serumPupTriggers = serumPupTriggers; }
   void SetPUPVideosPath(const char* path) { m_pupVideosPath = path; }
   const char* GetPUPVideosPath() const { return m_pupVideosPath.c_str(); }
   bool IsPUPExactColorMatch() const { return m_pupExactColorMatch; }
@@ -122,6 +124,7 @@ class DMDUTILAPI Config
   bool m_altColor;
   std::string m_altColorPath;
   bool m_pupCapture;
+  bool m_serumPupTriggers
   std::string m_pupVideosPath;
   bool m_pupExactColorMatch;
   int m_framesTimeout;
