@@ -1026,11 +1026,12 @@ void DMD::SerumThread()
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
             flags = 0;
+
             // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P
             // saves memory.
             if (m_pZeDMD)
             {
-              if (m_pZeDMD->GetWidth() == 256)
+              if (m_pZeDMD->GetHeight() == 64)
                 flags |= FLAG_REQUEST_64P_FRAMES;
               else
                 flags |= FLAG_REQUEST_32P_FRAMES;
@@ -1040,7 +1041,18 @@ void DMD::SerumThread()
             {
               for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
               {
-                if (pRGB24DMD->GetWidth() == 256)
+                if (pRGB24DMD->GetHeight() == 64)
+                  flags |= FLAG_REQUEST_64P_FRAMES;
+                else
+                  flags |= FLAG_REQUEST_32P_FRAMES;
+              }
+            }
+
+            if (m_levelDMDs.size() > 0)
+            {
+              for (LevelDMD* pLevelDMD : m_levelDMDs)
+              {
+                if (pLevelDMD->GetHeight() == 64)
                   flags |= FLAG_REQUEST_64P_FRAMES;
                 else
                   flags |= FLAG_REQUEST_32P_FRAMES;
@@ -1052,6 +1064,8 @@ void DMD::SerumThread()
     defined(__ANDROID__))
             if (m_pPixelcadeDMD) flags |= FLAG_REQUEST_32P_FRAMES;
 #endif
+
+            if (!flags) flags |= FLAG_REQUEST_32P_FRAMES;
 
             m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)
