@@ -1830,7 +1830,7 @@ void DMD::DumpDMDTxtThread()
             size_t pathLen = strlen(m_dumpPath);
             if (pathLen == 0)
             {
-              snprintf(filename, sizeof(filename), "./%s-%s.txt", m_dumpPath, name, suffix);
+              snprintf(filename, sizeof(filename), "./%s-%s.txt", name, suffix);
             }
             else if (m_dumpPath[pathLen - 1] == '/' || m_dumpPath[pathLen - 1] == '\\')
             {
