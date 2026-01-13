@@ -1031,7 +1031,7 @@ void DMD::SerumThread()
             // saves memory.
             if (m_pZeDMD)
             {
-              if (m_pZeDMD->GetHight() == 64)
+              if (m_pZeDMD->GetHeight() == 64)
                 flags |= FLAG_REQUEST_64P_FRAMES;
               else
                 flags |= FLAG_REQUEST_32P_FRAMES;
