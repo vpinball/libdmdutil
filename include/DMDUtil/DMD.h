@@ -165,6 +165,8 @@ class DMDUTILAPI DMD
   void SetPUPTrigger(const char source, const uint16_t id, const uint8_t value = 1);
   void DumpDMDTxt();
   void DumpDMDRaw();
+  void DumpDMDRgb565();
+  void DumpDMDRgb888();
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
   bool DestroyLevelDMD(LevelDMD* pLevelDMD);
   void AddRGB24DMD(RGB24DMD* pRGB24DMD);
@@ -204,6 +206,9 @@ class DMDUTILAPI DMD
   void ZeDMDThread();
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
+  void DumpDMDRgb565Thread();
+  void DumpDMDRgb888Thread();
+  bool GetDumpSuffix(const char* romName, char* outSuffix, size_t outSize);
   void PupDMDThread();
   void SerumThread();
   void VniThread();
@@ -230,6 +235,8 @@ class DMDUTILAPI DMD
   std::thread* m_pDmdFrameThread;
   std::thread* m_pDumpDMDTxtThread;
   std::thread* m_pDumpDMDRawThread;
+  std::thread* m_pDumpDMDRgb565Thread;
+  std::thread* m_pDumpDMDRgb888Thread;
   std::thread* m_pPupDMDThread;
   std::thread* m_pSerumThread;
   std::thread* m_pVniThread;
@@ -238,6 +245,10 @@ class DMDUTILAPI DMD
   std::atomic<bool> m_stopFlag;
   std::atomic<uint16_t> m_updateBufferQueuePosition;
   std::atomic<uint16_t> m_pupSceneId;
+  std::mutex m_dumpSuffixMutex;
+  char m_dumpSuffixRom[DMDUTIL_MAX_NAME_SIZE] = {0};
+  char m_dumpSuffix[9] = {0};
+  bool m_dumpSuffixValid = false;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;

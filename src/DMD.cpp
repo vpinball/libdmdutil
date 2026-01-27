@@ -245,6 +245,8 @@ DMD::DMD()
   m_pConsoleDMDThread = nullptr;
   m_pDumpDMDTxtThread = nullptr;
   m_pDumpDMDRawThread = nullptr;
+  m_pDumpDMDRgb565Thread = nullptr;
+  m_pDumpDMDRgb888Thread = nullptr;
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -321,6 +323,20 @@ DMD::~DMD()
     m_pDumpDMDRawThread->join();
     delete m_pDumpDMDRawThread;
     m_pDumpDMDRawThread = nullptr;
+  }
+
+  if (m_pDumpDMDRgb565Thread)
+  {
+    m_pDumpDMDRgb565Thread->join();
+    delete m_pDumpDMDRgb565Thread;
+    m_pDumpDMDRgb565Thread = nullptr;
+  }
+
+  if (m_pDumpDMDRgb888Thread)
+  {
+    m_pDumpDMDRgb888Thread->join();
+    delete m_pDumpDMDRgb888Thread;
+    m_pDumpDMDRgb888Thread = nullptr;
   }
 
   if (m_pPupDMDThread)
@@ -479,6 +495,22 @@ void DMD::DumpDMDRaw()
   if (m_pDumpDMDRawThread)
   {
     m_pDumpDMDRawThread = new std::thread(&DMD::DumpDMDRawThread, this);
+  }
+}
+
+void DMD::DumpDMDRgb565()
+{
+  if (!m_pDumpDMDRgb565Thread)
+  {
+    m_pDumpDMDRgb565Thread = new std::thread(&DMD::DumpDMDRgb565Thread, this);
+  }
+}
+
+void DMD::DumpDMDRgb888()
+{
+  if (!m_pDumpDMDRgb888Thread)
+  {
+    m_pDumpDMDRgb888Thread = new std::thread(&DMD::DumpDMDRgb888Thread, this);
   }
 }
 
@@ -2324,6 +2356,27 @@ void DMD::GenerateRandomSuffix(char* buffer, size_t length)
   buffer[length] = '\0';
 }
 
+bool DMD::GetDumpSuffix(const char* romName, char* outSuffix, size_t outSize)
+{
+  if (!romName || romName[0] == '\0' || !outSuffix || outSize == 0)
+  {
+    return false;
+  }
+
+  std::lock_guard<std::mutex> lock(m_dumpSuffixMutex);
+  if (!m_dumpSuffixValid || strcmp(romName, m_dumpSuffixRom) != 0)
+  {
+    strncpy(m_dumpSuffixRom, romName, sizeof(m_dumpSuffixRom) - 1);
+    m_dumpSuffixRom[sizeof(m_dumpSuffixRom) - 1] = '\0';
+    GenerateRandomSuffix(m_dumpSuffix, 8);
+    m_dumpSuffixValid = true;
+  }
+
+  strncpy(outSuffix, m_dumpSuffix, outSize - 1);
+  outSuffix[outSize - 1] = '\0';
+  return true;
+}
+
 void DMD::DumpDMDTxtThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
@@ -2388,7 +2441,10 @@ void DMD::DumpDMDTxtThread()
           {
             char filename[DMDUTIL_MAX_NAME_SIZE + 128 + 8 + 5];
             char suffix[9];  // 8 chars + null terminator
-            GenerateRandomSuffix(suffix, 8);
+            if (!GetDumpSuffix(name, suffix, sizeof(suffix)))
+            {
+              GenerateRandomSuffix(suffix, 8);
+            }
             if (m_dumpPath[0] == '\0') strcpy(m_dumpPath, Config::GetInstance()->GetDumpPath());
             size_t pathLen = strlen(m_dumpPath);
             if (pathLen == 0)
@@ -2483,6 +2539,380 @@ void DMD::DumpDMDTxtThread()
             passed[1] = passed[2];
           }
         }
+      }
+    }
+  }
+}
+
+void DMD::DumpDMDRgb565Thread()
+{
+  char name[DMDUTIL_MAX_NAME_SIZE] = {0};
+  uint16_t bufferPosition = 0;
+  uint16_t renderBuffer[3][256 * 64] = {0};
+  uint16_t frameWidths[3] = {0};
+  uint16_t frameHeights[3] = {0};
+  uint32_t passed[3] = {0};
+  std::chrono::steady_clock::time_point start;
+  FILE* f = nullptr;
+  uint8_t palette[256 * 3] = {0};
+  uint8_t rgb24Temp[256 * 64 * 3] = {0};
+
+  (void)m_stopFlag.load(std::memory_order_acquire);
+
+  while (true)
+  {
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
+    sl.unlock();
+    if (m_stopFlag.load(std::memory_order_acquire))
+    {
+      if (f)
+      {
+        fflush(f);
+        fclose(f);
+        f = nullptr;
+      }
+      return;
+    }
+
+    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
+    {
+      // Don't use GetNextBufferPosition() here, we need all frames!
+      ++bufferPosition;  // 65635 + 1 = 0
+      uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+
+      Update* update = m_pUpdateBufferQueue[bufferPositionMod];
+      if (!(update->hasData || update->hasSegData)) continue;
+
+      if (!(update->mode == Mode::RGB24 || update->mode == Mode::RGB16 || update->mode == Mode::SerumV1 ||
+            update->mode == Mode::Vni || IsSerumV2Mode(update->mode)))
+        continue;
+
+      bool updateFrame = false;
+      if (strcmp(m_romName, name) != 0)
+      {
+        // New game ROM.
+        start = std::chrono::steady_clock::now();
+        if (f)
+        {
+          fclose(f);
+          f = nullptr;
+        }
+        strcpy(name, m_romName);
+
+        if (name[0] != '\0')
+        {
+          char filename[DMDUTIL_MAX_NAME_SIZE + 128 + 8 + 9];
+          char suffix[9];  // 8 chars + null terminator
+          if (!GetDumpSuffix(name, suffix, sizeof(suffix)))
+          {
+            GenerateRandomSuffix(suffix, 8);
+          }
+          if (m_dumpPath[0] == '\0') strcpy(m_dumpPath, Config::GetInstance()->GetDumpPath());
+          size_t pathLen = strlen(m_dumpPath);
+          if (pathLen == 0)
+          {
+            snprintf(filename, sizeof(filename), "./%s-%s.565.txt", name, suffix);
+          }
+          else if (m_dumpPath[pathLen - 1] == '/' || m_dumpPath[pathLen - 1] == '\\')
+          {
+            snprintf(filename, sizeof(filename), "%s%s-%s.565.txt", m_dumpPath, name, suffix);
+          }
+          else
+          {
+            snprintf(filename, sizeof(filename), "%s/%s-%s.565.txt", m_dumpPath, name, suffix);
+          }
+          f = fopen(filename, "w");
+          updateFrame = true;
+          memset(renderBuffer, 0, sizeof(renderBuffer));
+          memset(frameWidths, 0, sizeof(frameWidths));
+          memset(frameHeights, 0, sizeof(frameHeights));
+          passed[0] = passed[1] = 0;
+        }
+      }
+
+      if (name[0] == '\0')
+      {
+        continue;
+      }
+
+      uint16_t width = update->width;
+      uint16_t height = update->height;
+      int length = (int)width * height;
+      size_t frameBytes = (size_t)length * sizeof(uint16_t);
+      if (frameBytes > sizeof(renderBuffer[0]))
+      {
+        continue;
+      }
+
+      if (width != frameWidths[1] || height != frameHeights[1])
+      {
+        updateFrame = true;
+      }
+
+      uint16_t* nextFrame = renderBuffer[2];
+      if (update->mode == Mode::RGB16 || IsSerumV2Mode(update->mode))
+      {
+        memcpy(nextFrame, update->segData, frameBytes);
+      }
+      else
+      {
+        if (update->mode == Mode::RGB24)
+        {
+          if (update->depth != 24)
+          {
+            UpdatePalette(palette, update->depth, update->r, update->g, update->b);
+          }
+          AdjustRGB24Depth(update->data, rgb24Temp, length, palette, update->depth);
+        }
+        else
+        {
+          size_t paletteBytes = PaletteBytesForDepth((uint8_t)update->depth);
+          if (paletteBytes > 0 && paletteBytes <= sizeof(palette))
+          {
+            memcpy(palette, update->segData, paletteBytes);
+          }
+          FrameUtil::Helper::ConvertToRgb24(rgb24Temp, update->data, length, palette);
+        }
+
+        for (int i = 0; i < length; i++)
+        {
+          int pos = i * 3;
+          uint32_t r = rgb24Temp[pos];
+          uint32_t g = rgb24Temp[pos + 1];
+          uint32_t b = rgb24Temp[pos + 2];
+          nextFrame[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
+        }
+      }
+
+      if (updateFrame || memcmp(renderBuffer[1], nextFrame, frameBytes) != 0)
+      {
+        passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::steady_clock::now() - start)
+                                   .count());
+        frameWidths[2] = width;
+        frameHeights[2] = height;
+
+        if (f && passed[0] > 0 && frameWidths[0] > 0 && frameHeights[0] > 0)
+        {
+          fprintf(f, "0x%08x\r\n", passed[0]);
+          uint32_t rowWidth = frameWidths[0];
+          uint32_t rowHeight = frameHeights[0];
+          const uint16_t* frame = renderBuffer[0];
+          for (uint32_t y = 0; y < rowHeight; y++)
+          {
+            for (uint32_t x = 0; x < rowWidth; x++)
+            {
+              fprintf(f, "%04x", frame[y * rowWidth + x]);
+            }
+            fprintf(f, "\r\n");
+          }
+          fprintf(f, "\r\n");
+        }
+
+        size_t prevBytes = (size_t)frameWidths[1] * frameHeights[1] * sizeof(uint16_t);
+        if (prevBytes > sizeof(renderBuffer[0])) prevBytes = sizeof(renderBuffer[0]);
+        memcpy(renderBuffer[0], renderBuffer[1], prevBytes);
+        passed[0] = passed[1];
+        frameWidths[0] = frameWidths[1];
+        frameHeights[0] = frameHeights[1];
+
+        memcpy(renderBuffer[1], nextFrame, frameBytes);
+        passed[1] = passed[2];
+        frameWidths[1] = frameWidths[2];
+        frameHeights[1] = frameHeights[2];
+      }
+    }
+  }
+}
+
+void DMD::DumpDMDRgb888Thread()
+{
+  char name[DMDUTIL_MAX_NAME_SIZE] = {0};
+  uint16_t bufferPosition = 0;
+  uint8_t renderBuffer[3][256 * 64 * 3] = {0};
+  uint16_t frameWidths[3] = {0};
+  uint16_t frameHeights[3] = {0};
+  uint32_t passed[3] = {0};
+  std::chrono::steady_clock::time_point start;
+  FILE* f = nullptr;
+  uint8_t palette[256 * 3] = {0};
+
+  (void)m_stopFlag.load(std::memory_order_acquire);
+
+  while (true)
+  {
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
+    sl.unlock();
+    if (m_stopFlag.load(std::memory_order_acquire))
+    {
+      if (f)
+      {
+        fflush(f);
+        fclose(f);
+        f = nullptr;
+      }
+      return;
+    }
+
+    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
+    {
+      // Don't use GetNextBufferPosition() here, we need all frames!
+      ++bufferPosition;  // 65635 + 1 = 0
+      uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+
+      Update* update = m_pUpdateBufferQueue[bufferPositionMod];
+      if (!(update->hasData || update->hasSegData)) continue;
+
+      if (!(update->mode == Mode::RGB24 || update->mode == Mode::RGB16 || update->mode == Mode::SerumV1 ||
+            update->mode == Mode::Vni || IsSerumV2Mode(update->mode)))
+        continue;
+
+      bool updateFrame = false;
+      if (strcmp(m_romName, name) != 0)
+      {
+        // New game ROM.
+        start = std::chrono::steady_clock::now();
+        if (f)
+        {
+          fclose(f);
+          f = nullptr;
+        }
+        strcpy(name, m_romName);
+
+        if (name[0] != '\0')
+        {
+          char filename[DMDUTIL_MAX_NAME_SIZE + 128 + 8 + 9];
+          char suffix[9];  // 8 chars + null terminator
+          if (!GetDumpSuffix(name, suffix, sizeof(suffix)))
+          {
+            GenerateRandomSuffix(suffix, 8);
+          }
+          if (m_dumpPath[0] == '\0') strcpy(m_dumpPath, Config::GetInstance()->GetDumpPath());
+          size_t pathLen = strlen(m_dumpPath);
+          if (pathLen == 0)
+          {
+            snprintf(filename, sizeof(filename), "./%s-%s.888.txt", name, suffix);
+          }
+          else if (m_dumpPath[pathLen - 1] == '/' || m_dumpPath[pathLen - 1] == '\\')
+          {
+            snprintf(filename, sizeof(filename), "%s%s-%s.888.txt", m_dumpPath, name, suffix);
+          }
+          else
+          {
+            snprintf(filename, sizeof(filename), "%s/%s-%s.888.txt", m_dumpPath, name, suffix);
+          }
+          f = fopen(filename, "w");
+          updateFrame = true;
+          memset(renderBuffer, 0, sizeof(renderBuffer));
+          memset(frameWidths, 0, sizeof(frameWidths));
+          memset(frameHeights, 0, sizeof(frameHeights));
+          passed[0] = passed[1] = 0;
+        }
+      }
+
+      if (name[0] == '\0')
+      {
+        continue;
+      }
+
+      uint16_t width = update->width;
+      uint16_t height = update->height;
+      int length = (int)width * height;
+      size_t frameBytes = (size_t)length * 3;
+      if (frameBytes > sizeof(renderBuffer[0]))
+      {
+        continue;
+      }
+
+      if (width != frameWidths[1] || height != frameHeights[1])
+      {
+        updateFrame = true;
+      }
+
+      uint8_t* nextFrame = renderBuffer[2];
+      if (update->mode == Mode::RGB24)
+      {
+        if (update->depth != 24)
+        {
+          UpdatePalette(palette, update->depth, update->r, update->g, update->b);
+        }
+        AdjustRGB24Depth(update->data, nextFrame, length, palette, update->depth);
+      }
+      else if (update->mode == Mode::RGB16 || IsSerumV2Mode(update->mode))
+      {
+        const uint16_t* src = update->segData;
+        for (int i = 0; i < length; i++)
+        {
+          uint16_t value = src[i];
+          uint8_t r = (uint8_t)((value >> 11) & 0x1F);
+          uint8_t g = (uint8_t)((value >> 5) & 0x3F);
+          uint8_t b = (uint8_t)(value & 0x1F);
+          nextFrame[i * 3] = (uint8_t)((r << 3) | (r >> 2));
+          nextFrame[i * 3 + 1] = (uint8_t)((g << 2) | (g >> 4));
+          nextFrame[i * 3 + 2] = (uint8_t)((b << 3) | (b >> 2));
+        }
+      }
+      else
+      {
+        size_t paletteBytes = PaletteBytesForDepth((uint8_t)update->depth);
+        if (paletteBytes > 0 && paletteBytes <= sizeof(palette))
+        {
+          memcpy(palette, update->segData, paletteBytes);
+        }
+        FrameUtil::Helper::ConvertToRgb24(nextFrame, update->data, length, palette);
+      }
+
+      if (updateFrame || memcmp(renderBuffer[1], nextFrame, frameBytes) != 0)
+      {
+        passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::steady_clock::now() - start)
+                                   .count());
+        frameWidths[2] = width;
+        frameHeights[2] = height;
+
+        if (f && passed[0] > 0 && frameWidths[0] > 0 && frameHeights[0] > 0)
+        {
+          fprintf(f, "0x%08x\r\n", passed[0]);
+          uint32_t rowWidth = frameWidths[0];
+          uint32_t rowHeight = frameHeights[0];
+          const uint8_t* frame = renderBuffer[0];
+          for (uint32_t y = 0; y < rowHeight; y++)
+          {
+            for (uint32_t x = 0; x < rowWidth; x++)
+            {
+              int pos = (int)(y * rowWidth + x) * 3;
+              fprintf(f, "%02x%02x%02x", frame[pos], frame[pos + 1], frame[pos + 2]);
+            }
+            fprintf(f, "\r\n");
+          }
+          fprintf(f, "\r\n");
+        }
+
+        size_t prevBytes = (size_t)frameWidths[1] * frameHeights[1] * 3;
+        if (prevBytes > sizeof(renderBuffer[0])) prevBytes = sizeof(renderBuffer[0]);
+        memcpy(renderBuffer[0], renderBuffer[1], prevBytes);
+        passed[0] = passed[1];
+        frameWidths[0] = frameWidths[1];
+        frameHeights[0] = frameHeights[1];
+
+        memcpy(renderBuffer[1], nextFrame, frameBytes);
+        passed[1] = passed[2];
+        frameWidths[1] = frameWidths[2];
+        frameHeights[1] = frameHeights[2];
       }
     }
   }
