@@ -113,13 +113,17 @@ if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "li
    )
 endif()
 
+set(DMDUTIL_PIN2DMD_ENABLED FALSE)
 if(ENABLE_PIN2DMD AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux"))
-   list(APPEND DMDUTIL_SOURCES
-      src/pin2dmd.cpp
-   )
-   list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_PIN2DMD)
    if(PLATFORM STREQUAL "win")
-      list(APPEND DMDUTIL_PIN2DMD_LIBS libusb-1.0)
+      find_path(LIBUSB_INCLUDE_DIR libusb.h)
+      find_library(LIBUSB_LIBRARY NAMES libusb-1.0 usb-1.0)
+      if(LIBUSB_INCLUDE_DIR)
+         list(APPEND DMDUTIL_PIN2DMD_INCLUDE_DIRS ${LIBUSB_INCLUDE_DIR})
+      endif()
+      if(LIBUSB_LIBRARY)
+         list(APPEND DMDUTIL_PIN2DMD_LIBS ${LIBUSB_LIBRARY})
+      endif()
    else()
       find_package(PkgConfig)
       if(PkgConfig_FOUND)
@@ -131,20 +135,38 @@ if(ENABLE_PIN2DMD AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR P
          list(APPEND DMDUTIL_PIN2DMD_LIBS ${LIBUSB_LIBRARIES})
          list(APPEND DMDUTIL_PIN2DMD_COMPILE_OPTIONS ${LIBUSB_CFLAGS_OTHER})
       else()
+         if(PLATFORM STREQUAL "macos" AND ARCH STREQUAL "x64")
+            set(LIBUSB_SEARCH_PREFIXES /usr/local)
+         elseif(PLATFORM STREQUAL "macos")
+            set(LIBUSB_SEARCH_PREFIXES /opt/homebrew)
+         else()
+            set(LIBUSB_SEARCH_PREFIXES /opt/homebrew /usr/local)
+         endif()
+
          find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
-            PATHS /opt/homebrew/include /usr/local/include)
+            PATHS ${LIBUSB_SEARCH_PREFIXES}
+            PATH_SUFFIXES include)
          if(LIBUSB_INCLUDE_DIR)
             list(APPEND DMDUTIL_PIN2DMD_INCLUDE_DIRS ${LIBUSB_INCLUDE_DIR})
          endif()
 
          find_library(LIBUSB_LIBRARY NAMES usb-1.0 libusb-1.0
-            PATHS /opt/homebrew/lib /usr/local/lib)
+            PATHS ${LIBUSB_SEARCH_PREFIXES}
+            PATH_SUFFIXES lib)
          if(LIBUSB_LIBRARY)
             list(APPEND DMDUTIL_PIN2DMD_LIBS ${LIBUSB_LIBRARY})
-         else()
-            list(APPEND DMDUTIL_PIN2DMD_LIBS usb-1.0)
          endif()
       endif()
+   endif()
+
+   if(DMDUTIL_PIN2DMD_INCLUDE_DIRS AND DMDUTIL_PIN2DMD_LIBS)
+      list(APPEND DMDUTIL_SOURCES
+         src/pin2dmd.cpp
+      )
+      list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_PIN2DMD)
+      set(DMDUTIL_PIN2DMD_ENABLED TRUE)
+   else()
+      message(WARNING "PIN2DMD disabled: libusb headers/libraries not found.")
    endif()
 endif()
 
