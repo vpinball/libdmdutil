@@ -100,7 +100,7 @@ cd ..
 # build libvni and copy to external
 #
 
-curl -sL https://github.com/mkalkbrenner/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
+curl -sL https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
 tar xzf libvni-${LIBVNI_SHA}.tar.gz
 mv libvni-${LIBVNI_SHA} libvni
 cd libvni

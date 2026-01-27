@@ -2,7 +2,7 @@
 
 A cross platform library for performing DMD tasks.
 
-This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/PPUC/libserum), outputing to [ZeDMD](https://github.com/PPUC/zedmd) and [Pixelcade](https://pixelcade.org) devices, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
+This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/PPUC/libserum), outputing to [ZeDMD](https://github.com/PPUC/zedmd), [Pixelcade](https://pixelcade.org)  and [PIN2DMD](https://https://pin2dmd.com/)devices, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
 
 ## Usage:
 
@@ -211,6 +211,10 @@ Height = 32
 Enabled = 1
 # Disable auto-detection and provide a fixed serial port
 Device =
+
+[Pin2DMD]
+# Set to 1 if PIN2DMD is attached
+Enabled = 0
 ```
 
 ## Serum PUP Scenes Generator
@@ -229,6 +233,27 @@ The `dmdutil-generate-scenes` tool generates a dump of such scene frames accordi
   -d, --depth=VALUE      Bit depth of the DMD frames (2 or 4) (optional, default is 2)
   -i, --id=VALUE         PUP scene trigger ID to generate (optional, default is all scenes)
   -h, --help             Show help
+```
+
+## DMD Dump Player
+
+`dmdutil-play-dump` plays an existing txt or raw dump and sends the frames as 2-bit or 4-bit data frames to all attached DMDs.
+The timestamps in the dump represent the duration of each frame. It can optionally connect to a remote DMD server and can dump
+txt/rgb565/rgb888 while playing (raw output is not supported).
+
+`dmdutil-play-dump` accepts these command line options:
+```
+  -i, --input=FILE               Input dump file (.txt or .raw)
+  -d, --depth=VALUE              Bit depth to send (2 or 4) (optional, default is 2)
+  -s, --server=HOST[:PORT]       Connect to a DMD server (optional)
+  -L, --no-local                 Disable local displays
+  -t, --dump-txt                 Dump txt while playing
+  -5, --dump-565                 Dump rgb565 while playing
+  -8, --dump-888                 Dump rgb888 while playing
+  -o, --dump-path=PATH           Output path for dumps (optional)
+  -r, --rom=NAME                 ROM name for dumps (optional)
+  -R, --raw                      Force raw dump parsing
+  -h, --help                     Show help
 ```
 
 ## Building:
