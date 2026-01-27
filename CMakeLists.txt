@@ -131,7 +131,19 @@ if(ENABLE_PIN2DMD AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR P
          list(APPEND DMDUTIL_PIN2DMD_LIBS ${LIBUSB_LIBRARIES})
          list(APPEND DMDUTIL_PIN2DMD_COMPILE_OPTIONS ${LIBUSB_CFLAGS_OTHER})
       else()
-         list(APPEND DMDUTIL_PIN2DMD_LIBS usb-1.0)
+         find_path(LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
+            PATHS /opt/homebrew/include /usr/local/include)
+         if(LIBUSB_INCLUDE_DIR)
+            list(APPEND DMDUTIL_PIN2DMD_INCLUDE_DIRS ${LIBUSB_INCLUDE_DIR})
+         endif()
+
+         find_library(LIBUSB_LIBRARY NAMES usb-1.0 libusb-1.0
+            PATHS /opt/homebrew/lib /usr/local/lib)
+         if(LIBUSB_LIBRARY)
+            list(APPEND DMDUTIL_PIN2DMD_LIBS ${LIBUSB_LIBRARY})
+         else()
+            list(APPEND DMDUTIL_PIN2DMD_LIBS usb-1.0)
+         endif()
       endif()
    endif()
 endif()

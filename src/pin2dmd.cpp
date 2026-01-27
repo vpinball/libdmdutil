@@ -1,6 +1,10 @@
 #include <cstdint>
 #include <cstring>
+#if __has_include(<libusb-1.0/libusb.h>)
 #include <libusb-1.0/libusb.h>
+#else
+#include <libusb.h>
+#endif
 
 #include "pin2dmd.h"
 
