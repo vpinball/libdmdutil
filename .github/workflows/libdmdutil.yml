@@ -85,7 +85,7 @@ jobs:
       - if: (matrix.os == 'macos-15' && matrix.arch == 'arm64')
         name: Add libusb (mac arm64)
         run: |
-          brew install libusb
+          # brew install libusb
           echo "PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig" >> $GITHUB_ENV
       - if: (matrix.os == 'macos-15' && matrix.arch == 'x64')
         name: Add libusb (mac x64)
