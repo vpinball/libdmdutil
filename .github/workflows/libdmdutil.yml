@@ -62,10 +62,14 @@ jobs:
         name: Add autoconf and automake (mac runner)
         run: |
            brew install autoconf automake libtool libusb
+      - if: (matrix.platform == 'linux')
+        name: Add libusb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev
       - if: (matrix.platform == 'linux' && matrix.arch == 'aarch64')
         name: Add libgpiod (Raspberry Pi Linux)
         run: |
-          sudo apt-get update
           sudo apt-get install -y libgpiod-dev libusb-1.0-0-dev
       - name: Build libdmdutil-${{ matrix.platform }}-${{ matrix.arch }}
         run: |
