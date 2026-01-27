@@ -8,6 +8,7 @@ echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
 echo ""
 
 if [[ $(uname) == "Linux" ]]; then
@@ -90,4 +91,24 @@ cmake -DPLATFORM=android \
 cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
 cp build/libpupdmd.so ../../third-party/runtime-libs/android/arm64-v8a/
+cd ..
+
+#
+# build libvni and copy to external
+#
+
+curl -sL https://github.com/mkalkbrenner/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
+tar xzf libvni-${LIBVNI_SHA}.tar.gz
+mv libvni-${LIBVNI_SHA} libvni
+cd libvni
+cmake \
+   -DPLATFORM=android \
+   -DARCH=arm64-v8a \
+   -DBUILD_SHARED=ON \
+   -DBUILD_STATIC=OFF \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
+cmake --build build -- -j${NUM_PROCS}
+cp src/vni.h ../../third-party/include/
+cp build/libvni.so ../../third-party/runtime-libs/android/arm64-v8a/
 cd ..

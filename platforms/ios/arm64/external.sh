@@ -8,6 +8,7 @@ echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
 echo ""
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
@@ -85,4 +86,24 @@ cmake \
 cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
 cp build/libpupdmd.a ../../third-party/build-libs/ios/arm64/
+cd ..
+
+#
+# build libvni and copy to external
+#
+
+curl -sL https://github.com/mkalkbrenner/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
+tar xzf libvni-${LIBVNI_SHA}.tar.gz
+mv libvni-${LIBVNI_SHA} libvni
+cd libvni
+cmake \
+   -DPLATFORM=ios \
+   -DARCH=arm64 \
+   -DBUILD_SHARED=OFF \
+   -DBUILD_STATIC=ON \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
+cmake --build build -- -j${NUM_PROCS}
+cp src/vni.h ../../third-party/include/
+cp build/libvni.a ../../third-party/build-libs/ios/arm64/
 cd ..

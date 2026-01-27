@@ -7,6 +7,11 @@ option(BUILD_SHARED "Option to build shared library" ON)
 option(BUILD_STATIC "Option to build static library" ON)
 option(POST_BUILD_COPY_EXT_LIBS "Option to copy external libraries to build directory" ON)
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan for Debug builds" OFF)
+set(ENABLE_PIN2DMD_DEFAULT OFF)
+if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
+   set(ENABLE_PIN2DMD_DEFAULT ON)
+endif()
+option(ENABLE_PIN2DMD "Enable PIN2DMD support" ${ENABLE_PIN2DMD_DEFAULT})
 
 message(STATUS "PLATFORM: ${PLATFORM}")
 message(STATUS "ARCH: ${ARCH}")
@@ -15,6 +20,7 @@ message(STATUS "BUILD_SHARED: ${BUILD_SHARED}")
 message(STATUS "BUILD_STATIC: ${BUILD_STATIC}")
 message(STATUS "POST_BUILD_COPY_EXT_LIBS: ${POST_BUILD_COPY_EXT_LIBS}")
 message(STATUS "ENABLE_SANITIZERS: ${ENABLE_SANITIZERS}")
+message(STATUS "ENABLE_PIN2DMD: ${ENABLE_PIN2DMD}")
 
 if(PLATFORM STREQUAL "macos")
    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -95,10 +101,25 @@ set(DMDUTIL_SOURCES
    src/DMDServer.cpp
 )
 
+set(DMDUTIL_COMPILE_DEFINITIONS "")
+set(DMDUTIL_PIN2DMD_LIBS "")
+
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
    list(APPEND DMDUTIL_SOURCES
       src/PixelcadeDMD.cpp
    )
+endif()
+
+if(ENABLE_PIN2DMD AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux"))
+   list(APPEND DMDUTIL_SOURCES
+      src/pin2dmd.cpp
+   )
+   list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_PIN2DMD)
+   if(PLATFORM STREQUAL "win")
+      list(APPEND DMDUTIL_PIN2DMD_LIBS libusb-1.0)
+   else()
+      list(APPEND DMDUTIL_PIN2DMD_LIBS usb-1.0)
+   endif()
 endif()
 
 set(DMDUTIL_INCLUDE_DIRS
@@ -110,6 +131,9 @@ if(BUILD_SHARED)
    add_library(dmdutil_shared SHARED ${DMDUTIL_SOURCES})
 
    target_include_directories(dmdutil_shared PUBLIC ${DMDUTIL_INCLUDE_DIRS})
+   if(DMDUTIL_COMPILE_DEFINITIONS)
+      target_compile_definitions(dmdutil_shared PUBLIC ${DMDUTIL_COMPILE_DEFINITIONS})
+   endif()
 
    if(PLATFORM STREQUAL "win")
       target_link_directories(dmdutil_shared PUBLIC
@@ -117,30 +141,34 @@ if(BUILD_SHARED)
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
       if(ARCH STREQUAL "x64")
-         target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 libserialport64 sockpp64 pupdmd64 ws2_32)
+         target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 vni64 libserialport64 sockpp64 pupdmd64 ws2_32)
       else()
-        target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum libserialport sockpp pupdmd ws2_32)
+        target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum vni libserialport sockpp pupdmd ws2_32)
       endif()
    elseif(PLATFORM STREQUAL "macos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum vni serialport sockpp pupdmd)
    elseif(PLATFORM STREQUAL "linux")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum vni serialport sockpp pupdmd)
    elseif(PLATFORM STREQUAL "ios" OR PLATFORM STREQUAL "ios-simulator" OR PLATFORM STREQUAL "tvos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum vni sockpp pupdmd)
    elseif(PLATFORM STREQUAL "android")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum vni sockpp pupdmd)
+   endif()
+
+   if(DMDUTIL_PIN2DMD_LIBS)
+      target_link_libraries(dmdutil_shared PUBLIC ${DMDUTIL_PIN2DMD_LIBS})
    endif()
 
    if(PLATFORM STREQUAL "win" AND ARCH STREQUAL "x64")
@@ -194,6 +222,13 @@ if(BUILD_STATIC)
    add_library(dmdutil_static STATIC ${DMDUTIL_SOURCES})
 
    target_include_directories(dmdutil_static PUBLIC ${DMDUTIL_INCLUDE_DIRS})
+   if(DMDUTIL_COMPILE_DEFINITIONS)
+      target_compile_definitions(dmdutil_static PUBLIC ${DMDUTIL_COMPILE_DEFINITIONS})
+   endif()
+
+   if(DMDUTIL_PIN2DMD_LIBS)
+      target_link_libraries(dmdutil_static PUBLIC ${DMDUTIL_PIN2DMD_LIBS})
+   endif()
 
    if(PLATFORM STREQUAL "win")
       set_target_properties(dmdutil_static PROPERTIES
@@ -221,20 +256,20 @@ if(BUILD_STATIC)
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
          if(ARCH STREQUAL "x64")
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 libserialport64 sockpp64 pupdmd64 ws2_32)
-         else()
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum libserialport sockpp pupdmd ws2_32)
-         endif()
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 vni64 libserialport64 sockpp64 pupdmd64 ws2_32)
+          else()
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum vni libserialport sockpp pupdmd ws2_32)
+          endif()
       elseif(PLATFORM STREQUAL "macos")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp pupdmd)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum vni serialport sockpp pupdmd)
       elseif(PLATFORM STREQUAL "linux")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum serialport sockpp pupdmd)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum vni serialport sockpp pupdmd)
       endif()
 
       if(POST_BUILD_COPY_EXT_LIBS)

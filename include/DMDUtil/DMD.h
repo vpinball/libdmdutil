@@ -32,6 +32,7 @@ class ZeDMD;
 
 struct _Serum_Frame_Struc;
 typedef _Serum_Frame_Struc SerumFrameStruct;
+struct Vni_Context;
 
 namespace PUPDMD
 {
@@ -89,12 +90,13 @@ class DMDUTILAPI DMD
     SerumV2_64 = 8,
     SerumV2_64_32 = 9,
     NotColorized = 10,
+    Vni = 11,
   };
 
   bool IsSerumMode(Mode mode, bool showNotColorized = false)
   {
     return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
-            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 ||
+            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 || mode == Mode::Vni ||
             (showNotColorized && mode == Mode::NotColorized));
   }
 
@@ -204,6 +206,7 @@ class DMDUTILAPI DMD
   void DumpDMDRawThread();
   void PupDMDThread();
   void SerumThread();
+  void VniThread();
 
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
@@ -211,6 +214,7 @@ class DMDUTILAPI DMD
   char m_dumpPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   SerumFrameStruct* m_pSerum;
+  Vni_Context* m_pVni;
   ZeDMD* m_pZeDMD;
   PUPDMD::DMD* m_pPUPDMD;
   std::vector<LevelDMD*> m_levelDMDs;
@@ -228,6 +232,7 @@ class DMDUTILAPI DMD
   std::thread* m_pDumpDMDRawThread;
   std::thread* m_pPupDMDThread;
   std::thread* m_pSerumThread;
+  std::thread* m_pVniThread;
   std::shared_mutex m_dmdSharedMutex;
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_stopFlag;
@@ -243,6 +248,18 @@ class DMDUTILAPI DMD
   void PixelcadeDMDThread();
   PixelcadeDMD* m_pPixelcadeDMD;
   std::thread* m_pPixelcadeDMDThread;
+#endif
+
+#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                 \
+    !(                                                                                                                 \
+        (defined(__APPLE__) &&                                                                                         \
+         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                     \
+        defined(__ANDROID__))
+  void Pin2DMDThread();
+  std::thread* m_pPin2DMDThread;
+  bool m_pin2dmdConnected;
+  uint16_t m_pin2dmdWidth;
+  uint16_t m_pin2dmdHeight;
 #endif
 };
 
