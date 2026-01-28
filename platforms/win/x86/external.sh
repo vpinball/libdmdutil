@@ -5,6 +5,7 @@ set -e
 source ./platforms/config.sh
 
 echo "Building libraries..."
+echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
@@ -14,6 +15,26 @@ echo ""
 rm -rf external
 mkdir external
 cd external
+
+#
+# build libusb and copy to third-party
+#
+
+curl -sL https://github.com/libusb/libusb/archive/${LIBUSB_SHA}.tar.gz -o libusb-${LIBUSB_SHA}.tar.gz
+tar xzf libusb-${LIBUSB_SHA}.tar.gz
+mv libusb-${LIBUSB_SHA} libusb
+cd libusb
+# remove patch after this is fixed: https://github.com/libusb/libusb/issues/1649#issuecomment-2940138443
+cp ../../platforms/win/x86/libusb/libusb_dll.vcxproj msvc
+msbuild.exe msvc/libusb_dll.vcxproj \
+   -p:Configuration=${BUILD_TYPE} \
+   -p:Platform=Win32 \
+   -p:PlatformToolset=v143
+mkdir -p ../../third-party/include/libusb-1.0
+cp libusb/libusb.h ../../third-party/include/libusb-1.0
+cp build/v143/Win32/${BUILD_TYPE}/libusb_dll/../dll/libusb-1.0.lib ../../third-party/build-libs/win/x86
+cp build/v143/Win32/${BUILD_TYPE}/libusb_dll/../dll/libusb-1.0.dll ../../third-party/runtime-libs/win/x86
+cd ..
 
 #
 # build libzedmd and copy to external
