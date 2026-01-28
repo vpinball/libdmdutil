@@ -62,10 +62,14 @@ jobs:
         name: Add autoconf and automake (mac runner)
         run: |
            brew install autoconf automake libtool
+      - if: (matrix.platform == 'linux')
+        name: Add libudev and autotools (linux runner)
+        run: |
+           sudo apt-get update
+           sudo apt install libudev-dev autoconf automake libtool pkg-config
       - if: (matrix.platform == 'linux' && matrix.arch == 'aarch64')
         name: Add libgpiod (Raspberry Pi Linux)
         run: |
-          sudo apt-get update
           sudo apt-get install -y libgpiod-dev
       - name: Build libdmdutil-${{ matrix.platform }}-${{ matrix.arch }}
         run: |
