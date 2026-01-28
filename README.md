@@ -237,19 +237,23 @@ The `dmdutil-generate-scenes` tool generates a dump of such scene frames accordi
 
 ## DMD Dump Player
 
-`dmdutil-play-dump` plays an existing txt or raw dump and sends the frames as 2-bit or 4-bit data frames to all attached DMDs.
-The timestamps in the dump represent the duration of each frame. It can optionally connect to a remote DMD server and can dump
-txt/rgb565/rgb888 while playing (raw output is not supported).
+`dmdutil-play-dump` plays an existing txt, rgb565, rgb888, or raw dump and sends the frames to all attached DMDs. Txt/raw inputs are sent as
+2-bit or 4-bit data frames, while rgb565/rgb888 inputs are sent as color frames. The timestamps in the dump represent the absolute time
+(ms since start). It can optionally connect to a remote DMD server and can dump txt/rgb565/rgb888 while playing (raw output is not supported).
+Dump output uses the live DMD dumpers (same as libdmdutil), so colorized frames are preserved. By default, playback uses the original frame
+timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's original duration is shorter, the original duration is used.
 
 `dmdutil-play-dump` accepts these command line options:
 ```
-  -i, --input=FILE               Input dump file (.txt or .raw)
+  -i, --input=FILE               Input dump file (.txt, .565.txt, .888.txt, or .raw)
+  -a, --alt-color-path=PATH      Alt color base path (optional, enables Serum colorization)
   -d, --depth=VALUE              Bit depth to send (2 or 4) (optional, default is 2)
   -s, --server=HOST[:PORT]       Connect to a DMD server (optional)
   -L, --no-local                 Disable local displays
   -t, --dump-txt                 Dump txt while playing
   -5, --dump-565                 Dump rgb565 while playing
   -8, --dump-888                 Dump rgb888 while playing
+  -w, --delay-ms[=MS]            Fixed delay between frames in milliseconds (optional, default is 8 when specified without a value)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
   -R, --raw                      Force raw dump parsing

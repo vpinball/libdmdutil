@@ -21,4 +21,5 @@ third-party/include/LZ4Stream.h
 third-party/include/lz4
 third-party/include/TimeUtils.h
 third-party/include/vni.h
+third-party/include/libusb-1.0
 .DS_Store

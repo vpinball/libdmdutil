@@ -228,6 +228,8 @@ DMD::DMD()
   for (uint8_t i = 0; i < DMDUTIL_FRAME_BUFFER_SIZE; i++)
   {
     m_pUpdateBufferQueue[i] = new Update();
+    m_updateBufferQueueTimestamp[i] = 0;
+    m_updateBufferQueueHasTimestamp[i] = false;
   }
   m_updateBufferQueuePosition.store(0, std::memory_order_release);
   m_stopFlag.store(false, std::memory_order_release);
@@ -628,15 +630,43 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   QueueUpdate(dmdUpdate, buffered);
 }
 
-void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered)
+void DMD::UpdateDataWithTimestampInternal(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
+                                          uint8_t g, uint8_t b, Mode mode, uint32_t timestampMs, bool buffered)
+{
+  auto dmdUpdate = std::make_shared<Update>();
+  if (pData)
+  {
+    memcpy(dmdUpdate->data, pData, (size_t)width * height * (mode == Mode::RGB16 ? 2 : (mode == Mode::RGB24 ? 3 : 1)));
+    dmdUpdate->hasData = true;
+  }
+  else
+  {
+    dmdUpdate->hasData = false;
+  }
+  dmdUpdate->mode = mode;
+  dmdUpdate->depth = depth;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
+  dmdUpdate->hasSegData = false;
+  dmdUpdate->hasSegData2 = false;
+  dmdUpdate->r = r;
+  dmdUpdate->g = g;
+  dmdUpdate->b = b;
+
+  QueueUpdate(dmdUpdate, buffered, true, timestampMs);
+}
+
+void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bool hasTimestamp, uint32_t timestampMs)
 {
   std::thread(
-      [this, dmdUpdate, buffered]()
+      [this, dmdUpdate, buffered, hasTimestamp, timestampMs]()
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
         uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
-        memcpy(m_pUpdateBufferQueue[(++updateBufferQueuePosition) % DMDUTIL_FRAME_BUFFER_SIZE], dmdUpdate.get(),
-               sizeof(Update));
+        uint8_t slot = (++updateBufferQueuePosition) % DMDUTIL_FRAME_BUFFER_SIZE;
+        memcpy(m_pUpdateBufferQueue[slot], dmdUpdate.get(), sizeof(Update));
+        m_updateBufferQueueHasTimestamp[slot] = hasTimestamp;
+        m_updateBufferQueueTimestamp[slot] = timestampMs;
         m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
 
         Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
@@ -689,6 +719,12 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   UpdateData(pData, depth, width, height, r, g, b, Mode::Data, buffered);
 }
 
+void DMD::UpdateDataWithTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
+                                  uint8_t b, uint32_t timestampMs, bool buffered)
+{
+  UpdateDataWithTimestampInternal(pData, depth, width, height, r, g, b, Mode::Data, timestampMs, buffered);
+}
+
 void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                           uint8_t b, bool buffered)
 {
@@ -698,6 +734,18 @@ void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint1
 void DMD::UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, bool buffered)
 {
   UpdateData(pData, 24, width, height, 0, 0, 0, Mode::RGB24, buffered);
+}
+
+void DMD::UpdateRGB24DataWithTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
+                                       uint8_t g, uint8_t b, uint32_t timestampMs, bool buffered)
+{
+  UpdateDataWithTimestampInternal(pData, depth, width, height, r, g, b, Mode::RGB24, timestampMs, buffered);
+}
+
+void DMD::UpdateRGB24DataWithTimestamp(const uint8_t* pData, uint16_t width, uint16_t height, uint32_t timestampMs,
+                                       bool buffered)
+{
+  UpdateDataWithTimestampInternal(pData, 24, width, height, 0, 0, 0, Mode::RGB24, timestampMs, buffered);
 }
 
 void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered)
@@ -720,6 +768,29 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
   dmdUpdate->hasSegData2 = false;
 
   QueueUpdate(dmdUpdate, buffered);
+}
+
+void DMD::UpdateRGB16DataWithTimestamp(const uint16_t* pData, uint16_t width, uint16_t height, uint32_t timestampMs,
+                                       bool buffered)
+{
+  auto dmdUpdate = std::make_shared<Update>();
+  dmdUpdate->mode = Mode::RGB16;
+  dmdUpdate->depth = 24;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
+  if (pData)
+  {
+    memcpy(dmdUpdate->segData, pData, (size_t)width * height * sizeof(uint16_t));
+    dmdUpdate->hasData = true;
+  }
+  else
+  {
+    dmdUpdate->hasData = false;
+  }
+  dmdUpdate->hasSegData = false;
+  dmdUpdate->hasSegData2 = false;
+
+  QueueUpdate(dmdUpdate, buffered, true, timestampMs);
 }
 
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
@@ -1153,6 +1224,8 @@ void DMD::SerumThread()
         if (m_pSerum)
         {
           Serum_Dispose();
+          m_serumHasTimestamp = false;
+          m_serumLastTimestampMs = 0;
         }
 
         return;
@@ -1197,6 +1270,8 @@ void DMD::SerumThread()
           // DMDServer accepted a different connection, turn off Serum Colorization.
           Serum_Dispose();
           m_pSerum = nullptr;
+          m_serumHasTimestamp = false;
+          m_serumLastTimestampMs = 0;
           lastDmdUpdate = nullptr;
           strcpy(name, "");
           QueueBuffer();
@@ -1213,6 +1288,8 @@ void DMD::SerumThread()
             {
               Serum_Dispose();
               m_pSerum = nullptr;
+              m_serumHasTimestamp = false;
+              m_serumLastTimestampMs = 0;
               lastDmdUpdate = nullptr;
             }
 
@@ -1280,6 +1357,8 @@ void DMD::SerumThread()
 
               Serum_SetIgnoreUnknownFramesTimeout(Config::GetInstance()->GetIgnoreUnknownFramesTimeout());
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
+              m_serumHasTimestamp = false;
+              m_serumLastTimestampMs = 0;
             }
           }
 
@@ -1294,7 +1373,11 @@ void DMD::SerumThread()
 
               lastDmdUpdate = m_pUpdateBufferQueue[bufferPositionMod];
 
-              QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES);
+              uint32_t queuedTimestamp = 0;
+              bool hasTimestamp = GetQueueTimestamp(bufferPositionMod, queuedTimestamp);
+
+              QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES,
+                               hasTimestamp, queuedTimestamp);
 
               if (result > 0 && ((result & 0xffff) < 2048))
               {
@@ -1327,7 +1410,9 @@ void DMD::SerumThread()
                      (size_t)m_pUpdateBufferQueue[bufferPositionMod]->width *
                          m_pUpdateBufferQueue[bufferPositionMod]->height);
 
-              QueueUpdate(noSerumUpdate, false);
+              uint32_t queuedTimestamp = 0;
+              bool hasTimestamp = GetQueueTimestamp(bufferPositionMod, queuedTimestamp);
+              QueueUpdate(noSerumUpdate, false, hasTimestamp, queuedTimestamp);
             }
           }
         }
@@ -1341,7 +1426,7 @@ void DMD::SerumThread()
 
           Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
 
-          QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000);
+          QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000, false, 0);
 
           if (result > 0 && ((result & 0xffff) < 2048))
           {
@@ -1490,7 +1575,9 @@ void DMD::VniThread()
                 memcpy(vniUpdate->data, frame->frame, frameSize);
                 memcpy(vniUpdate->segData, frame->palette, paletteSize * 3);
 
-                QueueUpdate(vniUpdate, false);
+                uint32_t queuedTimestamp = 0;
+                bool hasTimestamp = GetQueueTimestamp(bufferPositionMod, queuedTimestamp);
+                QueueUpdate(vniUpdate, false, hasTimestamp, queuedTimestamp);
               }
             }
           }
@@ -1510,7 +1597,9 @@ void DMD::VniThread()
                    (size_t)m_pUpdateBufferQueue[bufferPositionMod]->width *
                        m_pUpdateBufferQueue[bufferPositionMod]->height);
 
-            QueueUpdate(noVniUpdate, false);
+            uint32_t queuedTimestamp = 0;
+            bool hasTimestamp = GetQueueTimestamp(bufferPositionMod, queuedTimestamp);
+            QueueUpdate(noVniUpdate, false, hasTimestamp, queuedTimestamp);
           }
         }
       }
@@ -1518,9 +1607,21 @@ void DMD::VniThread()
   }
 }
 
-void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
+void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool hasTimestamp, uint32_t timestampMs)
 {
   if (!render32 && !render64) return;
+
+  if (!hasTimestamp && m_serumHasTimestamp && m_pSerum && m_pSerum->rotationtimer > 0)
+  {
+    timestampMs = m_serumLastTimestampMs + (uint32_t)m_pSerum->rotationtimer;
+    hasTimestamp = true;
+  }
+
+  if (hasTimestamp)
+  {
+    m_serumHasTimestamp = true;
+    m_serumLastTimestampMs = timestampMs;
+  }
 
   auto serumUpdate = std::make_shared<Update>();
   serumUpdate->hasData = true;
@@ -1536,7 +1637,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
     memcpy(serumUpdate->data, m_pSerum->frame, (size_t)dmdUpdate->width * dmdUpdate->height);
     memcpy(serumUpdate->segData, m_pSerum->palette, PALETTE_SIZE);
 
-    QueueUpdate(serumUpdate, false);
+    QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
   }
   else if (m_pSerum->SerumVersion == SERUM_V2)
   {
@@ -1550,7 +1651,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
         serumUpdate->height = 32;
         memcpy(serumUpdate->segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
-        QueueUpdate(serumUpdate, false);
+        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
     }
     else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
@@ -1563,7 +1664,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
         serumUpdate->height = 64;
         memcpy(serumUpdate->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
-        QueueUpdate(serumUpdate, false);
+        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
     }
     else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
@@ -1576,7 +1677,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
         serumUpdate->height = 32;
         memcpy(serumUpdate->segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
 
-        QueueUpdate(serumUpdate, false);
+        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
 
       if (render64)
@@ -1592,7 +1693,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64)
         serumUpdateHD->height = 64;
         memcpy(serumUpdateHD->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
 
-        QueueUpdate(serumUpdateHD, false);
+        QueueUpdate(serumUpdateHD, false, hasTimestamp, timestampMs);
       }
     }
   }
@@ -2377,6 +2478,45 @@ bool DMD::GetDumpSuffix(const char* romName, char* outSuffix, size_t outSize)
   return true;
 }
 
+bool DMD::GetQueueTimestamp(uint8_t bufferPositionMod, uint32_t& timestampMs) const
+{
+  if (!m_updateBufferQueueHasTimestamp[bufferPositionMod]) return false;
+  timestampMs = m_updateBufferQueueTimestamp[bufferPositionMod];
+  return true;
+}
+
+uint16_t DMD::GetUpdateQueuePosition() const
+{
+  return m_updateBufferQueuePosition.load(std::memory_order_acquire);
+}
+
+bool DMD::DumpersReached(uint16_t targetPosition) const
+{
+  if (m_dumpTxtActive.load(std::memory_order_acquire) &&
+      m_dumpTxtPosition.load(std::memory_order_acquire) != targetPosition)
+    return false;
+  if (m_dumpRawActive.load(std::memory_order_acquire) &&
+      m_dumpRawPosition.load(std::memory_order_acquire) != targetPosition)
+    return false;
+  if (m_dump565Active.load(std::memory_order_acquire) &&
+      m_dump565Position.load(std::memory_order_acquire) != targetPosition)
+    return false;
+  if (m_dump888Active.load(std::memory_order_acquire) &&
+      m_dump888Position.load(std::memory_order_acquire) != targetPosition)
+    return false;
+  return true;
+}
+
+bool DMD::WaitForDumpers(uint16_t targetPosition, uint32_t timeoutMs)
+{
+  std::unique_lock<std::mutex> lock(m_dumpPositionMutex);
+  if (DumpersReached(targetPosition)) return true;
+  if (timeoutMs == 0) return false;
+  auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+  return m_dumpPositionCv.wait_until(lock, deadline, [&]() { return DumpersReached(targetPosition); });
+}
+
+
 void DMD::DumpDMDTxtThread()
 {
   char name[DMDUTIL_MAX_NAME_SIZE] = {0};
@@ -2392,6 +2532,9 @@ void DMD::DumpDMDTxtThread()
   Config* const pConfig = Config::GetInstance();
   bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
   bool filterTransitionalFrames = pConfig->IsFilterTransitionalFrames();
+  m_dumpTxtActive.store(true, std::memory_order_release);
+  m_dumpTxtPosition.store(bufferPosition, std::memory_order_release);
+  m_dumpPositionCv.notify_all();
 
   while (true)
   {
@@ -2411,6 +2554,8 @@ void DMD::DumpDMDTxtThread()
         fclose(f);
         f = nullptr;
       }
+      m_dumpTxtActive.store(false, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
       return;
     }
 
@@ -2420,6 +2565,8 @@ void DMD::DumpDMDTxtThread()
       // Don't use GetNextBufferPosition() here, we need all frames!
       ++bufferPosition;  // 65635 + 1 = 0
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      m_dumpTxtPosition.store(bufferPosition, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
 
       if (m_pUpdateBufferQueue[bufferPositionMod]->depth <= 4 && m_pUpdateBufferQueue[bufferPositionMod]->hasData &&
           ((m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data && !dumpNotColorizedFrames) ||
@@ -2472,9 +2619,17 @@ void DMD::DumpDMDTxtThread()
               (int)m_pUpdateBufferQueue[bufferPositionMod]->width * m_pUpdateBufferQueue[bufferPositionMod]->height;
           if (update || (memcmp(renderBuffer[1], m_pUpdateBufferQueue[bufferPositionMod]->data, length) != 0))
           {
-            passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       std::chrono::steady_clock::now() - start)
-                                       .count());
+            uint32_t queuedTimestamp = 0;
+            if (GetQueueTimestamp(bufferPositionMod, queuedTimestamp))
+            {
+              passed[2] = queuedTimestamp;
+            }
+            else
+            {
+              passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                         std::chrono::steady_clock::now() - start)
+                                         .count());
+            }
             memcpy(renderBuffer[2], m_pUpdateBufferQueue[bufferPositionMod]->data, length);
 
             if (filterTransitionalFrames && m_pUpdateBufferQueue[bufferPositionMod]->depth == 2 &&
@@ -2558,6 +2713,9 @@ void DMD::DumpDMDRgb565Thread()
   uint8_t rgb24Temp[256 * 64 * 3] = {0};
 
   (void)m_stopFlag.load(std::memory_order_acquire);
+  m_dump565Active.store(true, std::memory_order_release);
+  m_dump565Position.store(bufferPosition, std::memory_order_release);
+  m_dumpPositionCv.notify_all();
 
   while (true)
   {
@@ -2577,6 +2735,8 @@ void DMD::DumpDMDRgb565Thread()
         fclose(f);
         f = nullptr;
       }
+      m_dump565Active.store(false, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
       return;
     }
 
@@ -2586,6 +2746,8 @@ void DMD::DumpDMDRgb565Thread()
       // Don't use GetNextBufferPosition() here, we need all frames!
       ++bufferPosition;  // 65635 + 1 = 0
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      m_dump565Position.store(bufferPosition, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
 
       Update* update = m_pUpdateBufferQueue[bufferPositionMod];
       if (!(update->hasData || update->hasSegData)) continue;
@@ -2693,9 +2855,17 @@ void DMD::DumpDMDRgb565Thread()
 
       if (updateFrame || memcmp(renderBuffer[1], nextFrame, frameBytes) != 0)
       {
-        passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::steady_clock::now() - start)
-                                   .count());
+        uint32_t queuedTimestamp = 0;
+        if (GetQueueTimestamp(bufferPositionMod, queuedTimestamp))
+        {
+          passed[2] = queuedTimestamp;
+        }
+        else
+        {
+          passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::steady_clock::now() - start)
+                                     .count());
+        }
         frameWidths[2] = width;
         frameHeights[2] = height;
 
@@ -2745,6 +2915,9 @@ void DMD::DumpDMDRgb888Thread()
   uint8_t palette[256 * 3] = {0};
 
   (void)m_stopFlag.load(std::memory_order_acquire);
+  m_dump888Active.store(true, std::memory_order_release);
+  m_dump888Position.store(bufferPosition, std::memory_order_release);
+  m_dumpPositionCv.notify_all();
 
   while (true)
   {
@@ -2764,6 +2937,8 @@ void DMD::DumpDMDRgb888Thread()
         fclose(f);
         f = nullptr;
       }
+      m_dump888Active.store(false, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
       return;
     }
 
@@ -2773,6 +2948,8 @@ void DMD::DumpDMDRgb888Thread()
       // Don't use GetNextBufferPosition() here, we need all frames!
       ++bufferPosition;  // 65635 + 1 = 0
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      m_dump888Position.store(bufferPosition, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
 
       Update* update = m_pUpdateBufferQueue[bufferPositionMod];
       if (!(update->hasData || update->hasSegData)) continue;
@@ -2878,9 +3055,17 @@ void DMD::DumpDMDRgb888Thread()
 
       if (updateFrame || memcmp(renderBuffer[1], nextFrame, frameBytes) != 0)
       {
-        passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::steady_clock::now() - start)
-                                   .count());
+        uint32_t queuedTimestamp = 0;
+        if (GetQueueTimestamp(bufferPositionMod, queuedTimestamp))
+        {
+          passed[2] = queuedTimestamp;
+        }
+        else
+        {
+          passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::steady_clock::now() - start)
+                                     .count());
+        }
         frameWidths[2] = width;
         frameHeights[2] = height;
 
@@ -2926,6 +3111,9 @@ void DMD::DumpDMDRawThread()
   FILE* f = nullptr;
 
   (void)m_stopFlag.load(std::memory_order_acquire);
+  m_dumpRawActive.store(true, std::memory_order_release);
+  m_dumpRawPosition.store(bufferPosition, std::memory_order_release);
+  m_dumpPositionCv.notify_all();
 
   while (true)
   {
@@ -2945,6 +3133,8 @@ void DMD::DumpDMDRawThread()
         fclose(f);
         f = nullptr;
       }
+      m_dumpRawActive.store(false, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
       return;
     }
 
@@ -2954,6 +3144,8 @@ void DMD::DumpDMDRawThread()
       // Don't use GetNextBufferPosition() here, we need all frames!
       ++bufferPosition;  // 65635 + 1 = 0
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+      m_dumpRawPosition.store(bufferPosition, std::memory_order_release);
+      m_dumpPositionCv.notify_all();
 
       if (m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData)
       {
@@ -2980,8 +3172,13 @@ void DMD::DumpDMDRawThread()
         {
           if (f)
           {
-            auto current =
-                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            uint32_t current = 0;
+            if (!GetQueueTimestamp(bufferPositionMod, current))
+            {
+              current = (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - start)
+                            .count();
+            }
             fwrite(&current, 4, 1, f);
 
             uint32_t size = sizeof(m_pUpdateBufferQueue[bufferPositionMod]);
