@@ -212,7 +212,7 @@ Enabled = 1
 # Disable auto-detection and provide a fixed serial port
 Device =
 
-[Pin2DMD]
+[PIN2DMD]
 # Set to 1 if PIN2DMD is attached
 Enabled = 0
 ```

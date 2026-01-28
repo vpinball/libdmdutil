@@ -7,11 +7,6 @@ option(BUILD_SHARED "Option to build shared library" ON)
 option(BUILD_STATIC "Option to build static library" ON)
 option(POST_BUILD_COPY_EXT_LIBS "Option to copy external libraries to build directory" ON)
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan for Debug builds" OFF)
-set(ENABLE_PIN2DMD_DEFAULT OFF)
-if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
-   set(ENABLE_PIN2DMD_DEFAULT ON)
-endif()
-option(ENABLE_PIN2DMD "Enable PIN2DMD support" ${ENABLE_PIN2DMD_DEFAULT})
 
 message(STATUS "PLATFORM: ${PLATFORM}")
 message(STATUS "ARCH: ${ARCH}")
@@ -20,7 +15,6 @@ message(STATUS "BUILD_SHARED: ${BUILD_SHARED}")
 message(STATUS "BUILD_STATIC: ${BUILD_STATIC}")
 message(STATUS "POST_BUILD_COPY_EXT_LIBS: ${POST_BUILD_COPY_EXT_LIBS}")
 message(STATUS "ENABLE_SANITIZERS: ${ENABLE_SANITIZERS}")
-message(STATUS "ENABLE_PIN2DMD: ${ENABLE_PIN2DMD}")
 
 if(PLATFORM STREQUAL "macos")
    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -110,9 +104,9 @@ if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "li
    )
 endif()
 
-if(ENABLE_PIN2DMD AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux"))
+if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       list(APPEND DMDUTIL_SOURCES
-         src/pin2dmd.cpp
+         src/PIN2DMD.cpp
       )
       list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_PIN2DMD)
    if(PLATFORM STREQUAL "win")

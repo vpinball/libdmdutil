@@ -22,7 +22,7 @@
         (defined(__APPLE__) &&                                                                                        \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
         defined(__ANDROID__))
-#include "pin2dmd.h"
+#include "PIN2DMD.h"
 #endif
 
 #include <algorithm>
@@ -261,10 +261,10 @@ DMD::DMD()
         (defined(__APPLE__) &&                                                                                        \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
         defined(__ANDROID__))
-  m_pPin2DMDThread = nullptr;
-  m_pin2dmdConnected = false;
-  m_pin2dmdWidth = 0;
-  m_pin2dmdHeight = 0;
+  m_pPIN2DMDThread = nullptr;
+  m_PIN2DMDConnected = false;
+  m_PIN2DMDWidth = 0;
+  m_PIN2DMDHeight = 0;
 #endif
 
   m_pDmdFrameThread = new std::thread(&DMD::DmdFrameThread, this);
@@ -378,11 +378,11 @@ DMD::~DMD()
         (defined(__APPLE__) &&                                                                                        \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
         defined(__ANDROID__))
-  if (m_pPin2DMDThread)
+  if (m_pPIN2DMDThread)
   {
-    m_pPin2DMDThread->join();
-    delete m_pPin2DMDThread;
-    m_pPin2DMDThread = nullptr;
+    m_pPIN2DMDThread->join();
+    delete m_pPIN2DMDThread;
+    m_pPIN2DMDThread = nullptr;
   }
 #endif
   delete m_pAlphaNumeric;
@@ -449,7 +449,7 @@ bool DMD::HasDisplay() const
         (defined(__APPLE__) &&                                                                                        \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
         defined(__ANDROID__))
-  if (m_pin2dmdConnected) return true;
+  if (m_PIN2DMDConnected) return true;
 #endif
 
   return false;
@@ -472,7 +472,7 @@ bool DMD::HasHDDisplay() const
         (defined(__APPLE__) &&                                                                                        \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
         defined(__ANDROID__))
-  if (m_pin2dmdConnected && m_pin2dmdWidth == 256) return true;
+  if (m_PIN2DMDConnected && m_PIN2DMDWidth == 256) return true;
 #endif
 
   return false;
@@ -943,21 +943,21 @@ void DMD::FindDisplays()
         (defined(__APPLE__) &&                                                                                        \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
         defined(__ANDROID__))
-          m_pin2dmdConnected = false;
-          m_pin2dmdWidth = 0;
-          m_pin2dmdHeight = 0;
+          m_PIN2DMDConnected = false;
+          m_PIN2DMDWidth = 0;
+          m_PIN2DMDHeight = 0;
 
-          if (pConfig->IsPin2DMD())
+          if (pConfig->IsPIN2DMD())
           {
-            int pin2dmdInit = Pin2dmdInit();
-            if (pin2dmdInit > 0)
+            int PIN2DMDInitResult = PIN2DMDInit();
+            if (PIN2DMDInitResult > 0)
             {
-              m_pin2dmdWidth = Pin2dmdGetWidth();
-              m_pin2dmdHeight = Pin2dmdGetHeight();
-              if (m_pin2dmdWidth > 0 && m_pin2dmdHeight > 0)
+              m_PIN2DMDWidth = PIN2DMDGetWidth();
+              m_PIN2DMDHeight = PIN2DMDGetHeight();
+              if (m_PIN2DMDWidth > 0 && m_PIN2DMDHeight > 0)
               {
-                m_pin2dmdConnected = true;
-                m_pPin2DMDThread = new std::thread(&DMD::Pin2DMDThread, this);
+                m_PIN2DMDConnected = true;
+                m_pPIN2DMDThread = new std::thread(&DMD::PIN2DMDThread, this);
               }
             }
           }
@@ -1339,9 +1339,9 @@ void DMD::SerumThread()
         (defined(__APPLE__) &&                                                                                        \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
         defined(__ANDROID__))
-            if (m_pin2dmdConnected)
+            if (m_PIN2DMDConnected)
             {
-              if (m_pin2dmdHeight == 64)
+              if (m_PIN2DMDHeight == 64)
                 flags |= FLAG_REQUEST_64P_FRAMES;
               else
                 flags |= FLAG_REQUEST_32P_FRAMES;
@@ -1704,7 +1704,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
     defined(__ANDROID__))
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD)
-void DMD::Pin2DMDThread()
+void DMD::PIN2DMDThread()
 {
   uint16_t bufferPosition = 0;
   uint16_t segData1[128] = {0};
@@ -1712,8 +1712,8 @@ void DMD::Pin2DMDThread()
   uint8_t palette[256 * 3] = {0};
   uint8_t renderBuffer[256 * 64] = {0};
 
-  const int targetWidth = m_pin2dmdWidth;
-  const int targetHeight = m_pin2dmdHeight;
+  const int targetWidth = m_PIN2DMDWidth;
+  const int targetHeight = m_PIN2DMDHeight;
   const int targetLength = targetWidth * targetHeight;
   const int maxSourceLength = 256 * 64;
   uint8_t* rgb24Data = new uint8_t[maxSourceLength * 3];
@@ -1908,7 +1908,7 @@ void DMD::Pin2DMDThread()
 
       if (update && scaleToTarget(rgb24Data, width, height, scaledBuffer))
       {
-        Pin2dmdRenderRaw(targetWidth, targetHeight, scaledBuffer, 1);
+        PIN2DMDRenderRaw(targetWidth, targetHeight, scaledBuffer, 1);
       }
     }
   }

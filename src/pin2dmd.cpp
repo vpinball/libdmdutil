@@ -1,12 +1,8 @@
 #include <cstdint>
 #include <cstring>
-#if __has_include(<libusb-1.0/libusb.h>)
 #include <libusb-1.0/libusb.h>
-#else
-#include <libusb.h>
-#endif
 
-#include "pin2dmd.h"
+#include "PIN2DMD.h"
 
 //define PIN2DMD vendor id and product id
 constexpr uint16_t kVid = 0x0314;
@@ -16,9 +12,9 @@ constexpr uint16_t kPid = 0xe457;
 constexpr uint8_t kEpIn = 0x81;
 constexpr uint8_t kEpOut = 0x01;
 
-static bool g_pin2dmd = false;
-static bool g_pin2dmdXL = false;
-static bool g_pin2dmdHD = false;
+static bool g_PIN2DMD = false;
+static bool g_PIN2DMDXL = false;
+static bool g_PIN2DMDHD = false;
 
 static libusb_device** g_devices = nullptr;
 static libusb_device_handle* g_deviceHandle = nullptr;
@@ -27,7 +23,7 @@ static libusb_context* g_usbContext = nullptr;
 
 static uint8_t g_outputBuffer[65536] = {};
 
-int Pin2dmdInit() {
+int PIN2DMDInit() {
     static int ret = 0;
     static uint8_t product[256] = {};
     static const char* string = nullptr;
@@ -82,15 +78,15 @@ int Pin2dmdInit() {
     string = (const char*)product;
     if (ret > 0) {
         if (strcmp(string, "PIN2DMD") == 0) {
-            g_pin2dmd = true;
+            g_PIN2DMD = true;
             ret = 1;
         }
         else if (strcmp(string, "PIN2DMD XL") == 0) {
-            g_pin2dmdXL = true;
+            g_PIN2DMDXL = true;
             ret = 2;
         }
         else if (strcmp(string, "PIN2DMD HD") == 0) {
-            g_pin2dmdHD = true;
+            g_PIN2DMDHD = true;
             ret = 3;
         }
         else {
@@ -101,33 +97,33 @@ int Pin2dmdInit() {
     return ret;
 }
 
-bool Pin2dmdIsConnected()
+bool PIN2DMDIsConnected()
 {
-    return (g_pin2dmd || g_pin2dmdXL || g_pin2dmdHD);
+    return (g_PIN2DMD || g_PIN2DMDXL || g_PIN2DMDHD);
 }
 
-uint16_t Pin2dmdGetWidth()
+uint16_t PIN2DMDGetWidth()
 {
-    if (g_pin2dmdHD) return 256;
-    if (g_pin2dmdXL) return 192;
-    if (g_pin2dmd) return 128;
+    if (g_PIN2DMDHD) return 256;
+    if (g_PIN2DMDXL) return 192;
+    if (g_PIN2DMD) return 128;
     return 0;
 }
 
-uint16_t Pin2dmdGetHeight()
+uint16_t PIN2DMDGetHeight()
 {
-    if (g_pin2dmdHD) return 64;
-    if (g_pin2dmdXL) return 64;
-    if (g_pin2dmd) return 32;
+    if (g_PIN2DMDHD) return 64;
+    if (g_PIN2DMDXL) return 64;
+    if (g_PIN2DMD) return 32;
     return 0;
 }
 
-void Pin2dmdRender(uint16_t width, uint16_t height, uint8_t* buffer, int bitDepth) {
+void PIN2DMDRender(uint16_t width, uint16_t height, uint8_t* buffer, int bitDepth) {
     if (!g_deviceHandle) return;
     if (
-        (width == 256 && height == 64 && g_pin2dmdHD) ||
-        (width == 192 && height == 64 && (g_pin2dmdXL || g_pin2dmdHD)) ||
-        (width == 128 && height <= 32 && (g_pin2dmd || g_pin2dmdXL || g_pin2dmdHD))
+        (width == 256 && height == 64 && g_PIN2DMDHD) ||
+        (width == 192 && height == 64 && (g_PIN2DMDXL || g_PIN2DMDHD)) ||
+        (width == 128 && height <= 32 && (g_PIN2DMD || g_PIN2DMDXL || g_PIN2DMDHD))
     ) {
         int frameSizeInByte = width * height / 8;
         int chunksOf512Bytes = (frameSizeInByte / 512) * bitDepth;
@@ -151,12 +147,12 @@ void Pin2dmdRender(uint16_t width, uint16_t height, uint8_t* buffer, int bitDept
     }
 }
 
-void Pin2dmdRenderRaw(uint16_t width, uint16_t height, uint8_t* buffer, uint32_t frames) {
+void PIN2DMDRenderRaw(uint16_t width, uint16_t height, uint8_t* buffer, uint32_t frames) {
     if (!g_deviceHandle) return;
     if (
-        (width == 256 && height == 64 && g_pin2dmdHD) ||
-        (width == 192 && height == 64 && (g_pin2dmdXL || g_pin2dmdHD)) ||
-        (width == 128 && height <= 32 && (g_pin2dmd || g_pin2dmdXL || g_pin2dmdHD))
+        (width == 256 && height == 64 && g_PIN2DMDHD) ||
+        (width == 192 && height == 64 && (g_PIN2DMDXL || g_PIN2DMDHD)) ||
+        (width == 128 && height <= 32 && (g_PIN2DMD || g_PIN2DMDXL || g_PIN2DMDHD))
     ) {
         int frameSizeInByte = width * height * 3;
         int chunksOf512Bytes = (frameSizeInByte / 512) * frames;

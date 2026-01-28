@@ -35,7 +35,7 @@ Config::Config()
   m_zedmdBrightness = -1;
   m_pixelcade = true;
   m_pixelcadeDevice.clear();
-  m_pin2dmd = true;
+  m_PIN2DMD = true;
   m_dmdServer = false;
   m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;
@@ -242,14 +242,14 @@ void Config::parseConfigFile(const char* path)
     SetPixelcadeDevice("");
   }
 
-  // Pin2DMD
+  // PIN2DMD
   try
   {
-    SetPin2DMD(r.Get<bool>("Pin2DMD", "Enabled", true));
+    SetPIN2DMD(r.Get<bool>("PIN2DMD", "Enabled", true));
   }
   catch (const std::exception&)
   {
-    SetPin2DMD(true);
+    SetPIN2DMD(true);
   }
 
   // Serum

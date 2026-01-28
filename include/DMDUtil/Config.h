@@ -94,8 +94,8 @@ class DMDUTILAPI Config
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
-  bool IsPin2DMD() const { return m_pin2dmd; }
-  void SetPin2DMD(bool pin2dmd) { m_pin2dmd = pin2dmd; }
+  bool IsPIN2DMD() const { return m_PIN2DMD; }
+  void SetPIN2DMD(bool PIN2DMD) { m_PIN2DMD = PIN2DMD; }
   void SetDMDServer(bool dmdServer)
   {
     m_dmdServer = dmdServer;
@@ -156,7 +156,7 @@ class DMDUTILAPI Config
   int m_dmdServerPort;
   bool m_pixelcade;
   std::string m_pixelcadeDevice;
-  bool m_pin2dmd;
+  bool m_PIN2DMD;
   DMDUtil_LogLevel m_logLevel;
   DMDUtil_LogCallback m_logCallback;
   DMDUtil_PUPTriggerCallbackContext m_pupTriggerCallbackContext;

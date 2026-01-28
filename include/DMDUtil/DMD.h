@@ -296,11 +296,11 @@ class DMDUTILAPI DMD
         (defined(__APPLE__) &&                                                                                         \
          ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                     \
         defined(__ANDROID__))
-  void Pin2DMDThread();
-  std::thread* m_pPin2DMDThread;
-  bool m_pin2dmdConnected;
-  uint16_t m_pin2dmdWidth;
-  uint16_t m_pin2dmdHeight;
+  void PIN2DMDThread();
+  std::thread* m_pPIN2DMDThread;
+  bool m_PIN2DMDConnected;
+  uint16_t m_PIN2DMDWidth;
+  uint16_t m_PIN2DMDHeight;
 #endif
 };
 
