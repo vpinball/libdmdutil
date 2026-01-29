@@ -102,18 +102,21 @@ jobs:
           if [[ "${{ matrix.platform }}" == "win" ]]; then
              ARTIFACT_PATH="tmp"
              if [[ "${{ matrix.arch }}" == "x64" ]]; then
-                cp build/Release/*64.lib tmp
-                cp build/Release/*64.dll tmp
+                LIBS=(dmdutil64 cargs64 zedmd64 serum64 libusb64-1.0 libserialport64 sockpp64 pupdmd64 vni64)
              else
-                cp build/Release/*.lib tmp
-                cp build/Release/*.dll tmp
+                LIBS=(dmdutil cargs zedmd serum libusb-1.0 libserialport sockpp pupdmd vni)
              fi
+             for LIB in "${LIBS[@]}"; do
+                cp "build/Release/${LIB}.lib" tmp
+                cp "build/Release/${LIB}.dll" tmp
+             done
              cp build/Release/dmdserver.exe tmp
              cp build/Release/dmdserver_test.exe tmp
              cp build/Release/dmdutil_static.lib tmp
              cp build/Release/dmdutil_test_s.exe tmp
              cp build/Release/dmdutil_test.exe tmp
              cp build/Release/dmdutil-generate-scenes.exe tmp
+             cp build/Release/dmdutil-play-dump.exe tmp
              cp -r test tmp/
           else
             ARTIFACT_PATH="libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
@@ -125,6 +128,7 @@ jobs:
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
                cp build/dmdutil-generate-scenes tmp
+               cp build/dmdutil-play-dump tmp
             elif [[ "${{ matrix.platform }}" == "linux" ]]; then
                cp build/libdmdutil.a tmp
                cp -a build/*.{so,so.*} tmp
@@ -133,6 +137,7 @@ jobs:
                cp build/dmdutil_test_s tmp
                cp build/dmdutil_test tmp
                cp build/dmdutil-generate-scenes tmp
+               cp build/dmdutil-play-dump tmp
             elif [[ "${{ matrix.platform }}" == "ios" || "${{ matrix.platform }}" == "ios-simulator" || "${{ matrix.platform }}" == "tvos" ]]; then
                cp build/libdmdutil.a tmp
                cp -a build/*.dylib tmp
