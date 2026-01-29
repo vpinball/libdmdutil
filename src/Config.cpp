@@ -20,6 +20,7 @@ Config::Config()
   m_altColorPath.clear();
   m_pupCapture = false;
   m_serumPupTriggers = false;
+  m_vniKey.clear();
   m_pupVideosPath.clear();
   m_pupExactColorMatch = true;
   m_framesTimeout = 0;
@@ -34,6 +35,7 @@ Config::Config()
   m_zedmdBrightness = -1;
   m_pixelcade = true;
   m_pixelcadeDevice.clear();
+  m_PIN2DMD = true;
   m_dmdServer = false;
   m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;
@@ -240,6 +242,16 @@ void Config::parseConfigFile(const char* path)
     SetPixelcadeDevice("");
   }
 
+  // PIN2DMD
+  try
+  {
+    SetPIN2DMD(r.Get<bool>("PIN2DMD", "Enabled", true));
+  }
+  catch (const std::exception&)
+  {
+    SetPIN2DMD(true);
+  }
+
   // Serum
   try
   {
@@ -266,6 +278,16 @@ void Config::parseConfigFile(const char* path)
   catch (const std::exception&)
   {
     SetShowNotColorizedFrames(false);
+  }
+
+  // VNI
+  try
+  {
+    SetVniKey(r.Get<std::string>("VNI", "Key", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetVniKey("");
   }
 
   // Dump

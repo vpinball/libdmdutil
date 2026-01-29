@@ -5,14 +5,38 @@ set -e
 source ./platforms/config.sh
 
 echo "Building libraries..."
+echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
 echo ""
 
 rm -rf external
 mkdir external
 cd external
+
+#
+# build libusb and copy to third-party
+#
+
+curl -sL https://github.com/libusb/libusb/archive/${LIBUSB_SHA}.tar.gz -o libusb-${LIBUSB_SHA}.tar.gz
+tar xzf libusb-${LIBUSB_SHA}.tar.gz
+mv libusb-${LIBUSB_SHA} libusb
+cd libusb
+sed -i.bak 's/LIBRARY.*libusb-1.0/LIBRARY libusb64-1.0/' libusb/libusb-1.0.def
+# remove patch after this is fixed: https://github.com/libusb/libusb/issues/1649#issuecomment-2940138443
+cp ../../platforms/win/x64/libusb/libusb_dll.vcxproj msvc
+msbuild.exe msvc/libusb_dll.vcxproj \
+   -p:TargetName=libusb64-1.0 \
+   -p:Configuration=${BUILD_TYPE} \
+   -p:Platform=x64 \
+   -p:PlatformToolset=v143
+mkdir -p ../../third-party/include/libusb-1.0
+cp libusb/libusb.h ../../third-party/include/libusb-1.0
+cp build/v143/x64/${BUILD_TYPE}/libusb_dll/../dll/libusb64-1.0.lib ../../third-party/build-libs/win/x64
+cp build/v143/x64/${BUILD_TYPE}/libusb_dll/../dll/libusb64-1.0.dll ../../third-party/runtime-libs/win/x64
+cd ..
 
 #
 # build libzedmd and copy to external
@@ -93,4 +117,25 @@ cmake --build build --config ${BUILD_TYPE}
 cp src/pupdmd.h ../../third-party/include/
 cp build/${BUILD_TYPE}/pupdmd64.lib ../../third-party/build-libs/win/x64/
 cp build/${BUILD_TYPE}/pupdmd64.dll ../../third-party/runtime-libs/win/x64/
+cd ..
+
+#
+# build libvni and copy to external
+#
+
+curl -sL https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
+tar xzf libvni-${LIBVNI_SHA}.tar.gz
+mv libvni-${LIBVNI_SHA} libvni
+cd libvni
+cmake \
+   -G "Visual Studio 17 2022" \
+   -DPLATFORM=win \
+   -DARCH=x64 \
+   -DBUILD_SHARED=ON \
+   -DBUILD_STATIC=OFF \
+   -B build
+cmake --build build --config ${BUILD_TYPE}
+cp src/vni.h ../../third-party/include/
+cp build/${BUILD_TYPE}/vni64.lib ../../third-party/build-libs/win/x64/
+cp build/${BUILD_TYPE}/vni64.dll ../../third-party/runtime-libs/win/x64/
 cd ..

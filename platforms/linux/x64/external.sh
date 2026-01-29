@@ -5,9 +5,11 @@ set -e
 source ./platforms/config.sh
 
 echo "Building libraries..."
+echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
 echo ""
 
 NUM_PROCS=$(nproc)
@@ -15,6 +17,23 @@ NUM_PROCS=$(nproc)
 rm -rf external
 mkdir external
 cd external
+
+#
+# build libusb and copy to third-party
+#
+
+curl -sL https://github.com/libusb/libusb/archive/${LIBUSB_SHA}.tar.gz -o libusb-${LIBUSB_SHA}.tar.gz
+tar xzf libusb-${LIBUSB_SHA}.tar.gz
+mv libusb-${LIBUSB_SHA} libusb
+cd libusb
+./autogen.sh
+./configure \
+   --enable-shared
+make -j${NUM_PROCS}
+mkdir -p ../../third-party/include/libusb-1.0
+cp libusb/libusb.h ../../third-party/include/libusb-1.0
+cp -a libusb/.libs/libusb-1.0.{so,so.*} ../../third-party/runtime-libs/linux/x64/
+cd ..
 
 #
 # build libzedmd and copy to external
@@ -89,4 +108,24 @@ cmake \
 cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
 cp -a build/libpupdmd.{so,so.*} ../../third-party/runtime-libs/linux/x64/
+cd ..
+
+#
+# build libvni and copy to external
+#
+
+curl -sL https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-${LIBVNI_SHA}.tar.gz
+tar xzf libvni-${LIBVNI_SHA}.tar.gz
+mv libvni-${LIBVNI_SHA} libvni
+cd libvni
+cmake \
+   -DPLATFORM=linux \
+   -DARCH=x64 \
+   -DBUILD_SHARED=ON \
+   -DBUILD_STATIC=OFF \
+   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+   -B build
+cmake --build build -- -j${NUM_PROCS}
+cp src/vni.h ../../third-party/include/
+cp -a build/libvni.{so,so.*} ../../third-party/runtime-libs/linux/x64/
 cd ..

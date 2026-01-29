@@ -45,6 +45,8 @@ class DMDUTILAPI Config
   void SetPUPCapture(bool pupCapture) { m_pupCapture = pupCapture; }
   bool IsSerumPUPTriggers() const { return m_serumPupTriggers; }
   void SetSerumPUPTriggers(bool serumPupTriggers) { m_serumPupTriggers = serumPupTriggers; }
+  void SetVniKey(const char* key) { m_vniKey = key ? key : ""; }
+  const char* GetVniKey() const { return m_vniKey.c_str(); }
   void SetPUPVideosPath(const char* path) { m_pupVideosPath = path; }
   const char* GetPUPVideosPath() const { return m_pupVideosPath.c_str(); }
   bool IsPUPExactColorMatch() const { return m_pupExactColorMatch; }
@@ -92,6 +94,8 @@ class DMDUTILAPI Config
   void SetPixelcade(bool pixelcade) { m_pixelcade = pixelcade; }
   void SetPixelcadeDevice(const char* port) { m_pixelcadeDevice = port; }
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
+  bool IsPIN2DMD() const { return m_PIN2DMD; }
+  void SetPIN2DMD(bool PIN2DMD) { m_PIN2DMD = PIN2DMD; }
   void SetDMDServer(bool dmdServer)
   {
     m_dmdServer = dmdServer;
@@ -125,6 +129,7 @@ class DMDUTILAPI Config
   std::string m_altColorPath;
   bool m_pupCapture;
   bool m_serumPupTriggers;
+  std::string m_vniKey;
   std::string m_pupVideosPath;
   bool m_pupExactColorMatch;
   int m_framesTimeout;
@@ -151,6 +156,7 @@ class DMDUTILAPI Config
   int m_dmdServerPort;
   bool m_pixelcade;
   std::string m_pixelcadeDevice;
+  bool m_PIN2DMD;
   DMDUtil_LogLevel m_logLevel;
   DMDUtil_LogCallback m_logCallback;
   DMDUtil_PUPTriggerCallbackContext m_pupTriggerCallbackContext;

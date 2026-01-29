@@ -32,6 +32,7 @@ class ZeDMD;
 
 struct _Serum_Frame_Struc;
 typedef _Serum_Frame_Struc SerumFrameStruct;
+struct Vni_Context;
 
 namespace PUPDMD
 {
@@ -89,12 +90,13 @@ class DMDUTILAPI DMD
     SerumV2_64 = 8,
     SerumV2_64_32 = 9,
     NotColorized = 10,
+    Vni = 11,
   };
 
   bool IsSerumMode(Mode mode, bool showNotColorized = false)
   {
     return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
-            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 ||
+            mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 || mode == Mode::Vni ||
             (showNotColorized && mode == Mode::NotColorized));
   }
 
@@ -163,6 +165,10 @@ class DMDUTILAPI DMD
   void SetPUPTrigger(const char source, const uint16_t id, const uint8_t value = 1);
   void DumpDMDTxt();
   void DumpDMDRaw();
+  void DumpDMDRgb565();
+  void DumpDMDRgb888();
+  uint16_t GetUpdateQueuePosition() const;
+  bool WaitForDumpers(uint16_t targetPosition, uint32_t timeoutMs);
   LevelDMD* CreateLevelDMD(uint16_t width, uint16_t height, bool sam);
   bool DestroyLevelDMD(LevelDMD* pLevelDMD);
   void AddRGB24DMD(RGB24DMD* pRGB24DMD);
@@ -172,28 +178,55 @@ class DMDUTILAPI DMD
   bool DestroyConsoleDMD(ConsoleDMD* pConsoleDMD);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   bool buffered = false);
+  void UpdateDataWithTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
+                               uint8_t b, uint32_t timestampMs, bool buffered = false);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                        uint8_t b, bool buffer = false);
   void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, bool buffered = false);
+  void UpdateRGB24DataWithTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
+                                    uint8_t g, uint8_t b, uint32_t timestampMs, bool buffered = false);
+  void UpdateRGB24DataWithTimestamp(const uint8_t* pData, uint16_t width, uint16_t height, uint32_t timestampMs,
+                                    bool buffered = false);
   void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered = false);
+  void UpdateRGB16DataWithTimestamp(const uint16_t* pData, uint16_t width, uint16_t height, uint32_t timestampMs,
+                                    bool buffered = false);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b);
-  void QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered);
+  void QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bool hasTimestamp = false,
+                   uint32_t timestampMs = 0);
   bool QueueBuffer();
 
  private:
   Update* m_pUpdateBufferQueue[DMDUTIL_FRAME_BUFFER_SIZE];
   std::shared_ptr<Update> m_updateBuffered;
+  uint32_t m_updateBufferQueueTimestamp[DMDUTIL_FRAME_BUFFER_SIZE] = {0};
+  bool m_updateBufferQueueHasTimestamp[DMDUTIL_FRAME_BUFFER_SIZE] = {false};
+  uint32_t m_serumLastTimestampMs = 0;
+  bool m_serumHasTimestamp = false;
+  std::mutex m_dumpPositionMutex;
+  std::condition_variable m_dumpPositionCv;
+  std::atomic<uint16_t> m_dumpTxtPosition{0};
+  std::atomic<uint16_t> m_dumpRawPosition{0};
+  std::atomic<uint16_t> m_dump565Position{0};
+  std::atomic<uint16_t> m_dump888Position{0};
+  std::atomic<bool> m_dumpTxtActive{false};
+  std::atomic<bool> m_dumpRawActive{false};
+  std::atomic<bool> m_dump565Active{false};
+  std::atomic<bool> m_dump888Active{false};
 
   uint16_t GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t updateBufferQueuePosition);
   bool ConnectDMDServer();
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   Mode mode, bool buffered = false);
+  void UpdateDataWithTimestampInternal(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
+                                       uint8_t g, uint8_t b, Mode mode, uint32_t timestampMs, bool buffered = false);
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
   void HandleTrigger(uint16_t id);
-  void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true);
+  void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true, bool hasTimestamp = false,
+                        uint32_t timestampMs = 0);
   void GenerateRandomSuffix(char* buffer, size_t length);
+  bool DumpersReached(uint16_t targetPosition) const;
 
   void DmdFrameThread();
   void LevelDMDThread();
@@ -202,8 +235,13 @@ class DMDUTILAPI DMD
   void ZeDMDThread();
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
+  void DumpDMDRgb565Thread();
+  void DumpDMDRgb888Thread();
+  bool GetDumpSuffix(const char* romName, char* outSuffix, size_t outSize);
+  bool GetQueueTimestamp(uint8_t bufferPositionMod, uint32_t& timestampMs) const;
   void PupDMDThread();
   void SerumThread();
+  void VniThread();
 
   char m_romName[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_altColorPath[DMDUTIL_MAX_PATH_SIZE] = {0};
@@ -211,6 +249,7 @@ class DMDUTILAPI DMD
   char m_dumpPath[DMDUTIL_MAX_PATH_SIZE] = {0};
   AlphaNumeric* m_pAlphaNumeric;
   SerumFrameStruct* m_pSerum;
+  Vni_Context* m_pVni;
   ZeDMD* m_pZeDMD;
   PUPDMD::DMD* m_pPUPDMD;
   std::vector<LevelDMD*> m_levelDMDs;
@@ -226,13 +265,20 @@ class DMDUTILAPI DMD
   std::thread* m_pDmdFrameThread;
   std::thread* m_pDumpDMDTxtThread;
   std::thread* m_pDumpDMDRawThread;
+  std::thread* m_pDumpDMDRgb565Thread;
+  std::thread* m_pDumpDMDRgb888Thread;
   std::thread* m_pPupDMDThread;
   std::thread* m_pSerumThread;
+  std::thread* m_pVniThread;
   std::shared_mutex m_dmdSharedMutex;
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_stopFlag;
   std::atomic<uint16_t> m_updateBufferQueuePosition;
   std::atomic<uint16_t> m_pupSceneId;
+  std::mutex m_dumpSuffixMutex;
+  char m_dumpSuffixRom[DMDUTIL_MAX_NAME_SIZE] = {0};
+  char m_dumpSuffix[9] = {0};
+  bool m_dumpSuffixValid = false;
 
   bool m_hasUpdateBuffered = false;
   static bool m_finding;
@@ -243,6 +289,18 @@ class DMDUTILAPI DMD
   void PixelcadeDMDThread();
   PixelcadeDMD* m_pPixelcadeDMD;
   std::thread* m_pPixelcadeDMDThread;
+#endif
+
+#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                 \
+    !(                                                                                                                 \
+        (defined(__APPLE__) &&                                                                                         \
+         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                     \
+        defined(__ANDROID__))
+  void PIN2DMDThread();
+  std::thread* m_pPIN2DMDThread;
+  bool m_PIN2DMDConnected;
+  uint16_t m_PIN2DMDWidth;
+  uint16_t m_PIN2DMDHeight;
 #endif
 };
 
