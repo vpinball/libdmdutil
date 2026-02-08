@@ -237,7 +237,8 @@ The `dmdutil-generate-scenes` tool generates a dump of such scene frames accordi
 
 ## DMD Dump Player
 
-`dmdutil-play-dump` plays an existing txt, rgb565, rgb888, or raw dump and sends the frames to all attached DMDs. Txt/raw inputs are sent as
+`dmdutil-play-dump` plays an existing txt, rgb565, rgb888, raw, or zipped dump and sends the frames to all attached DMDs. Zipped dumps are auto-detected.
+Txt/raw inputs are sent as
 2-bit or 4-bit data frames, while rgb565/rgb888 inputs are sent as color frames. The timestamps in the dump represent the absolute time
 (ms since start). It can optionally connect to a remote DMD server and can dump txt/rgb565/rgb888 while playing (raw output is not supported).
 Dump output uses the live DMD dumpers (same as libdmdutil), so colorized frames are preserved. By default, playback uses the original frame
@@ -245,7 +246,7 @@ timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's
 
 `dmdutil-play-dump` accepts these command line options:
 ```
-  -i, --input=FILE               Input dump file (.txt, .565.txt, .888.txt, or .raw)
+  -i, --input=FILE               Input dump file (.txt, .565.txt, .888.txt, .raw, or .zip)
   -a, --alt-color-path=PATH      Alt color base path (optional, enables Serum colorization)
   -d, --depth=VALUE              Bit depth to send (2 or 4) (optional, default is 2)
   -s, --server=HOST[:PORT]       Connect to a DMD server (optional)
@@ -253,6 +254,7 @@ timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's
   -t, --dump-txt                 Dump txt while playing
   -5, --dump-565                 Dump rgb565 while playing
   -8, --dump-888                 Dump rgb888 while playing
+  -z, --dump-zip                 Write txt/565/888 dumps as .zip files
   -w, --delay-ms[=MS]            Fixed delay between frames in milliseconds (optional, default is 8 when specified without a value)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)

@@ -10,9 +10,12 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <sstream>
+#include <limits>
 
 #include "DMDUtil/DMDUtil.h"
 #include "cargs.h"
+#include "miniz/miniz.h"
 
 namespace
 {
@@ -28,6 +31,16 @@ enum class FrameFormat
   Indexed,
   RGB565,
   RGB888
+};
+
+enum class InputFormat
+{
+  Txt,
+  Raw,
+  Rgb565,
+  Rgb888,
+  Zip,
+  Unknown
 };
 
 struct Frame
@@ -71,6 +84,26 @@ static std::string StripExtension(const std::string& name)
   return name.substr(0, pos);
 }
 
+static bool IsZipFile(const std::string& path)
+{
+  std::ifstream file(path, std::ios::binary);
+  if (!file)
+  {
+    return false;
+  }
+  unsigned char header[4] = {0};
+  file.read(reinterpret_cast<char*>(header), sizeof(header));
+  if (file.gcount() < (std::streamsize)sizeof(header))
+  {
+    return false;
+  }
+  if (header[0] != 'P' || header[1] != 'K') return false;
+  if (header[2] == 0x03 && header[3] == 0x04) return true;
+  if (header[2] == 0x05 && header[3] == 0x06) return true;
+  if (header[2] == 0x07 && header[3] == 0x08) return true;
+  return false;
+}
+
 static int HexToInt(char ch)
 {
   if (ch >= '0' && ch <= '9') return ch - '0';
@@ -101,15 +134,8 @@ static uint8_t QuantizeToDepth(uint8_t r, uint8_t g, uint8_t b, uint8_t depth)
   return (depth == 2) ? (uint8_t)(v >> 6) : (uint8_t)(v >> 4);
 }
 
-static bool LoadTxtDump(const std::string& path, uint8_t outDepth, std::vector<Frame>& frames)
+static bool LoadTxtDumpStream(std::istream& file, uint8_t outDepth, std::vector<Frame>& frames)
 {
-  std::ifstream file(path);
-  if (!file)
-  {
-    std::cerr << "Error: Unable to open input file: " << path << "\n";
-    return false;
-  }
-
   std::string line;
   Frame current;
   bool inFrame = false;
@@ -213,6 +239,18 @@ static bool LoadTxtDump(const std::string& path, uint8_t outDepth, std::vector<F
   return true;
 }
 
+static bool LoadTxtDump(const std::string& path, uint8_t outDepth, std::vector<Frame>& frames)
+{
+  std::ifstream file(path);
+  if (!file)
+  {
+    std::cerr << "Error: Unable to open input file: " << path << "\n";
+    return false;
+  }
+
+  return LoadTxtDumpStream(file, outDepth, frames);
+}
+
 static bool ParseHexUint16(const std::string& line, size_t pos, uint16_t& value)
 {
   if (pos + 4 > line.size()) return false;
@@ -241,16 +279,9 @@ static bool ParseHexRgb24(const std::string& line, size_t pos, uint8_t& r, uint8
   return true;
 }
 
-static bool LoadRgb565Dump(const std::string& path, uint8_t outDepth, std::vector<Frame>& frames)
+static bool LoadRgb565DumpStream(std::istream& file, uint8_t outDepth, std::vector<Frame>& frames)
 {
   (void)outDepth;
-  std::ifstream file(path);
-  if (!file)
-  {
-    std::cerr << "Error: Unable to open input file: " << path << "\n";
-    return false;
-  }
-
   std::string line;
   Frame current;
   bool inFrame = false;
@@ -342,9 +373,8 @@ static bool LoadRgb565Dump(const std::string& path, uint8_t outDepth, std::vecto
   return true;
 }
 
-static bool LoadRgb888Dump(const std::string& path, uint8_t outDepth, std::vector<Frame>& frames)
+static bool LoadRgb565Dump(const std::string& path, uint8_t outDepth, std::vector<Frame>& frames)
 {
-  (void)outDepth;
   std::ifstream file(path);
   if (!file)
   {
@@ -352,6 +382,12 @@ static bool LoadRgb888Dump(const std::string& path, uint8_t outDepth, std::vecto
     return false;
   }
 
+  return LoadRgb565DumpStream(file, outDepth, frames);
+}
+
+static bool LoadRgb888DumpStream(std::istream& file, uint8_t outDepth, std::vector<Frame>& frames)
+{
+  (void)outDepth;
   std::string line;
   Frame current;
   bool inFrame = false;
@@ -445,6 +481,18 @@ static bool LoadRgb888Dump(const std::string& path, uint8_t outDepth, std::vecto
   }
 
   return true;
+}
+
+static bool LoadRgb888Dump(const std::string& path, uint8_t outDepth, std::vector<Frame>& frames)
+{
+  std::ifstream file(path);
+  if (!file)
+  {
+    std::cerr << "Error: Unable to open input file: " << path << "\n";
+    return false;
+  }
+
+  return LoadRgb888DumpStream(file, outDepth, frames);
 }
 
 static void FinalizeFrameDurations(std::vector<Frame>& frames)
@@ -618,6 +666,192 @@ static bool LoadRawDump(const std::string& path, uint8_t outDepth, std::vector<F
   return true;
 }
 
+static bool LoadRawDumpFromBuffer(const uint8_t* data, size_t size, uint8_t outDepth, std::vector<Frame>& frames)
+{
+  size_t offset = 0;
+  while (offset + sizeof(uint32_t) * 2 <= size)
+  {
+    uint32_t timestamp = 0;
+    uint32_t frameSize = 0;
+    memcpy(&timestamp, data + offset, sizeof(timestamp));
+    offset += sizeof(timestamp);
+    memcpy(&frameSize, data + offset, sizeof(frameSize));
+    offset += sizeof(frameSize);
+
+    if (frameSize < sizeof(DMDUtil::DMD::Update))
+    {
+      std::cerr << "Error: Raw dump frame size is too small\n";
+      return false;
+    }
+
+    if (offset + frameSize > size)
+    {
+      break;
+    }
+
+    std::vector<uint8_t> buffer(frameSize);
+    memcpy(buffer.data(), data + offset, frameSize);
+    offset += frameSize;
+
+    DMDUtil::DMD::Update update;
+    memcpy(&update, buffer.data(), sizeof(update));
+
+    Frame frame;
+    frame.timestampMs = timestamp;
+    frame.originalTimestampMs = timestamp;
+    if (ConvertUpdateToIndexed(update, outDepth, frame))
+    {
+      frames.push_back(std::move(frame));
+    }
+  }
+
+  if (frames.empty())
+  {
+    std::cerr << "Error: No frames found in raw dump\n";
+    return false;
+  }
+
+  return true;
+}
+
+static InputFormat DetectFormatFromName(const std::string& name)
+{
+  if (EndsWithCaseInsensitive(name, ".565.txt")) return InputFormat::Rgb565;
+  if (EndsWithCaseInsensitive(name, ".888.txt")) return InputFormat::Rgb888;
+  if (EndsWithCaseInsensitive(name, ".raw")) return InputFormat::Raw;
+  if (EndsWithCaseInsensitive(name, ".txt")) return InputFormat::Txt;
+  return InputFormat::Unknown;
+}
+
+static bool LoadZipDump(const std::string& path, uint8_t outDepth, std::vector<Frame>& frames)
+{
+  mz_zip_archive zip;
+  mz_zip_zero_struct(&zip);
+  if (!mz_zip_reader_init_file(&zip, path.c_str(), 0))
+  {
+    std::cerr << "Error: Unable to open zip file: " << path << "\n";
+    return false;
+  }
+
+  int bestIndex = -1;
+  InputFormat bestFormat = InputFormat::Unknown;
+  int bestPriority = -1;
+  int firstFileIndex = -1;
+  const mz_uint fileCount = mz_zip_reader_get_num_files(&zip);
+
+  for (mz_uint i = 0; i < fileCount; ++i)
+  {
+    mz_zip_archive_file_stat stat;
+    if (!mz_zip_reader_file_stat(&zip, i, &stat))
+    {
+      continue;
+    }
+    if (stat.m_is_directory)
+    {
+      continue;
+    }
+    if (firstFileIndex < 0)
+    {
+      firstFileIndex = (int)i;
+    }
+
+    InputFormat format = DetectFormatFromName(stat.m_filename);
+    int priority = -1;
+    switch (format)
+    {
+      case InputFormat::Rgb565:
+        priority = 3;
+        break;
+      case InputFormat::Rgb888:
+        priority = 2;
+        break;
+      case InputFormat::Txt:
+        priority = 1;
+        break;
+      case InputFormat::Raw:
+        priority = 0;
+        break;
+      default:
+        break;
+    }
+
+    if (priority > bestPriority)
+    {
+      bestPriority = priority;
+      bestIndex = (int)i;
+      bestFormat = format;
+    }
+  }
+
+  if (bestIndex < 0 && firstFileIndex >= 0)
+  {
+    bestIndex = firstFileIndex;
+    bestFormat = InputFormat::Unknown;
+  }
+
+  if (bestIndex < 0)
+  {
+    mz_zip_reader_end(&zip);
+    std::cerr << "Error: No files found in zip dump\n";
+    return false;
+  }
+
+  mz_zip_archive_file_stat stat;
+  if (!mz_zip_reader_file_stat(&zip, (mz_uint)bestIndex, &stat))
+  {
+    mz_zip_reader_end(&zip);
+    std::cerr << "Error: Unable to read zip entry\n";
+    return false;
+  }
+
+  if (stat.m_uncomp_size > static_cast<mz_uint64>(std::numeric_limits<size_t>::max()))
+  {
+    mz_zip_reader_end(&zip);
+    std::cerr << "Error: Zip entry too large to extract\n";
+    return false;
+  }
+
+  std::vector<uint8_t> buffer(static_cast<size_t>(stat.m_uncomp_size));
+  if (!mz_zip_reader_extract_to_mem(&zip, (mz_uint)bestIndex, buffer.data(), buffer.size(), 0))
+  {
+    mz_zip_reader_end(&zip);
+    std::cerr << "Error: Unable to extract zip entry\n";
+    return false;
+  }
+
+  if (bestFormat == InputFormat::Unknown)
+  {
+    bestFormat = DetectFormatFromName(stat.m_filename);
+  }
+
+  bool ok = false;
+  if (bestFormat == InputFormat::Rgb565)
+  {
+    std::string content(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+    std::istringstream stream(content);
+    ok = LoadRgb565DumpStream(stream, outDepth, frames);
+  }
+  else if (bestFormat == InputFormat::Rgb888)
+  {
+    std::string content(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+    std::istringstream stream(content);
+    ok = LoadRgb888DumpStream(stream, outDepth, frames);
+  }
+  else if (bestFormat == InputFormat::Raw)
+  {
+    ok = LoadRawDumpFromBuffer(buffer.data(), buffer.size(), outDepth, frames);
+  }
+  else
+  {
+    std::string content(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+    std::istringstream stream(content);
+    ok = LoadTxtDumpStream(stream, outDepth, frames);
+  }
+
+  mz_zip_reader_end(&zip);
+  return ok;
+}
+
 static bool ParseServer(const std::string& value, std::string& host, int& port)
 {
   if (value.empty()) return false;
@@ -648,7 +882,7 @@ static struct cag_option options[] = {
      .access_letters = "i",
      .access_name = "input",
      .value_name = "FILE",
-     .description = "Input dump file (.txt or .raw)"},
+     .description = "Input dump file (.txt, .raw, .565.txt, .888.txt, or .zip)"},
     {.identifier = 'a',
      .access_letters = "a",
      .access_name = "alt-color-path",
@@ -668,6 +902,10 @@ static struct cag_option options[] = {
     {.identifier = 't', .access_letters = "t", .access_name = "dump-txt", .description = "Dump txt while playing"},
     {.identifier = '5', .access_letters = "5", .access_name = "dump-565", .description = "Dump rgb565 while playing"},
     {.identifier = '8', .access_letters = "8", .access_name = "dump-888", .description = "Dump rgb888 while playing"},
+    {.identifier = 'z',
+     .access_letters = "z",
+     .access_name = "dump-zip",
+     .description = "Write txt/565/888 dumps as .zip files"},
     {.identifier = 'w',
      .access_letters = "w",
      .access_name = "delay-ms",
@@ -701,6 +939,7 @@ int main(int argc, char* argv[])
   bool opt_dump_txt = false;
   bool opt_dump_565 = false;
   bool opt_dump_888 = false;
+  bool opt_dump_zip = false;
   bool opt_force_raw = false;
   uint32_t opt_delay_ms = 100;
   bool opt_delay_set = true;
@@ -734,6 +973,9 @@ int main(int argc, char* argv[])
         break;
       case '8':
         opt_dump_888 = true;
+        break;
+      case 'z':
+        opt_dump_zip = true;
         break;
       case 'w':
       {
@@ -778,15 +1020,12 @@ int main(int argc, char* argv[])
   }
 
   std::string inputPath = opt_input;
-  enum class InputFormat
-  {
-    Txt,
-    Raw,
-    Rgb565,
-    Rgb888
-  };
   InputFormat format = InputFormat::Txt;
-  if (opt_force_raw || EndsWithCaseInsensitive(inputPath, ".raw"))
+  if (IsZipFile(inputPath))
+  {
+    format = InputFormat::Zip;
+  }
+  else if (opt_force_raw || EndsWithCaseInsensitive(inputPath, ".raw"))
   {
     format = InputFormat::Raw;
   }
@@ -810,6 +1049,9 @@ int main(int argc, char* argv[])
       break;
     case InputFormat::Rgb888:
       if (!LoadRgb888Dump(inputPath, opt_depth, frames)) return 1;
+      break;
+    case InputFormat::Zip:
+      if (!LoadZipDump(inputPath, opt_depth, frames)) return 1;
       break;
     case InputFormat::Txt:
     default:
@@ -873,6 +1115,10 @@ int main(int argc, char* argv[])
     if (opt_dump_path && opt_dump_path[0] != '\0')
     {
       config->SetDumpPath(opt_dump_path);
+    }
+    if (opt_dump_zip)
+    {
+      config->SetDumpZip(true);
     }
     if (opt_dump_txt) dmd.DumpDMDTxt();
     if (opt_dump_565) dmd.DumpDMDRgb565();

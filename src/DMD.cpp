@@ -38,6 +38,7 @@
 #include "TimeUtils.h"
 #include "ZeDMD.h"
 #include "komihash/komihash.h"
+#include "miniz/miniz.h"
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
@@ -55,6 +56,40 @@ std::string ToLower(const std::string& value)
     out.push_back(static_cast<char>(std::tolower(ch)));
   }
   return out;
+}
+
+bool ZipDumpFile(const std::string& sourcePath)
+{
+  if (sourcePath.empty())
+  {
+    return false;
+  }
+
+  std::filesystem::path srcPath(sourcePath);
+  std::string zipPath = sourcePath + ".zip";
+  std::string entryName = srcPath.filename().string();
+
+  mz_zip_archive zip;
+  mz_zip_zero_struct(&zip);
+  if (!mz_zip_writer_init_file(&zip, zipPath.c_str(), 0))
+  {
+    return false;
+  }
+
+  bool ok = mz_zip_writer_add_file(&zip, entryName.c_str(), sourcePath.c_str(), nullptr, 0, MZ_BEST_COMPRESSION);
+  ok = ok && mz_zip_writer_finalize_archive(&zip);
+  mz_zip_writer_end(&zip);
+
+  if (!ok)
+  {
+    std::error_code ec;
+    std::filesystem::remove(zipPath, ec);
+    return false;
+  }
+
+  std::error_code ec;
+  std::filesystem::remove(sourcePath, ec);
+  return true;
 }
 
 bool FindCaseInsensitiveFile(const std::string& dir, const std::string& filename, std::string* outPath)
@@ -2525,6 +2560,7 @@ void DMD::DumpDMDTxtThread()
   uint32_t passed[3] = {0};
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
+  std::string currentPath;
   std::unordered_set<uint64_t> seenHashes;
 
   (void)m_stopFlag.load(std::memory_order_acquire);
@@ -2532,9 +2568,23 @@ void DMD::DumpDMDTxtThread()
   Config* const pConfig = Config::GetInstance();
   bool dumpNotColorizedFrames = pConfig->IsDumpNotColorizedFrames();
   bool filterTransitionalFrames = pConfig->IsFilterTransitionalFrames();
+  bool dumpZip = pConfig->IsDumpZip();
   m_dumpTxtActive.store(true, std::memory_order_release);
   m_dumpTxtPosition.store(bufferPosition, std::memory_order_release);
   m_dumpPositionCv.notify_all();
+
+  auto closeDumpFile = [&](FILE*& handle, std::string& path)
+  {
+    if (!handle) return;
+    fflush(handle);
+    fclose(handle);
+    handle = nullptr;
+    if (dumpZip && !path.empty())
+    {
+      ZipDumpFile(path);
+    }
+    path.clear();
+  };
 
   while (true)
   {
@@ -2548,12 +2598,7 @@ void DMD::DumpDMDTxtThread()
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
-      if (f)
-      {
-        fflush(f);
-        fclose(f);
-        f = nullptr;
-      }
+      closeDumpFile(f, currentPath);
       m_dumpTxtActive.store(false, std::memory_order_release);
       m_dumpPositionCv.notify_all();
       return;
@@ -2577,11 +2622,7 @@ void DMD::DumpDMDTxtThread()
         {
           // New game ROM.
           start = std::chrono::steady_clock::now();
-          if (f)
-          {
-            fclose(f);
-            f = nullptr;
-          }
+          closeDumpFile(f, currentPath);
           strcpy(name, m_romName);
 
           if (name[0] != '\0')
@@ -2607,6 +2648,14 @@ void DMD::DumpDMDTxtThread()
               snprintf(filename, sizeof(filename), "%s/%s-%s.txt", m_dumpPath, name, suffix);
             }
             f = fopen(filename, "w");
+            if (f)
+            {
+              currentPath = filename;
+            }
+            else
+            {
+              currentPath.clear();
+            }
             update = true;
             memset(renderBuffer, 0, 2 * 256 * 64);
             passed[0] = passed[1] = 0;
@@ -2709,13 +2758,28 @@ void DMD::DumpDMDRgb565Thread()
   uint32_t passed[3] = {0};
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
+  std::string currentPath;
   uint8_t palette[256 * 3] = {0};
   uint8_t rgb24Temp[256 * 64 * 3] = {0};
 
   (void)m_stopFlag.load(std::memory_order_acquire);
+  bool dumpZip = Config::GetInstance()->IsDumpZip();
   m_dump565Active.store(true, std::memory_order_release);
   m_dump565Position.store(bufferPosition, std::memory_order_release);
   m_dumpPositionCv.notify_all();
+
+  auto closeDumpFile = [&](FILE*& handle, std::string& path)
+  {
+    if (!handle) return;
+    fflush(handle);
+    fclose(handle);
+    handle = nullptr;
+    if (dumpZip && !path.empty())
+    {
+      ZipDumpFile(path);
+    }
+    path.clear();
+  };
 
   while (true)
   {
@@ -2729,12 +2793,7 @@ void DMD::DumpDMDRgb565Thread()
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
-      if (f)
-      {
-        fflush(f);
-        fclose(f);
-        f = nullptr;
-      }
+      closeDumpFile(f, currentPath);
       m_dump565Active.store(false, std::memory_order_release);
       m_dumpPositionCv.notify_all();
       return;
@@ -2761,11 +2820,7 @@ void DMD::DumpDMDRgb565Thread()
       {
         // New game ROM.
         start = std::chrono::steady_clock::now();
-        if (f)
-        {
-          fclose(f);
-          f = nullptr;
-        }
+        closeDumpFile(f, currentPath);
         strcpy(name, m_romName);
 
         if (name[0] != '\0')
@@ -2791,6 +2846,14 @@ void DMD::DumpDMDRgb565Thread()
             snprintf(filename, sizeof(filename), "%s/%s-%s.565.txt", m_dumpPath, name, suffix);
           }
           f = fopen(filename, "w");
+          if (f)
+          {
+            currentPath = filename;
+          }
+          else
+          {
+            currentPath.clear();
+          }
           updateFrame = true;
           memset(renderBuffer, 0, sizeof(renderBuffer));
           memset(frameWidths, 0, sizeof(frameWidths));
@@ -2912,12 +2975,27 @@ void DMD::DumpDMDRgb888Thread()
   uint32_t passed[3] = {0};
   std::chrono::steady_clock::time_point start;
   FILE* f = nullptr;
+  std::string currentPath;
   uint8_t palette[256 * 3] = {0};
 
   (void)m_stopFlag.load(std::memory_order_acquire);
+  bool dumpZip = Config::GetInstance()->IsDumpZip();
   m_dump888Active.store(true, std::memory_order_release);
   m_dump888Position.store(bufferPosition, std::memory_order_release);
   m_dumpPositionCv.notify_all();
+
+  auto closeDumpFile = [&](FILE*& handle, std::string& path)
+  {
+    if (!handle) return;
+    fflush(handle);
+    fclose(handle);
+    handle = nullptr;
+    if (dumpZip && !path.empty())
+    {
+      ZipDumpFile(path);
+    }
+    path.clear();
+  };
 
   while (true)
   {
@@ -2931,12 +3009,7 @@ void DMD::DumpDMDRgb888Thread()
     sl.unlock();
     if (m_stopFlag.load(std::memory_order_acquire))
     {
-      if (f)
-      {
-        fflush(f);
-        fclose(f);
-        f = nullptr;
-      }
+      closeDumpFile(f, currentPath);
       m_dump888Active.store(false, std::memory_order_release);
       m_dumpPositionCv.notify_all();
       return;
@@ -2963,11 +3036,7 @@ void DMD::DumpDMDRgb888Thread()
       {
         // New game ROM.
         start = std::chrono::steady_clock::now();
-        if (f)
-        {
-          fclose(f);
-          f = nullptr;
-        }
+        closeDumpFile(f, currentPath);
         strcpy(name, m_romName);
 
         if (name[0] != '\0')
@@ -2993,6 +3062,14 @@ void DMD::DumpDMDRgb888Thread()
             snprintf(filename, sizeof(filename), "%s/%s-%s.888.txt", m_dumpPath, name, suffix);
           }
           f = fopen(filename, "w");
+          if (f)
+          {
+            currentPath = filename;
+          }
+          else
+          {
+            currentPath.clear();
+          }
           updateFrame = true;
           memset(renderBuffer, 0, sizeof(renderBuffer));
           memset(frameWidths, 0, sizeof(frameWidths));

@@ -28,6 +28,7 @@ Config::Config()
   m_showNotColorizedFrames = false;
   m_dumpNotColorizedFrames = false;
   m_dumpFrames = false;
+  m_dumpZip = false;
   m_filterTransitionalFrames = false;
   m_zedmd = true;
   m_zedmdDevice.clear();

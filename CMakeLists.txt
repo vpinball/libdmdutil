@@ -93,6 +93,7 @@ set(DMDUTIL_SOURCES
    src/Logger.cpp
    src/AlphaNumeric.cpp
    src/DMDServer.cpp
+   external/libserum/third-party/include/miniz/miniz.c
 )
 
 set(DMDUTIL_COMPILE_DEFINITIONS "")
@@ -107,6 +108,7 @@ endif()
 set(DMDUTIL_INCLUDE_DIRS
    ${CMAKE_CURRENT_SOURCE_DIR}/include
    third-party/include
+   external/libserum/third-party/include
 )
 
 if(BUILD_SHARED)
@@ -189,6 +191,7 @@ if(BUILD_SHARED)
 
       add_executable(dmdutil-play-dump
          src/playDump.cpp
+         external/libserum/third-party/include/miniz/miniz.c
       )
       target_link_libraries(dmdutil-play-dump PUBLIC dmdutil_shared)
 
