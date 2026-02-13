@@ -46,7 +46,7 @@ mv libzedmd-${LIBZEDMD_SHA} libzedmd
 cd libzedmd
 BUILD_TYPE=${BUILD_TYPE} platforms/win/x86/external.sh
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -A Win32 \
    -DPLATFORM=win \
    -DARCH=x86 \
@@ -80,7 +80,7 @@ tar xzf libserum-${LIBSERUM_SHA}.tar.gz
 mv libserum-${LIBSERUM_SHA} libserum
 cd libserum
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -A Win32 \
    -DPLATFORM=win \
    -DARCH=x86 \
@@ -107,7 +107,7 @@ tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
 mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
 cd libpupdmd
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -A Win32 \
    -DPLATFORM=win \
    -DARCH=x86 \
