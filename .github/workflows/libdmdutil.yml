@@ -182,7 +182,7 @@ jobs:
                 "libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/$filename"
             fi
           done
-          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test; do
+          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test dmdutil-play-dump; do
             lipo -create -output "tmp/$filename" \
                "libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/$filename" \
                "libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/$filename"
