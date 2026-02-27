@@ -708,7 +708,9 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bo
         ul.unlock();
         m_dmdCV.notify_all();
 
-        if (m_pDMDServerConnector && !IsSerumMode(dmdUpdate->mode))
+        const bool sendToDMDServer =
+            !IsSerumMode(dmdUpdate->mode) || dmdUpdate->mode == Mode::SerumCommand;
+        if (m_pDMDServerConnector && sendToDMDServer)
         {
           StreamHeader streamHeader;
           streamHeader.buffered = (uint8_t)buffered;
