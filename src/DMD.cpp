@@ -17,17 +17,15 @@
 #include "PixelcadeDMD.h"
 #endif
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                \
-    !(                                                                                                                \
-        (defined(__APPLE__) &&                                                                                        \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
 #include "PIN2DMD.h"
 #endif
 
 #include <algorithm>
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <cstring>
 #include <filesystem>
 #include <unordered_set>
@@ -42,8 +40,8 @@
 #include "pupdmd.h"
 #include "serum-decode.h"
 #include "serum.h"
-#include "vni.h"
 #include "sockpp/tcp_connector.h"
+#include "vni.h"
 
 namespace
 {
@@ -291,11 +289,9 @@ DMD::DMD()
   m_pPixelcadeDMDThread = nullptr;
 #endif
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                \
-    !(                                                                                                                \
-        (defined(__APPLE__) &&                                                                                        \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
   m_pPIN2DMDThread = nullptr;
   m_PIN2DMDConnected = false;
   m_PIN2DMDWidth = 0;
@@ -408,11 +404,9 @@ DMD::~DMD()
   }
 #endif
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                \
-    !(                                                                                                                \
-        (defined(__APPLE__) &&                                                                                        \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
   if (m_pPIN2DMDThread)
   {
     m_pPIN2DMDThread->join();
@@ -479,11 +473,9 @@ bool DMD::HasDisplay() const
   if (m_pPixelcadeDMD != nullptr) return true;
 #endif
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                \
-    !(                                                                                                                \
-        (defined(__APPLE__) &&                                                                                        \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
   if (m_PIN2DMDConnected) return true;
 #endif
 
@@ -502,11 +494,9 @@ bool DMD::HasHDDisplay() const
     }
   }
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                \
-    !(                                                                                                                \
-        (defined(__APPLE__) &&                                                                                        \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
   if (m_PIN2DMDConnected && m_PIN2DMDWidth == 256) return true;
 #endif
 
@@ -754,8 +744,8 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
   UpdateData(pData, depth, width, height, r, g, b, Mode::Data, buffered);
 }
 
-void DMD::UpdateDataWithTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
-                                  uint8_t b, uint32_t timestampMs, bool buffered)
+void DMD::UpdateDataWithTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
+                                  uint8_t g, uint8_t b, uint32_t timestampMs, bool buffered)
 {
   UpdateDataWithTimestampInternal(pData, depth, width, height, r, g, b, Mode::Data, timestampMs, buffered);
 }
@@ -973,11 +963,9 @@ void DMD::FindDisplays()
           m_pPixelcadeDMD = pPixelcadeDMD;
 #endif
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                \
-    !(                                                                                                                \
-        (defined(__APPLE__) &&                                                                                        \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
           m_PIN2DMDConnected = false;
           m_PIN2DMDWidth = 0;
           m_PIN2DMDHeight = 0;
@@ -1233,6 +1221,8 @@ void DMD::ZeDMDThread()
 void DMD::SerumThread()
 {
   Config* const pConfig = Config::GetInstance();
+  constexpr uint16_t kSerumTriggerMinEvent = 50000;
+  constexpr uint16_t kSerumTriggerMaxEvent = 62000;
 
   if (pConfig->IsAltColor())
   {
@@ -1266,18 +1256,6 @@ void DMD::SerumThread()
         return;
       }
 
-      if (m_pSerum && nextRotation == 0)
-      {
-        uint16_t sceneId = m_pupSceneId.load(std::memory_order_relaxed);
-        if (sceneId > 0)
-        {
-          // @todo
-
-          // Reset the trigger after processing
-          m_pupSceneId.store(0, std::memory_order_release);
-        }
-      }
-
       if (nextRotation == 0)
       {
         std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
@@ -1298,6 +1276,38 @@ void DMD::SerumThread()
         // Don't use GetNextBufferPosition() here, we need all frames for PUP triggers!
         ++bufferPosition;  // 65635 + 1 = 0
         uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+
+        if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumCommand)
+        {
+          if (m_pSerum && m_pUpdateBufferQueue[bufferPositionMod]->hasData &&
+              m_pUpdateBufferQueue[bufferPositionMod]->hasSegData)
+          {
+            const char source = static_cast<char>(m_pUpdateBufferQueue[bufferPositionMod]->data[0]);
+            const uint8_t value = m_pUpdateBufferQueue[bufferPositionMod]->data[1];
+            const uint16_t event = m_pUpdateBufferQueue[bufferPositionMod]->segData[0];
+
+            if (source == 'D' && value == 1 && event >= kSerumTriggerMinEvent && event <= kSerumTriggerMaxEvent)
+            {
+              uint32_t result = Serum_Scene_Trigger(event);
+
+              if (result != IDENTIFY_NO_FRAME && result != IDENTIFY_SAME_FRAME && lastDmdUpdate)
+              {
+                QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES, false,
+                                 0);
+              }
+
+              if (result > 0 && ((result & 0xffff) < 2048))
+              {
+                nextRotation = now + m_pSerum->rotationtimer;
+                if (result & 0x40000)
+                  Log(DMDUtil_LogLevel_DEBUG, "Serum: starting scene rotation, timer=%lu", m_pSerum->rotationtimer);
+              }
+              else
+                nextRotation = 0;
+            }
+          }
+          continue;
+        }
 
         if (m_pSerum && (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::RGB24 ||
                          m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::RGB16))
@@ -1369,11 +1379,9 @@ void DMD::SerumThread()
             if (m_pPixelcadeDMD) flags |= FLAG_REQUEST_32P_FRAMES;
 #endif
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                \
-    !(                                                                                                                \
-        (defined(__APPLE__) &&                                                                                        \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                    \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
             if (m_PIN2DMDConnected)
             {
               if (m_PIN2DMDHeight == 64)
@@ -1571,10 +1579,9 @@ void DMD::VniThread()
           }
           else if (!palPath.empty() || !vniPath.empty() || !pacPath.empty())
           {
-            m_pVni = Vni_LoadFromPaths(palPath.empty() ? nullptr : palPath.c_str(),
-                                       vniPath.empty() ? nullptr : vniPath.c_str(),
-                                       pacPath.empty() ? nullptr : pacPath.c_str(),
-                                       (vniKey && vniKey[0] != '\0') ? vniKey : nullptr);
+            m_pVni = Vni_LoadFromPaths(
+                palPath.empty() ? nullptr : palPath.c_str(), vniPath.empty() ? nullptr : vniPath.c_str(),
+                pacPath.empty() ? nullptr : pacPath.c_str(), (vniKey && vniKey[0] != '\0') ? vniKey : nullptr);
             if (m_pVni)
             {
               Log(DMDUtil_LogLevel_INFO, "VNI: Loaded colorization for %s", m_romName);
@@ -1850,8 +1857,7 @@ void DMD::PIN2DMDThread()
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if ((m_pSerum || m_pVni) &&
-          !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
+      if ((m_pSerum || m_pVni) && !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
         continue;
 
       if (!(m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData))
@@ -1990,8 +1996,7 @@ void DMD::PixelcadeDMDThread()
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if ((m_pSerum || m_pVni) &&
-          !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
+      if ((m_pSerum || m_pVni) && !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
         continue;
 
       if (m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData)
@@ -2234,8 +2239,7 @@ void DMD::RGB24DMDThread()
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if ((m_pSerum || m_pVni) &&
-          !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
+      if ((m_pSerum || m_pVni) && !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
         continue;
 
       if (!m_rgb24DMDs.empty() &&
@@ -2520,10 +2524,7 @@ bool DMD::GetQueueTimestamp(uint8_t bufferPositionMod, uint32_t& timestampMs) co
   return true;
 }
 
-uint16_t DMD::GetUpdateQueuePosition() const
-{
-  return m_updateBufferQueuePosition.load(std::memory_order_acquire);
-}
+uint16_t DMD::GetUpdateQueuePosition() const { return m_updateBufferQueuePosition.load(std::memory_order_acquire); }
 
 bool DMD::DumpersReached(uint16_t targetPosition) const
 {
@@ -2550,7 +2551,6 @@ bool DMD::WaitForDumpers(uint16_t targetPosition, uint32_t timeoutMs)
   auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
   return m_dumpPositionCv.wait_until(lock, deadline, [&]() { return DumpersReached(targetPosition); });
 }
-
 
 void DMD::DumpDMDTxtThread()
 {
@@ -2925,9 +2925,9 @@ void DMD::DumpDMDRgb565Thread()
         }
         else
         {
-          passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     std::chrono::steady_clock::now() - start)
-                                     .count());
+          passed[2] =
+              (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                             .count());
         }
         frameWidths[2] = width;
         frameHeights[2] = height;
@@ -3139,9 +3139,9 @@ void DMD::DumpDMDRgb888Thread()
         }
         else
         {
-          passed[2] = (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     std::chrono::steady_clock::now() - start)
-                                     .count());
+          passed[2] =
+              (uint32_t)(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                             .count());
         }
         frameWidths[2] = width;
         frameHeights[2] = height;
@@ -3392,17 +3392,18 @@ void DMD::HandleTrigger(uint16_t id)
 
 void DMD::SetPUPTrigger(const char source, const uint16_t event, const uint8_t value)
 {
-  if (m_pSerum)
+  if (m_pSerum && source == 'D' && value == 1)
   {
-    //    uint16_t id = m_pGenerator->getSceneId(source, event, value);
-    //    if (id > 0)
-    //    {
-    //      while (m_pupSceneId.load(std::memory_order_acquire) != 0)
-    //      {
-    //        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    //      }
-    //      m_pupSceneId.store(id, std::memory_order_release);
-    //    }
+    auto commandUpdate = std::make_shared<Update>();
+    commandUpdate->mode = Mode::SerumCommand;
+    commandUpdate->hasData = true;
+    commandUpdate->hasSegData = true;
+    commandUpdate->hasSegData2 = false;
+    commandUpdate->data[0] = static_cast<uint8_t>(source);
+    commandUpdate->data[1] = value;
+    commandUpdate->segData[0] = event;
+
+    QueueUpdate(commandUpdate, false);
   }
 }
 

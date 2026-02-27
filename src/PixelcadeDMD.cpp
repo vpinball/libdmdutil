@@ -247,8 +247,8 @@ void PixelcadeDMD::EnableRgbLedMatrix(int shifterLen32, int rows)
 
   if (m_isV2)
   {
-    uint8_t command =
-        (m_firmwareVersion >= 23) ? PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 : PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE;
+    uint8_t command = (m_firmwareVersion >= 23) ? PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23
+                                                : PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE;
     uint8_t frame[8];
     int frameSize;
 
@@ -292,8 +292,7 @@ void PixelcadeDMD::Run()
         EnableRgbLedMatrix(shifterLen32, rows);
 
         int errors = 0;
-        FrameUtil::ColorMatrix colorMatrix =
-            (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
+        FrameUtil::ColorMatrix colorMatrix = (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
 
         const int maxFrameDataSize = m_length * 3;
         uint8_t* pFrameData = new uint8_t[maxFrameDataSize + 10];
@@ -357,8 +356,8 @@ void PixelcadeDMD::Run()
               command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
               payloadSize = m_length * 3 / 2;
               pFrameData[0] = command;
-              FrameUtil::Helper::SplitIntoRgbPlanes((uint16_t*)frame.pData, m_length, m_width, rows / 2,
-                                                     pFrameData + 1, colorMatrix);
+              FrameUtil::Helper::SplitIntoRgbPlanes((uint16_t*)frame.pData, m_length, m_width, rows / 2, pFrameData + 1,
+                                                    colorMatrix);
               response = sp_blocking_write(m_pSerialPort, pFrameData, 1 + payloadSize, PIXELCADE_COMMAND_WRITE_TIMEOUT);
             }
 

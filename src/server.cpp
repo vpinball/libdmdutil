@@ -1,8 +1,9 @@
 #include <signal.h>
+
 #include <sstream>
 
-#include "DMDUtil/DMDUtil.h"
 #include "DMDUtil/DMDServer.h"
+#include "DMDUtil/DMDUtil.h"
 #include "Logger.h"
 #include "cargs.h"
 

@@ -91,12 +91,14 @@ class DMDUTILAPI DMD
     SerumV2_64_32 = 9,
     NotColorized = 10,
     Vni = 11,
+    SerumCommand = 12,
   };
 
   bool IsSerumMode(Mode mode, bool showNotColorized = false)
   {
     return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
             mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 || mode == Mode::Vni ||
+            mode == Mode::SerumCommand ||
             (showNotColorized && mode == Mode::NotColorized));
   }
 
@@ -274,7 +276,6 @@ class DMDUTILAPI DMD
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_stopFlag;
   std::atomic<uint16_t> m_updateBufferQueuePosition;
-  std::atomic<uint16_t> m_pupSceneId;
   std::mutex m_dumpSuffixMutex;
   char m_dumpSuffixRom[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_dumpSuffix[9] = {0};

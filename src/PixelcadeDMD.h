@@ -16,8 +16,9 @@
 #define PIXELCADE_RESPONSE_ESTABLE_CONNECTION 0x00
 #define PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME 0x1F
 #define PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE 0x1E
-#define PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 0x2E    //For Pixelcade V2 boards with firwmare v23 or later
-#define PIXELCADE_COMMAND_V23_INIT 0xEF                     //one time init command for Pixelcade V2 boards with V23+ firmware to set up the framing protocol
+#define PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 0x2E  // For Pixelcade V2 boards with firwmare v23 or later
+#define PIXELCADE_COMMAND_V23_INIT \
+  0xEF  // one time init command for Pixelcade V2 boards with V23+ firmware to set up the framing protocol
 #define PIXELCADE_COMMAND_RGB565 0x30
 #define PIXELCADE_COMMAND_RGB888 0x40
 #define PIXELCADE_FRAME_START_MARKER 0xFE

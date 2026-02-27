@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdint>
@@ -6,12 +7,11 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <atomic>
+#include <limits>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
-#include <sstream>
-#include <limits>
 
 #include "DMDUtil/DMDUtil.h"
 #include "cargs.h"
@@ -21,10 +21,7 @@ namespace
 {
 std::atomic<bool> g_stopRequested{false};
 
-void HandleSigInt(int)
-{
-  g_stopRequested.store(true, std::memory_order_release);
-}
+void HandleSigInt(int) { g_stopRequested.store(true, std::memory_order_release); }
 
 enum class FrameFormat
 {
