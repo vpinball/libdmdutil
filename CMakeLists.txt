@@ -86,6 +86,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
    endif()
 endif()
 
+set(MINIZ_SOURCE "third-party/include/miniz/miniz.c")
+set(MINIZ_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third-party/include")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${MINIZ_SOURCE}")
+   message(FATAL_ERROR "Could not find required local miniz source: ${MINIZ_SOURCE}")
+endif()
+
 set(DMDUTIL_SOURCES
    src/Config.cpp
    src/DMD.cpp
@@ -95,7 +101,7 @@ set(DMDUTIL_SOURCES
    src/Logger.cpp
    src/AlphaNumeric.cpp
    src/DMDServer.cpp
-   external/libserum/third-party/include/miniz/miniz.c
+   ${MINIZ_SOURCE}
 )
 
 set(DMDUTIL_COMPILE_DEFINITIONS "")
@@ -113,7 +119,7 @@ endif()
 set(DMDUTIL_INCLUDE_DIRS
    ${CMAKE_CURRENT_SOURCE_DIR}/include
    third-party/include
-   external/libserum/third-party/include
+   ${MINIZ_INCLUDE_DIR}
 )
 
 if(BUILD_SHARED)
@@ -214,7 +220,7 @@ if(BUILD_SHARED)
 
       add_executable(dmdutil-play-dump
          src/playDump.cpp
-         external/libserum/third-party/include/miniz/miniz.c
+         ${MINIZ_SOURCE}
       )
       target_link_libraries(dmdutil-play-dump PUBLIC dmdutil_shared)
 
