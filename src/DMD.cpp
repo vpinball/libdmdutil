@@ -47,6 +47,9 @@
 
 namespace
 {
+constexpr size_t kMaxFramePixels = 256u * 64u;
+constexpr size_t kMaxRgb24Bytes = kMaxFramePixels * 3u;
+
 std::string ToLower(const std::string& value)
 {
   std::string out;
@@ -1129,7 +1132,16 @@ void DMD::ZeDMDThread()
               m_pUpdateBufferQueue[bufferPositionMod]->width, m_pUpdateBufferQueue[bufferPositionMod]->height);
           width = m_pUpdateBufferQueue[bufferPositionMod]->width;
           height = m_pUpdateBufferQueue[bufferPositionMod]->height;
-          frameSize = width * height;
+          const size_t framePixels = (size_t)width * height;
+          if (framePixels == 0 || framePixels > kMaxFramePixels)
+          {
+            Log(DMDUtil_LogLevel_ERROR, "ZeDMD: Invalid frame size %ux%u, skipping frame", width, height);
+            width = 0;
+            height = 0;
+            frameSize = 0;
+            continue;
+          }
+          frameSize = (uint16_t)framePixels;
           // Activate the correct scaling mode.
           m_pZeDMD->SetFrameSize(width, height);
         }
@@ -1149,6 +1161,12 @@ void DMD::ZeDMDThread()
         {
           // ZeDMD HD supports 256 * 64 pixels.
           uint8_t rgb24Data[256 * 64 * 3];
+          const size_t rgb24Len = (size_t)width * height * 3u;
+          if (rgb24Len == 0 || rgb24Len > kMaxRgb24Bytes)
+          {
+            Log(DMDUtil_LogLevel_ERROR, "ZeDMD: Invalid RGB24 frame payload for %ux%u, skipping frame", width, height);
+            continue;
+          }
 
           AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPositionMod]->data, rgb24Data, (size_t)width * height, palette,
                            m_pUpdateBufferQueue[bufferPositionMod]->depth);
@@ -1678,11 +1696,19 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
 
   if (m_pSerum->SerumVersion == SERUM_V1 && render32)
   {
+    const size_t frameBytes = (size_t)dmdUpdate->width * dmdUpdate->height;
+    if (frameBytes == 0 || frameBytes > sizeof(serumUpdate->data))
+    {
+      Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v1 frame size %ux%u, skipping frame", dmdUpdate->width,
+          dmdUpdate->height);
+      return;
+    }
+
     serumUpdate->mode = Mode::SerumV1;
     serumUpdate->depth = 6;
     serumUpdate->width = dmdUpdate->width;
     serumUpdate->height = dmdUpdate->height;
-    memcpy(serumUpdate->data, m_pSerum->frame, (size_t)dmdUpdate->width * dmdUpdate->height);
+    memcpy(serumUpdate->data, m_pSerum->frame, frameBytes);
     memcpy(serumUpdate->segData, m_pSerum->palette, PALETTE_SIZE);
 
     QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
@@ -1693,11 +1719,18 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
     {
       if (render32)
       {
+        const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
+        if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+        {
+          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
+          return;
+        }
+
         serumUpdate->mode = Mode::SerumV2_32;
         serumUpdate->depth = 24;
         serumUpdate->width = m_pSerum->width32;
         serumUpdate->height = 32;
-        memcpy(serumUpdate->segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+        memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
@@ -1706,11 +1739,18 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
     {
       if (render64)
       {
+        const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
+        if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+        {
+          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
+          return;
+        }
+
         serumUpdate->mode = Mode::SerumV2_64;
         serumUpdate->depth = 24;
         serumUpdate->width = m_pSerum->width64;
         serumUpdate->height = 64;
-        memcpy(serumUpdate->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+        memcpy(serumUpdate->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
@@ -1719,17 +1759,31 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
     {
       if (render32)
       {
+        const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
+        if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+        {
+          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
+          return;
+        }
+
         serumUpdate->mode = Mode::SerumV2_32_64;
         serumUpdate->depth = 24;
         serumUpdate->width = m_pSerum->width32;
         serumUpdate->height = 32;
-        memcpy(serumUpdate->segData, m_pSerum->frame32, m_pSerum->width32 * 32 * sizeof(uint16_t));
+        memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
 
       if (render64)
       {
+        const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
+        if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+        {
+          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
+          return;
+        }
+
         // We can't reuse the shared pointer from above because it might have been sent already.
         auto serumUpdateHD = std::make_shared<Update>();
         serumUpdateHD->hasData = true;
@@ -1739,7 +1793,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
         serumUpdateHD->depth = 24;
         serumUpdateHD->width = m_pSerum->width64;
         serumUpdateHD->height = 64;
-        memcpy(serumUpdateHD->segData, m_pSerum->frame64, m_pSerum->width64 * 64 * sizeof(uint16_t));
+        memcpy(serumUpdateHD->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
 
         QueueUpdate(serumUpdateHD, false, hasTimestamp, timestampMs);
       }
