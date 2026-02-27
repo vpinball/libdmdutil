@@ -7,6 +7,7 @@ option(BUILD_SHARED "Option to build shared library" ON)
 option(BUILD_STATIC "Option to build static library" ON)
 option(POST_BUILD_COPY_EXT_LIBS "Option to copy external libraries to build directory" ON)
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan for Debug builds" OFF)
+option(ENABLE_VNI "Enable VNI colorization support" ON)
 
 message(STATUS "PLATFORM: ${PLATFORM}")
 message(STATUS "ARCH: ${ARCH}")
@@ -15,6 +16,7 @@ message(STATUS "BUILD_SHARED: ${BUILD_SHARED}")
 message(STATUS "BUILD_STATIC: ${BUILD_STATIC}")
 message(STATUS "POST_BUILD_COPY_EXT_LIBS: ${POST_BUILD_COPY_EXT_LIBS}")
 message(STATUS "ENABLE_SANITIZERS: ${ENABLE_SANITIZERS}")
+message(STATUS "ENABLE_VNI: ${ENABLE_VNI}")
 
 if(PLATFORM STREQUAL "macos")
    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -97,6 +99,9 @@ set(DMDUTIL_SOURCES
 )
 
 set(DMDUTIL_COMPILE_DEFINITIONS "")
+if(ENABLE_VNI)
+   list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_VNI)
+endif()
 
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
    list(APPEND DMDUTIL_SOURCES
@@ -125,30 +130,48 @@ if(BUILD_SHARED)
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
       if(ARCH STREQUAL "x64")
-         target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 vni64 libusb64-1.0 libserialport64 sockpp64 pupdmd64 ws2_32)
+         target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 libusb64-1.0 libserialport64 sockpp64 pupdmd64 ws2_32)
+         if(ENABLE_VNI)
+            target_link_libraries(dmdutil_shared PUBLIC vni64)
+         endif()
       else()
-        target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum vni libusb-1.0 libserialport sockpp pupdmd ws2_32)
+        target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum libusb-1.0 libserialport sockpp pupdmd ws2_32)
+        if(ENABLE_VNI)
+           target_link_libraries(dmdutil_shared PUBLIC vni)
+        endif()
       endif()
    elseif(PLATFORM STREQUAL "macos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum vni usb-1.0 serialport sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum usb-1.0 serialport sockpp pupdmd)
+      if(ENABLE_VNI)
+         target_link_libraries(dmdutil_shared PUBLIC vni)
+      endif()
    elseif(PLATFORM STREQUAL "linux")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum vni serialport usb-1.0 sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum serialport usb-1.0 sockpp pupdmd)
+      if(ENABLE_VNI)
+         target_link_libraries(dmdutil_shared PUBLIC vni)
+      endif()
    elseif(PLATFORM STREQUAL "ios" OR PLATFORM STREQUAL "ios-simulator" OR PLATFORM STREQUAL "tvos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/build-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum vni sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp pupdmd)
+      if(ENABLE_VNI)
+         target_link_libraries(dmdutil_shared PUBLIC vni)
+      endif()
    elseif(PLATFORM STREQUAL "android")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
       )
-      target_link_libraries(dmdutil_shared PUBLIC zedmd serum vni sockpp pupdmd)
+      target_link_libraries(dmdutil_shared PUBLIC zedmd serum sockpp pupdmd)
+      if(ENABLE_VNI)
+         target_link_libraries(dmdutil_shared PUBLIC vni)
+      endif()
    endif()
 
    if(PLATFORM STREQUAL "win" AND ARCH STREQUAL "x64")
@@ -239,20 +262,32 @@ if(BUILD_STATIC)
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
          if(ARCH STREQUAL "x64")
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 vni64 libusb64-1.0 libserialport64 sockpp64 pupdmd64 ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 libusb64-1.0 libserialport64 sockpp64 pupdmd64 ws2_32)
+            if(ENABLE_VNI)
+               target_link_libraries(dmdutil_test_s PUBLIC vni64)
+            endif()
           else()
-            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum vni libusb-1.0 libserialport sockpp pupdmd ws2_32)
+            target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum libusb-1.0 libserialport sockpp pupdmd ws2_32)
+            if(ENABLE_VNI)
+               target_link_libraries(dmdutil_test_s PUBLIC vni)
+            endif()
           endif()
       elseif(PLATFORM STREQUAL "macos")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum vni usb-1.0 serialport sockpp pupdmd)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum usb-1.0 serialport sockpp pupdmd)
+         if(ENABLE_VNI)
+            target_link_libraries(dmdutil_test_s PUBLIC vni)
+         endif()
       elseif(PLATFORM STREQUAL "linux")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
          )
-         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum vni usb-1.0 serialport sockpp pupdmd)
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum usb-1.0 serialport sockpp pupdmd)
+         if(ENABLE_VNI)
+            target_link_libraries(dmdutil_test_s PUBLIC vni)
+         endif()
       endif()
 
       if(POST_BUILD_COPY_EXT_LIBS)
@@ -282,9 +317,13 @@ if(POST_BUILD_COPY_EXT_LIBS AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "m
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/sockpp64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/pupdmd64.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/pupdmd64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/vni64.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
          )
+         if(ENABLE_VNI)
+            add_custom_command(TARGET copy_ext_libs POST_BUILD
+               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/vni64.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
+               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+            )
+         endif()
       else()
          add_custom_command(TARGET copy_ext_libs POST_BUILD
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/cargs.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
@@ -301,9 +340,13 @@ if(POST_BUILD_COPY_EXT_LIBS AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "m
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/sockpp.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/pupdmd.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/pupdmd.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/vni.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
          )
+         if(ENABLE_VNI)
+            add_custom_command(TARGET copy_ext_libs POST_BUILD
+               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/vni.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
+               COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+            )
+         endif()
       endif()
    elseif(PLATFORM STREQUAL "macos")
       add_custom_command(TARGET copy_ext_libs POST_BUILD
