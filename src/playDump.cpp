@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <execinfo.h>
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -13,6 +14,7 @@
 #include <thread>
 #include <vector>
 
+#include <unistd.h>
 #include "DMDUtil/DMDUtil.h"
 #include "cargs.h"
 #include "miniz/miniz.h"
@@ -20,8 +22,58 @@
 namespace
 {
 std::atomic<bool> g_stopRequested{false};
+volatile sig_atomic_t g_crashHandlerActive = 0;
+constexpr size_t kCrashAltStackSize = 65536;
+uint8_t g_crashAltStack[kCrashAltStackSize];
 
 void HandleSigInt(int) { g_stopRequested.store(true, std::memory_order_release); }
+
+void CrashSignalHandler(int sig, siginfo_t* info, void* context)
+{
+  (void)info;
+  (void)context;
+
+  if (g_crashHandlerActive)
+  {
+    _exit(128 + sig);
+  }
+  g_crashHandlerActive = 1;
+
+  const char msg[] = "FATAL: dmdutil-play-dump crashed. Stack trace:\n";
+  ssize_t ignored = write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  (void)ignored;
+
+  void* stack[64];
+  int frameCount = backtrace(stack, 64);
+  if (frameCount > 0)
+  {
+    backtrace_symbols_fd(stack, frameCount, STDERR_FILENO);
+  }
+
+  _exit(128 + sig);
+}
+
+void InstallCrashTraceHandlers()
+{
+  stack_t ss{};
+  ss.ss_sp = g_crashAltStack;
+  ss.ss_size = sizeof(g_crashAltStack);
+  if (sigaltstack(&ss, nullptr) != 0)
+  {
+    return;
+  }
+
+  struct sigaction sa {};
+  sa.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_ONSTACK;
+  sa.sa_sigaction = CrashSignalHandler;
+  sigemptyset(&sa.sa_mask);
+
+  sigaction(SIGSEGV, &sa, nullptr);
+  sigaction(SIGABRT, &sa, nullptr);
+  sigaction(SIGBUS, &sa, nullptr);
+  sigaction(SIGILL, &sa, nullptr);
+  sigaction(SIGFPE, &sa, nullptr);
+}
 
 enum class FrameFormat
 {
@@ -918,6 +970,10 @@ static struct cag_option options[] = {
      .access_name = "rom",
      .value_name = "NAME",
      .description = "ROM name for dumps (optional)"},
+    {.identifier = 'x',
+     .access_name = "crash-trace",
+     .value_name = NULL,
+     .description = "Enable in-process crash backtrace on fatal signals (optional)"},
     {.identifier = 'R', .access_letters = "R", .access_name = "raw", .description = "Force raw dump parsing"},
     {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
 
@@ -940,6 +996,7 @@ int main(int argc, char* argv[])
   bool opt_force_raw = false;
   uint32_t opt_delay_ms = 100;
   bool opt_delay_set = true;
+  bool opt_crash_trace = false;
 
   cag_option_init(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
   while (cag_option_fetch(&cag_context))
@@ -993,11 +1050,19 @@ int main(int argc, char* argv[])
       case 'R':
         opt_force_raw = true;
         break;
+      case 'x':
+        opt_crash_trace = true;
+        break;
       case 'h':
         std::cerr << "Usage: " << argv[0] << " [OPTION]...\n";
         cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
         return 0;
     }
+  }
+
+  if (opt_crash_trace)
+  {
+    InstallCrashTraceHandlers();
   }
 
   std::signal(SIGINT, HandleSigInt);
