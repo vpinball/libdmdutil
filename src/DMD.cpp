@@ -312,39 +312,50 @@ DMD::DMD()
 
 DMD::~DMD()
 {
+  Log(DMDUtil_LogLevel_INFO, "DMD destructor start");
   std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
   m_stopFlag.store(true, std::memory_order_release);
   ul.unlock();
   m_dmdCV.notify_all();
 
-  m_pDmdFrameThread->join();
+  Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining DmdFrameThread");
+  if (m_pDmdFrameThread->joinable()) m_pDmdFrameThread->join();
+  else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: DmdFrameThread not joinable");
   delete m_pDmdFrameThread;
   m_pDmdFrameThread = nullptr;
 
   if (m_pLevelDMDThread)
   {
-    m_pLevelDMDThread->join();
+    Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining LevelDMDThread");
+    if (m_pLevelDMDThread->joinable()) m_pLevelDMDThread->join();
+    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: LevelDMDThread not joinable");
     delete m_pLevelDMDThread;
     m_pLevelDMDThread = nullptr;
   }
 
   if (m_pRGB24DMDThread)
   {
-    m_pRGB24DMDThread->join();
+    Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining RGB24DMDThread");
+    if (m_pRGB24DMDThread->joinable()) m_pRGB24DMDThread->join();
+    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: RGB24DMDThread not joinable");
     delete m_pRGB24DMDThread;
     m_pRGB24DMDThread = nullptr;
   }
 
   if (m_pConsoleDMDThread)
   {
-    m_pConsoleDMDThread->join();
+    Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining ConsoleDMDThread");
+    if (m_pConsoleDMDThread->joinable()) m_pConsoleDMDThread->join();
+    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: ConsoleDMDThread not joinable");
     delete m_pConsoleDMDThread;
     m_pConsoleDMDThread = nullptr;
   }
 
   if (m_pZeDMDThread)
   {
-    m_pZeDMDThread->join();
+    Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining ZeDMDThread");
+    if (m_pZeDMDThread->joinable()) m_pZeDMDThread->join();
+    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: ZeDMDThread not joinable");
     delete m_pZeDMDThread;
     m_pZeDMDThread = nullptr;
   }
@@ -379,21 +390,27 @@ DMD::~DMD()
 
   if (m_pPupDMDThread)
   {
-    m_pPupDMDThread->join();
+    Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining PupDMDThread");
+    if (m_pPupDMDThread->joinable()) m_pPupDMDThread->join();
+    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: PupDMDThread not joinable");
     delete m_pPupDMDThread;
     m_pPupDMDThread = nullptr;
   }
 
   if (m_pSerumThread)
   {
-    m_pSerumThread->join();
+    Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining SerumThread");
+    if (m_pSerumThread->joinable()) m_pSerumThread->join();
+    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: SerumThread not joinable");
     delete m_pSerumThread;
     m_pSerumThread = nullptr;
   }
 
   if (m_pVniThread)
   {
-    m_pVniThread->join();
+    Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining VniThread");
+    if (m_pVniThread->joinable()) m_pVniThread->join();
+    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: VniThread not joinable");
     delete m_pVniThread;
     m_pVniThread = nullptr;
   }
@@ -443,6 +460,8 @@ DMD::~DMD()
   {
     delete m_pUpdateBufferQueue[i];
   }
+
+  Log(DMDUtil_LogLevel_INFO, "DMD destructor finished");
 }
 
 bool DMD::ConnectDMDServer()
