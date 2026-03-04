@@ -16,15 +16,13 @@
 namespace DMDUtil
 {
 
-PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2,
-                           int firmwareVersion)
+PixelcadeDMD::PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2)
 {
   m_pSerialPort = pSerialPort;
   m_width = width;
   m_height = height;
   m_colorSwap = colorSwap;
   m_isV2 = isV2;
-  m_firmwareVersion = firmwareVersion;
   m_length = width * height;
   m_pThread = nullptr;
   m_running = false;
@@ -172,7 +170,15 @@ PixelcadeDMD* PixelcadeDMD::Open(const char* pDevice)
       "ColorSwap=%d",
       pDevice, hardwareId, bootloaderId, firmware, width, height, isV2, firmwareVersion, colorSwap);
 
-  return new PixelcadeDMD(pSerialPort, width, height, colorSwap, isV2, firmwareVersion);
+  if (isV2 && firmwareVersion < 23)
+  {
+    Log(DMDUtil_LogLevel_INFO, "Pixelcade: V2 firmware %d is not supported, v23 or later is required", firmwareVersion);
+    sp_close(pSerialPort);
+    sp_free_port(pSerialPort);
+    return nullptr;
+  }
+
+  return new PixelcadeDMD(pSerialPort, width, height, colorSwap, isV2);
 }
 
 void PixelcadeDMD::Update(uint16_t* pData)
@@ -227,40 +233,14 @@ int PixelcadeDMD::BuildFrame(uint8_t* pFrameBuffer, size_t bufferSize, uint8_t c
   return frameSize;
 }
 
-int PixelcadeDMD::BuildRawCommand(uint8_t* pFrameBuffer, size_t bufferSize, uint8_t command, const uint8_t* pData,
-                                  uint16_t dataLength)
-{
-  const size_t commandSize = 1 + dataLength;
-
-  if (commandSize > bufferSize || dataLength > PIXELCADE_MAX_DATA_SIZE) return -1;
-
-  pFrameBuffer[0] = command;
-
-  if (dataLength > 0 && pData) memcpy(pFrameBuffer + 1, pData, dataLength);
-
-  return commandSize;
-}
-
 void PixelcadeDMD::EnableRgbLedMatrix(int shifterLen32, int rows)
 {
   uint8_t configData = (uint8_t)((shifterLen32 & 0x0F) | ((rows == 8 ? 0 : 1) << 4));
 
   if (m_isV2)
   {
-    uint8_t command =
-        (m_firmwareVersion >= 23) ? PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 : PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE;
     uint8_t frame[8];
-    int frameSize;
-
-    if (m_firmwareVersion >= 23)
-    {
-      frameSize = BuildFrame(frame, sizeof(frame), command, &configData, 1);
-    }
-    else
-    {
-      frameSize = BuildRawCommand(frame, sizeof(frame), command, &configData, 1);
-    }
-
+    int frameSize = BuildFrame(frame, sizeof(frame), PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V2, &configData, 1);
     if (frameSize > 0) sp_blocking_write(m_pSerialPort, frame, frameSize, 0);
   }
   else
@@ -281,9 +261,9 @@ void PixelcadeDMD::Run()
       {
         Log(DMDUtil_LogLevel_INFO, "PixelcadeDMD run thread starting");
 
-        if (m_firmwareVersion >= 23)
+        if (m_isV2)
         {
-          uint8_t initCmd = PIXELCADE_COMMAND_V23_INIT;
+          uint8_t initCmd = PIXELCADE_COMMAND_INIT_V2;
           sp_blocking_write(m_pSerialPort, &initCmd, 1, 0);
         }
 
@@ -292,8 +272,7 @@ void PixelcadeDMD::Run()
         EnableRgbLedMatrix(shifterLen32, rows);
 
         int errors = 0;
-        FrameUtil::ColorMatrix colorMatrix =
-            (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
+        FrameUtil::ColorMatrix colorMatrix = (!m_colorSwap) ? FrameUtil::ColorMatrix::Rgb : FrameUtil::ColorMatrix::Rbg;
 
         const int maxFrameDataSize = m_length * 3;
         uint8_t* pFrameData = new uint8_t[maxFrameDataSize + 10];
@@ -337,17 +316,8 @@ void PixelcadeDMD::Run()
                 payloadSize = m_length * 3;
               }
 
-              int frameSize;
-              if (m_firmwareVersion >= 23)
-              {
-                memcpy(pFrameData + 5, frame.pData, payloadSize);
-                frameSize = BuildFrame(pFrameData, maxFrameDataSize + 10, command, pFrameData + 5, payloadSize);
-              }
-              else
-              {
-                memcpy(pFrameData + 1, frame.pData, payloadSize);
-                frameSize = BuildRawCommand(pFrameData, maxFrameDataSize + 10, command, pFrameData + 1, payloadSize);
-              }
+              memcpy(pFrameData + 5, frame.pData, payloadSize);
+              int frameSize = BuildFrame(pFrameData, maxFrameDataSize + 10, command, pFrameData + 5, payloadSize);
 
               if (frameSize > 0)
                 response = sp_blocking_write(m_pSerialPort, pFrameData, frameSize, PIXELCADE_COMMAND_WRITE_TIMEOUT);
@@ -357,8 +327,8 @@ void PixelcadeDMD::Run()
               command = PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME;
               payloadSize = m_length * 3 / 2;
               pFrameData[0] = command;
-              FrameUtil::Helper::SplitIntoRgbPlanes((uint16_t*)frame.pData, m_length, m_width, rows / 2,
-                                                     pFrameData + 1, colorMatrix);
+              FrameUtil::Helper::SplitIntoRgbPlanes((uint16_t*)frame.pData, m_length, m_width, rows / 2, pFrameData + 1,
+                                                    colorMatrix);
               response = sp_blocking_write(m_pSerialPort, pFrameData, 1 + payloadSize, PIXELCADE_COMMAND_WRITE_TIMEOUT);
             }
 
