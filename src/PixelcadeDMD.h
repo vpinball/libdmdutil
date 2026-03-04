@@ -16,8 +16,8 @@
 #define PIXELCADE_RESPONSE_ESTABLE_CONNECTION 0x00
 #define PIXELCADE_COMMAND_RGB_LED_MATRIX_FRAME 0x1F
 #define PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE 0x1E
-#define PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V23 0x2E    //For Pixelcade V2 boards with firwmare v23 or later
-#define PIXELCADE_COMMAND_V23_INIT 0xEF                     //one time init command for Pixelcade V2 boards with V23+ firmware to set up the framing protocol
+#define PIXELCADE_COMMAND_RGB_LED_MATRIX_ENABLE_V2 0x2E
+#define PIXELCADE_COMMAND_INIT_V2 0xEF
 #define PIXELCADE_COMMAND_RGB565 0x30
 #define PIXELCADE_COMMAND_RGB888 0x40
 #define PIXELCADE_FRAME_START_MARKER 0xFE
@@ -46,7 +46,7 @@ struct PixelcadeFrame
 class PixelcadeDMD
 {
  public:
-  PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2, int firmwareVersion);
+  PixelcadeDMD(struct sp_port* pSerialPort, int width, int height, bool colorSwap, bool isV2);
   ~PixelcadeDMD();
 
   static PixelcadeDMD* Connect(const char* pDevice = nullptr);
@@ -56,22 +56,18 @@ class PixelcadeDMD
   int GetWidth() const { return m_width; }
   int GetHeight() const { return m_height; }
   bool GetIsV2() const { return m_isV2; }
-  int GetFirmwareVersion() const { return m_firmwareVersion; }
 
  private:
   static PixelcadeDMD* Open(const char* pDevice);
   void Run();
   void EnableRgbLedMatrix(int shifterLen32, int rows);
   int BuildFrame(uint8_t* pFrameBuffer, size_t bufferSize, uint8_t command, const uint8_t* pData, uint16_t dataLength);
-  int BuildRawCommand(uint8_t* pFrameBuffer, size_t bufferSize, uint8_t command, const uint8_t* pData,
-                      uint16_t dataLength);
 
   struct sp_port* m_pSerialPort;
   int m_width;
   int m_height;
   bool m_colorSwap;
   bool m_isV2;
-  int m_firmwareVersion;
   int m_length;
 
   std::thread* m_pThread;
