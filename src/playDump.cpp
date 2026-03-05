@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <csignal>
+#include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -27,6 +28,13 @@ constexpr size_t kCrashAltStackSize = 65536;
 uint8_t g_crashAltStack[kCrashAltStackSize];
 
 void HandleSigInt(int) { g_stopRequested.store(true, std::memory_order_release); }
+
+void DMDUTILCALLBACK LogToStdoutCallback(DMDUtil_LogLevel logLevel, const char* format, va_list args)
+{
+  (void)logLevel;
+  vfprintf(stdout, format, args);
+  fputc('\n', stdout);
+}
 
 void CrashSignalHandler(int sig, siginfo_t* info, void* context)
 {
@@ -960,6 +968,10 @@ static struct cag_option options[] = {
      .access_name = "delay-ms",
      .value_name = "MS",
      .description = "Fixed delay between frames in milliseconds (optional, default is 100)"},
+    {.identifier = 'l',
+     .access_letters = "l",
+     .access_name = "logging",
+     .description = "Enable debug logging to stdout (optional, default is no logging)"},
     {.identifier = 'o',
      .access_letters = "o",
      .access_name = "dump-path",
@@ -1043,6 +1055,10 @@ int main(int argc, char* argv[])
       }
       case 'o':
         opt_dump_path = cag_option_get_value(&cag_context);
+        break;
+      case 'l':
+        DMDUtil::Config::GetInstance()->SetLogCallback(LogToStdoutCallback);
+        DMDUtil::Config::GetInstance()->SetLogLevel(DMDUtil_LogLevel_DEBUG);
         break;
       case 'r':
         opt_rom = cag_option_get_value(&cag_context);

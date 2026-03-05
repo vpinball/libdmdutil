@@ -256,6 +256,7 @@ timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's
   -8, --dump-888                 Dump rgb888 while playing
   -z, --dump-zip                 Write txt/565/888 dumps as .zip files
   -w, --delay-ms[=MS]            Fixed delay between frames in milliseconds (optional, default is 8 when specified without a value)
+  -l, --logging                  Enable debug logging to stdout (optional, default is no logging)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
   -R, --raw                      Force raw dump parsing
