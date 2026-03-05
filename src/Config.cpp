@@ -26,6 +26,10 @@ Config::Config()
   m_framesTimeout = 0;
   m_framesToSkip = 0;
   m_showNotColorizedFrames = false;
+  m_excludeColorizedFramesForZeDMD = false;
+  m_excludeColorizedFramesForRGB24DMD = false;
+  m_excludeColorizedFramesForPIN2DMD = false;
+  m_excludeColorizedFramesForPixelcade = false;
   m_dumpNotColorizedFrames = false;
   m_dumpFrames = false;
   m_dumpZip = false;
@@ -279,6 +283,42 @@ void Config::parseConfigFile(const char* path)
   catch (const std::exception&)
   {
     SetShowNotColorizedFrames(false);
+  }
+
+  try
+  {
+    SetExcludeColorizedFramesForZeDMD(r.Get<bool>("Serum", "ExcludeZeDMD", false));
+  }
+  catch (const std::exception&)
+  {
+    SetExcludeColorizedFramesForZeDMD(false);
+  }
+
+  try
+  {
+    SetExcludeColorizedFramesForRGB24DMD(r.Get<bool>("Serum", "ExcludeRGB24DMD", false));
+  }
+  catch (const std::exception&)
+  {
+    SetExcludeColorizedFramesForRGB24DMD(false);
+  }
+
+  try
+  {
+    SetExcludeColorizedFramesForPIN2DMD(r.Get<bool>("Serum", "ExcludePIN2DMD", false));
+  }
+  catch (const std::exception&)
+  {
+    SetExcludeColorizedFramesForPIN2DMD(false);
+  }
+
+  try
+  {
+    SetExcludeColorizedFramesForPixelcade(r.Get<bool>("Serum", "ExcludePixelcade", false));
+  }
+  catch (const std::exception&)
+  {
+    SetExcludeColorizedFramesForPixelcade(false);
   }
 
   // VNI

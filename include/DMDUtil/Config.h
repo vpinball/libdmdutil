@@ -57,6 +57,26 @@ class DMDUTILAPI Config
   int GetMaximumUnknownFramesToSkip() { return m_framesToSkip; }
   bool IsShowNotColorizedFrames() const { return m_showNotColorizedFrames; }
   void SetShowNotColorizedFrames(bool showNotColorizedFrames) { m_showNotColorizedFrames = showNotColorizedFrames; }
+  bool IsExcludeColorizedFramesForZeDMD() const { return m_excludeColorizedFramesForZeDMD; }
+  void SetExcludeColorizedFramesForZeDMD(bool excludeColorizedFramesForZeDMD)
+  {
+    m_excludeColorizedFramesForZeDMD = excludeColorizedFramesForZeDMD;
+  }
+  bool IsExcludeColorizedFramesForRGB24DMD() const { return m_excludeColorizedFramesForRGB24DMD; }
+  void SetExcludeColorizedFramesForRGB24DMD(bool excludeColorizedFramesForRGB24DMD)
+  {
+    m_excludeColorizedFramesForRGB24DMD = excludeColorizedFramesForRGB24DMD;
+  }
+  bool IsExcludeColorizedFramesForPIN2DMD() const { return m_excludeColorizedFramesForPIN2DMD; }
+  void SetExcludeColorizedFramesForPIN2DMD(bool excludeColorizedFramesForPIN2DMD)
+  {
+    m_excludeColorizedFramesForPIN2DMD = excludeColorizedFramesForPIN2DMD;
+  }
+  bool IsExcludeColorizedFramesForPixelcade() const { return m_excludeColorizedFramesForPixelcade; }
+  void SetExcludeColorizedFramesForPixelcade(bool excludeColorizedFramesForPixelcade)
+  {
+    m_excludeColorizedFramesForPixelcade = excludeColorizedFramesForPixelcade;
+  }
   bool IsDumpNotColorizedFrames() const { return m_dumpNotColorizedFrames; }
   void SetDumpNotColorizedFrames(bool dumpNotColorizedFrames) { m_dumpNotColorizedFrames = dumpNotColorizedFrames; }
   bool IsDumpFrames() const { return m_dumpFrames; }
@@ -137,6 +157,10 @@ class DMDUTILAPI Config
   int m_framesTimeout;
   int m_framesToSkip;
   bool m_showNotColorizedFrames;
+  bool m_excludeColorizedFramesForZeDMD;
+  bool m_excludeColorizedFramesForRGB24DMD;
+  bool m_excludeColorizedFramesForPIN2DMD;
+  bool m_excludeColorizedFramesForPixelcade;
   bool m_dumpNotColorizedFrames;
   bool m_dumpFrames;
   std::string m_dumpPath;

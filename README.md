@@ -215,6 +215,16 @@ Device =
 [PIN2DMD]
 # Set to 1 if PIN2DMD is attached
 Enabled = 0
+
+[Serum]
+# Set to 1 to render non-colorized frames on ZeDMD while keeping Serum/VNI for other displays.
+ExcludeZeDMD = 0
+# Set to 1 to render non-colorized frames on RGB24DMD while keeping Serum/VNI for other displays.
+ExcludeRGB24DMD = 0
+# Set to 1 to render non-colorized frames on PIN2DMD while keeping Serum/VNI for other displays.
+ExcludePIN2DMD = 0
+# Set to 1 to render non-colorized frames on Pixelcade while keeping Serum/VNI for other displays.
+ExcludePixelcade = 0
 ```
 
 ## Serum PUP Scenes Generator
@@ -257,6 +267,10 @@ timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's
   -z, --dump-zip                 Write txt/565/888 dumps as .zip files
   -w, --delay-ms[=MS]            Fixed delay between frames in milliseconds (optional, default is 8 when specified without a value)
   -l, --logging                  Enable debug logging to stdout (optional, default is no logging)
+      --exclude-zedmd            Exclude ZeDMD from Serum/VNI colorization (optional)
+      --exclude-rgb24dmd         Exclude RGB24DMD from Serum/VNI colorization (optional)
+      --exclude-pin2dmd          Exclude PIN2DMD from Serum/VNI colorization (optional)
+      --exclude-pixelcade        Exclude Pixelcade from Serum/VNI colorization (optional)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
   -R, --raw                      Force raw dump parsing

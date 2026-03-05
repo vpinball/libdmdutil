@@ -1102,6 +1102,7 @@ void DMD::ZeDMDThread()
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+  bool excludeColorizedFrames = pConfig->IsExcludeColorizedFramesForZeDMD();
 
   while (true)
   {
@@ -1136,11 +1137,18 @@ void DMD::ZeDMDThread()
       bufferPosition = nextBufferPosition;
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if ((m_pSerum || m_pVni) &&
-          (!IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames) ||
-           (m_pZeDMD->GetWidth() == 256 && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_32_64) ||
-           (m_pZeDMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_64_32)))
+      const Mode updateMode = m_pUpdateBufferQueue[bufferPositionMod]->mode;
+      if (excludeColorizedFrames)
+      {
+        if (IsSerumMode(updateMode, true)) continue;
+      }
+      else if ((m_pSerum || m_pVni) &&
+               (!IsSerumMode(updateMode, showNotColorizedFrames) ||
+                (m_pZeDMD->GetWidth() == 256 && updateMode == Mode::SerumV2_32_64) ||
+                (m_pZeDMD->GetWidth() < 256 && updateMode == Mode::SerumV2_64_32)))
+      {
         continue;
+      }
 
       // Note: libzedmd has its own update detection.
 
@@ -1211,7 +1219,7 @@ void DMD::ZeDMDThread()
             memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, frameSize);
             update = true;
           }
-          else if ((!(m_pSerum || m_pVni) && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
+          else if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
                    (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::NotColorized))
           {
             memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, frameSize);
@@ -1852,6 +1860,7 @@ void DMD::PIN2DMDThread()
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+  bool excludeColorizedFrames = pConfig->IsExcludeColorizedFramesForPIN2DMD();
 
   auto scaleToTarget = [&](const uint8_t* src, uint16_t width, uint16_t height, uint8_t* dst) -> bool
   {
@@ -1938,8 +1947,15 @@ void DMD::PIN2DMDThread()
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if ((m_pSerum || m_pVni) && !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
+      const Mode updateMode = m_pUpdateBufferQueue[bufferPositionMod]->mode;
+      if (excludeColorizedFrames)
+      {
+        if (IsSerumMode(updateMode, true)) continue;
+      }
+      else if ((m_pSerum || m_pVni) && !IsSerumMode(updateMode, showNotColorizedFrames))
+      {
         continue;
+      }
 
       if (!(m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData))
         continue;
@@ -1991,7 +2007,8 @@ void DMD::PIN2DMDThread()
           memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
           update = true;
         }
-        else if ((!(m_pSerum || m_pVni) && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
+        else if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) &&
+                  m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
                  (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::NotColorized))
         {
           memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
@@ -2054,6 +2071,7 @@ void DMD::PixelcadeDMDThread()
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+  bool excludeColorizedFrames = pConfig->IsExcludeColorizedFramesForPixelcade();
 
   while (true)
   {
@@ -2077,8 +2095,15 @@ void DMD::PixelcadeDMDThread()
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if ((m_pSerum || m_pVni) && !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
+      const Mode updateMode = m_pUpdateBufferQueue[bufferPositionMod]->mode;
+      if (excludeColorizedFrames)
+      {
+        if (IsSerumMode(updateMode, true)) continue;
+      }
+      else if ((m_pSerum || m_pVni) && !IsSerumMode(updateMode, showNotColorizedFrames))
+      {
         continue;
+      }
 
       if (m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData)
       {
@@ -2173,7 +2198,8 @@ void DMD::PixelcadeDMDThread()
             memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
             update = true;
           }
-          else if ((!(m_pSerum || m_pVni) && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
+          else if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) &&
+                    m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
                    (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::NotColorized))
           {
             memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
@@ -2298,6 +2324,7 @@ void DMD::RGB24DMDThread()
 
   Config* const pConfig = Config::GetInstance();
   bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+  bool excludeColorizedFrames = pConfig->IsExcludeColorizedFramesForRGB24DMD();
 
   while (true)
   {
@@ -2320,8 +2347,15 @@ void DMD::RGB24DMDThread()
       bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
       uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
 
-      if ((m_pSerum || m_pVni) && !IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames))
+      const Mode updateMode = m_pUpdateBufferQueue[bufferPositionMod]->mode;
+      if (excludeColorizedFrames)
+      {
+        if (IsSerumMode(updateMode, true)) continue;
+      }
+      else if ((m_pSerum || m_pVni) && !IsSerumMode(updateMode, showNotColorizedFrames))
+      {
         continue;
+      }
 
       if (!m_rgb24DMDs.empty() &&
           (m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData))
@@ -2373,7 +2407,8 @@ void DMD::RGB24DMDThread()
                 palette, m_pUpdateBufferQueue[bufferPositionMod]->depth, m_pUpdateBufferQueue[bufferPositionMod]->r,
                 m_pUpdateBufferQueue[bufferPositionMod]->g, m_pUpdateBufferQueue[bufferPositionMod]->b);
 
-            if ((!(m_pSerum || m_pVni) && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
+            if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) &&
+                 m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
                 (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::NotColorized))
             {
               if (memcmp(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length) != 0)
@@ -2442,12 +2477,19 @@ void DMD::RGB24DMDThread()
 
           for (RGB24DMD* pRGB24DMD : m_rgb24DMDs)
           {
-            if ((m_pSerum || m_pVni) &&
-                (!IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames) ||
-                 (pRGB24DMD->GetWidth() == 256 &&
-                  m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_32_64) ||
-                 (pRGB24DMD->GetWidth() < 256 && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_64_32)))
+            if (excludeColorizedFrames)
+            {
+              if (IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, true)) continue;
+            }
+            else if ((m_pSerum || m_pVni) &&
+                     (!IsSerumMode(m_pUpdateBufferQueue[bufferPositionMod]->mode, showNotColorizedFrames) ||
+                      (pRGB24DMD->GetWidth() == 256 &&
+                       m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_32_64) ||
+                      (pRGB24DMD->GetWidth() < 256 &&
+                       m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV2_64_32)))
+            {
               continue;
+            }
 
             pRGB24DMD->Update(rgb24Data, m_pUpdateBufferQueue[bufferPositionMod]->width,
                               m_pUpdateBufferQueue[bufferPositionMod]->height);

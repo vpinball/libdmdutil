@@ -972,6 +972,18 @@ static struct cag_option options[] = {
      .access_letters = "l",
      .access_name = "logging",
      .description = "Enable debug logging to stdout (optional, default is no logging)"},
+    {.identifier = 'E',
+     .access_name = "exclude-zedmd",
+     .description = "Exclude ZeDMD from Serum/VNI colorization (optional)"},
+    {.identifier = 'G',
+     .access_name = "exclude-rgb24dmd",
+     .description = "Exclude RGB24DMD from Serum/VNI colorization (optional)"},
+    {.identifier = 'P',
+     .access_name = "exclude-pin2dmd",
+     .description = "Exclude PIN2DMD from Serum/VNI colorization (optional)"},
+    {.identifier = 'C',
+     .access_name = "exclude-pixelcade",
+     .description = "Exclude Pixelcade from Serum/VNI colorization (optional)"},
     {.identifier = 'o',
      .access_letters = "o",
      .access_name = "dump-path",
@@ -1059,6 +1071,18 @@ int main(int argc, char* argv[])
       case 'l':
         DMDUtil::Config::GetInstance()->SetLogCallback(LogToStdoutCallback);
         DMDUtil::Config::GetInstance()->SetLogLevel(DMDUtil_LogLevel_DEBUG);
+        break;
+      case 'E':
+        DMDUtil::Config::GetInstance()->SetExcludeColorizedFramesForZeDMD(true);
+        break;
+      case 'G':
+        DMDUtil::Config::GetInstance()->SetExcludeColorizedFramesForRGB24DMD(true);
+        break;
+      case 'P':
+        DMDUtil::Config::GetInstance()->SetExcludeColorizedFramesForPIN2DMD(true);
+        break;
+      case 'C':
+        DMDUtil::Config::GetInstance()->SetExcludeColorizedFramesForPixelcade(true);
         break;
       case 'r':
         opt_rom = cag_option_get_value(&cag_context);
