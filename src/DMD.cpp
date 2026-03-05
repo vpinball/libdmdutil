@@ -7,8 +7,10 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <winsock2.h>  // Windows byte-order functions
+#include <process.h>
 #else
 #include <arpa/inet.h>  // Linux/macOS byte-order functions
+#include <unistd.h>
 #endif
 
 #if !(                                                                                                                \
@@ -49,6 +51,14 @@ namespace
 {
 constexpr size_t kMaxFramePixels = 256u * 64u;
 constexpr size_t kMaxRgb24Bytes = kMaxFramePixels * 3u;
+
+uint64_t SplitMix64(uint64_t value)
+{
+  value += 0x9E3779B97F4A7C15ull;
+  value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9ull;
+  value = (value ^ (value >> 27)) * 0x94D049BB133111EBull;
+  return value ^ (value >> 31);
+}
 
 std::string ToLower(const std::string& value)
 {
@@ -2602,19 +2612,31 @@ void DMD::AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_
 
 void DMD::GenerateRandomSuffix(char* buffer, size_t length)
 {
-  static bool seedDone = false;
-  if (!seedDone)
+  if (!buffer || length == 0)
   {
-    srand(static_cast<unsigned int>(time(nullptr)));
-    seedDone = true;
+    return;
   }
 
+  static std::atomic<uint64_t> sequence{0};
   const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
-  size_t charsetSize = sizeof(charset) - 1;  // exclude null terminator
+  const uint64_t charsetSize = (uint64_t)(sizeof(charset) - 1);  // exclude null terminator
+
+  const uint64_t nowSteady =
+      (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
+  const uint64_t nowSystem =
+      (uint64_t)std::chrono::system_clock::now().time_since_epoch().count();
+  const uint64_t threadHash = (uint64_t)std::hash<std::thread::id>{}(std::this_thread::get_id());
+#if defined(_WIN32) || defined(_WIN64)
+  const uint64_t processId = (uint64_t)_getpid();
+#else
+  const uint64_t processId = (uint64_t)getpid();
+#endif
+  uint64_t state = SplitMix64(nowSteady ^ nowSystem ^ threadHash ^ processId ^ sequence.fetch_add(1));
 
   for (size_t i = 0; i < length; ++i)
   {
-    buffer[i] = charset[rand() % charsetSize];
+    state = SplitMix64(state);
+    buffer[i] = charset[state % charsetSize];
   }
   buffer[length] = '\0';
 }
