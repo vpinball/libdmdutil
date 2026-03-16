@@ -1,5 +1,3 @@
-#include <execinfo.h>
-
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -21,9 +19,11 @@
 #include <psapi.h>
 #include <windows.h>
 #elif defined(__APPLE__)
+#include <execinfo.h>
 #include <mach/mach.h>
 #include <unistd.h>
 #elif defined(__linux__)
+#include <execinfo.h>
 #include <unistd.h>
 #endif
 
@@ -49,6 +49,12 @@ void DMDUTILCALLBACK LogToStdoutCallback(DMDUtil_LogLevel logLevel, const char* 
 
 void CrashSignalHandler(int sig, siginfo_t* info, void* context)
 {
+#if defined(_WIN32)
+  (void)info;
+  (void)context;
+  (void)sig;
+  std::abort();
+#else
   (void)info;
   (void)context;
 
@@ -70,10 +76,15 @@ void CrashSignalHandler(int sig, siginfo_t* info, void* context)
   }
 
   _exit(128 + sig);
+#endif
 }
 
 void InstallCrashTraceHandlers()
 {
+#if defined(_WIN32)
+  // Not implemented on Windows for this utility.
+  return;
+#else
   stack_t ss{};
   ss.ss_sp = g_crashAltStack;
   ss.ss_size = sizeof(g_crashAltStack);
@@ -92,6 +103,7 @@ void InstallCrashTraceHandlers()
   sigaction(SIGBUS, &sa, nullptr);
   sigaction(SIGILL, &sa, nullptr);
   sigaction(SIGFPE, &sa, nullptr);
+#endif
 }
 
 enum class FrameFormat
