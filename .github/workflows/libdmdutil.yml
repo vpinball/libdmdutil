@@ -117,6 +117,7 @@ jobs:
              cp build/Release/dmdutil_test.exe tmp
              cp build/Release/dmdutil-generate-scenes.exe tmp
              cp build/Release/dmdutil-play-dump.exe tmp
+             cp build/Release/dmdutil-convert-serum.exe tmp
              cp -r test tmp/
           else
             ARTIFACT_PATH="libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz"
@@ -129,6 +130,7 @@ jobs:
                cp build/dmdutil_test tmp
                cp build/dmdutil-generate-scenes tmp
                cp build/dmdutil-play-dump tmp
+               cp build/dmdutil-convert-serum tmp
             elif [[ "${{ matrix.platform }}" == "linux" ]]; then
                cp build/libdmdutil.a tmp
                cp -a build/*.{so,so.*} tmp
@@ -138,6 +140,7 @@ jobs:
                cp build/dmdutil_test tmp
                cp build/dmdutil-generate-scenes tmp
                cp build/dmdutil-play-dump tmp
+               cp build/dmdutil-convert-serum tmp
             elif [[ "${{ matrix.platform }}" == "ios" || "${{ matrix.platform }}" == "ios-simulator" || "${{ matrix.platform }}" == "tvos" ]]; then
                cp build/libdmdutil.a tmp
                cp -a build/*.dylib tmp
@@ -182,7 +185,7 @@ jobs:
                 "libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/$filename"
             fi
           done
-          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test dmdutil-play-dump; do
+          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test dmdutil-play-dump dmdutil-convert-serum; do
             lipo -create -output "tmp/$filename" \
                "libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64/$filename" \
                "libdmdutil-${{ needs.version.outputs.tag }}-macos-x64/$filename"

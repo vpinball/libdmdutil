@@ -1,12 +1,14 @@
-#include <algorithm>
 #include <execinfo.h>
+
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <csignal>
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -15,7 +17,16 @@
 #include <thread>
 #include <vector>
 
+#if defined(_WIN32)
+#include <psapi.h>
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <mach/mach.h>
 #include <unistd.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#endif
+
 #include "DMDUtil/DMDUtil.h"
 #include "cargs.h"
 #include "miniz/miniz.h"
@@ -71,7 +82,7 @@ void InstallCrashTraceHandlers()
     return;
   }
 
-  struct sigaction sa {};
+  struct sigaction sa{};
   sa.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_ONSTACK;
   sa.sa_sigaction = CrashSignalHandler;
   sigemptyset(&sa.sa_mask);
@@ -932,6 +943,140 @@ static bool ParseServer(const std::string& value, std::string& host, int& port)
   if (port <= 0) port = 6789;
   return true;
 }
+
+static bool SetEnvFlag(const char* name, const char* value)
+{
+#if defined(_WIN32)
+  return _putenv_s(name, value) == 0;
+#else
+  return setenv(name, value, 1) == 0;
+#endif
+}
+
+static uint64_t GetProcessRssBytes()
+{
+#if defined(_WIN32)
+  PROCESS_MEMORY_COUNTERS_EX pmc{};
+  if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc)))
+  {
+    return static_cast<uint64_t>(pmc.WorkingSetSize);
+  }
+  return 0;
+#elif defined(__APPLE__)
+  mach_task_basic_info info{};
+  mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+  if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS)
+  {
+    return static_cast<uint64_t>(info.resident_size);
+  }
+  return 0;
+#elif defined(__linux__)
+  long rssPages = 0;
+  FILE* fp = fopen("/proc/self/statm", "r");
+  if (!fp)
+  {
+    return 0;
+  }
+  long totalPages = 0;
+  if (fscanf(fp, "%ld %ld", &totalPages, &rssPages) != 2)
+  {
+    fclose(fp);
+    return 0;
+  }
+  fclose(fp);
+  long pageSize = sysconf(_SC_PAGESIZE);
+  if (pageSize <= 0) return 0;
+  return static_cast<uint64_t>(rssPages) * static_cast<uint64_t>(pageSize);
+#else
+  return 0;
+#endif
+}
+
+static uint64_t HashFrameRgb565(const std::vector<uint16_t>& data16)
+{
+  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data16.data());
+  const size_t byteCount = data16.size() * sizeof(uint16_t);
+  uint64_t hash = 1469598103934665603ull;  // FNV-1a
+  for (size_t i = 0; i < byteCount; ++i)
+  {
+    hash ^= bytes[i];
+    hash *= 1099511628211ull;
+  }
+  hash ^= byteCount;
+  hash *= 1099511628211ull;
+  return hash;
+}
+
+static bool FindLatestRgb565Dump(const std::string& dumpPath, const std::string& romName, std::string& outPath)
+{
+  namespace fs = std::filesystem;
+  std::error_code ec;
+  fs::path root = dumpPath.empty() ? fs::path(".") : fs::path(dumpPath);
+  if (!fs::exists(root, ec) || !fs::is_directory(root, ec))
+  {
+    return false;
+  }
+
+  fs::file_time_type latestWrite{};
+  bool found = false;
+  const std::string prefix = romName + "-";
+  for (const auto& entry : fs::directory_iterator(root, ec))
+  {
+    if (ec) break;
+    if (!entry.is_regular_file()) continue;
+    const std::string name = entry.path().filename().string();
+    if (name.rfind(prefix, 0) != 0) continue;
+    if (!EndsWithCaseInsensitive(name, ".565.txt")) continue;
+    const auto writeTime = entry.last_write_time(ec);
+    if (ec) continue;
+    if (!found || writeTime > latestWrite)
+    {
+      latestWrite = writeTime;
+      outPath = entry.path().string();
+      found = true;
+    }
+  }
+  return found;
+}
+
+static bool WriteJsonDump(const std::string& sourceDumpPath, const std::string& outputJsonPath,
+                          const std::string& inputPath, const std::string& romName)
+{
+  uint8_t depth = 2;
+  std::vector<Frame> frames;
+  if (!LoadRgb565Dump(sourceDumpPath, depth, frames))
+  {
+    return false;
+  }
+  FinalizeFrameDurations(frames);
+
+  std::ofstream out(outputJsonPath, std::ios::binary | std::ios::trunc);
+  if (!out)
+  {
+    return false;
+  }
+
+  out << "{\n";
+  out << "  \"schema\": \"dmdutil.playdump.v1\",\n";
+  out << "  \"input\": \"" << inputPath << "\",\n";
+  out << "  \"rom\": \"" << romName << "\",\n";
+  out << "  \"sourceDump565\": \"" << sourceDumpPath << "\",\n";
+  out << "  \"frameCount\": " << frames.size() << ",\n";
+  out << "  \"frames\": [\n";
+  for (size_t i = 0; i < frames.size(); ++i)
+  {
+    const Frame& frame = frames[i];
+    const uint64_t hash = HashFrameRgb565(frame.data16);
+    out << "    {\"index\": " << i << ", \"timestampMs\": " << frame.timestampMs
+        << ", \"durationMs\": " << frame.durationMs << ", \"width\": " << frame.width
+        << ", \"height\": " << frame.height << ", \"format\": \"rgb565\", \"hashFNV1a64\": " << hash << "}";
+    if (i + 1 < frames.size()) out << ",";
+    out << "\n";
+  }
+  out << "  ]\n";
+  out << "}\n";
+  return true;
+}
 }  // namespace
 
 static struct cag_option options[] = {
@@ -998,6 +1143,18 @@ static struct cag_option options[] = {
      .access_name = "crash-trace",
      .value_name = NULL,
      .description = "Enable in-process crash backtrace on fatal signals (optional)"},
+    {.identifier = 'j',
+     .access_letters = "j",
+     .access_name = "dump-json",
+     .value_name = "FILE",
+     .description = "Write machine-readable JSON from produced rgb565 dump (optional, auto-enables --dump-565)"},
+    {.identifier = 'q',
+     .access_name = "serum-profile",
+     .description = "Enable libserum dynamic hotpath profiling logs (SERUM_PROFILE_DYNAMIC_HOTPATHS=1)"},
+    {.identifier = 'Q',
+     .access_name = "serum-profile-sparse",
+     .description = "Enable libserum dynamic+sparse profiling logs (SERUM_PROFILE_DYNAMIC_HOTPATHS=1, "
+                    "SERUM_PROFILE_SPARSE_VECTORS=1)"},
     {.identifier = 'R', .access_letters = "R", .access_name = "raw", .description = "Force raw dump parsing"},
     {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
 
@@ -1010,6 +1167,7 @@ int main(int argc, char* argv[])
   const char* opt_alt_color_path = nullptr;
   const char* opt_server = nullptr;
   const char* opt_dump_path = nullptr;
+  const char* opt_dump_json = nullptr;
   const char* opt_rom = nullptr;
   uint8_t opt_depth = 2;
   bool opt_no_local = false;
@@ -1018,6 +1176,8 @@ int main(int argc, char* argv[])
   bool opt_dump_888 = false;
   bool opt_dump_zip = false;
   bool opt_force_raw = false;
+  bool opt_serum_profile = false;
+  bool opt_serum_profile_sparse = false;
   uint32_t opt_delay_ms = 100;
   bool opt_delay_set = true;
   bool opt_crash_trace = false;
@@ -1093,6 +1253,15 @@ int main(int argc, char* argv[])
       case 'x':
         opt_crash_trace = true;
         break;
+      case 'j':
+        opt_dump_json = cag_option_get_value(&cag_context);
+        break;
+      case 'q':
+        opt_serum_profile = true;
+        break;
+      case 'Q':
+        opt_serum_profile_sparse = true;
+        break;
       case 'h':
         std::cerr << "Usage: " << argv[0] << " [OPTION]...\n";
         cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
@@ -1119,6 +1288,29 @@ int main(int argc, char* argv[])
   {
     std::cerr << "Error: Depth must be 2 or 4\n";
     return 1;
+  }
+  if (opt_dump_json && opt_dump_json[0] == '\0')
+  {
+    std::cerr << "Error: --dump-json requires a non-empty file path\n";
+    return 1;
+  }
+  if (opt_dump_json && opt_dump_zip)
+  {
+    std::cerr << "Error: --dump-json currently does not support --dump-zip\n";
+    return 1;
+  }
+  if (opt_dump_json)
+  {
+    opt_dump_565 = true;
+  }
+
+  if (opt_serum_profile || opt_serum_profile_sparse)
+  {
+    SetEnvFlag("SERUM_PROFILE_DYNAMIC_HOTPATHS", "1");
+  }
+  if (opt_serum_profile_sparse)
+  {
+    SetEnvFlag("SERUM_PROFILE_SPARSE_VECTORS", "1");
   }
 
   std::string inputPath = opt_input;
@@ -1212,6 +1404,7 @@ int main(int argc, char* argv[])
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
+  const auto dumpStartTime = std::chrono::steady_clock::now();
   if (opt_dump_txt || opt_dump_565 || opt_dump_888)
   {
     if (opt_dump_path && opt_dump_path[0] != '\0')
@@ -1231,6 +1424,9 @@ int main(int argc, char* argv[])
   const uint8_t dumpG = 69;
   const uint8_t dumpB = 0;
   const bool dumpEnabled = opt_dump_txt || opt_dump_565 || opt_dump_888;
+  const bool serumProfilingEnabled = opt_serum_profile || opt_serum_profile_sparse;
+  uint64_t peakRssBytes = 0;
+  uint32_t profiledFrames = 0;
 
   if (opt_delay_ms < 100)
   {
@@ -1312,6 +1508,21 @@ int main(int argc, char* argv[])
     {
       std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
     }
+
+    if (serumProfilingEnabled)
+    {
+      const uint64_t rssBytes = GetProcessRssBytes();
+      if (rssBytes > peakRssBytes)
+      {
+        peakRssBytes = rssBytes;
+      }
+      ++profiledFrames;
+      if (profiledFrames % 240 == 0)
+      {
+        std::cout << "Profile RAM: rssMB=" << (rssBytes / (1024.0 * 1024.0))
+                  << " peakMB=" << (peakRssBytes / (1024.0 * 1024.0)) << " frames=" << profiledFrames << "\n";
+      }
+    }
   }
 
   if (g_stopRequested.load(std::memory_order_acquire))
@@ -1325,6 +1536,37 @@ int main(int argc, char* argv[])
       target = current;
     }
     dmd.WaitForDumpers(target, 2000);
+  }
+
+  if (opt_dump_json)
+  {
+    std::string latestRgb565DumpPath;
+    const std::string dumpDir = (opt_dump_path && opt_dump_path[0] != '\0') ? opt_dump_path : ".";
+    if (!FindLatestRgb565Dump(dumpDir, romName, latestRgb565DumpPath))
+    {
+      std::cerr << "Error: Failed to locate generated .565.txt dump for ROM " << romName << "\n";
+      return 1;
+    }
+    if (!WriteJsonDump(latestRgb565DumpPath, opt_dump_json, inputPath, romName))
+    {
+      std::cerr << "Error: Failed to write JSON dump " << opt_dump_json << "\n";
+      return 1;
+    }
+    const auto elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - dumpStartTime).count();
+    std::cout << "JSON dump written to " << opt_dump_json << " (source: " << latestRgb565DumpPath
+              << ", elapsed=" << elapsed << "ms)\n";
+  }
+
+  if (serumProfilingEnabled)
+  {
+    const uint64_t rssBytes = GetProcessRssBytes();
+    if (rssBytes > peakRssBytes)
+    {
+      peakRssBytes = rssBytes;
+    }
+    std::cout << "Profile RAM final: rssMB=" << (rssBytes / (1024.0 * 1024.0))
+              << " peakMB=" << (peakRssBytes / (1024.0 * 1024.0)) << " frames=" << profiledFrames << "\n";
   }
 
   return 0;

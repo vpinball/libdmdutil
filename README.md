@@ -253,6 +253,7 @@ Txt/raw inputs are sent as
 (ms since start). It can optionally connect to a remote DMD server and can dump txt/rgb565/rgb888 while playing (raw output is not supported).
 Dump output uses the live DMD dumpers (same as libdmdutil), so colorized frames are preserved. By default, playback uses the original frame
 timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's original duration is shorter, the original duration is used.
+When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage is also logged periodically and at the end.
 
 `dmdutil-play-dump` accepts these command line options:
 ```
@@ -273,7 +274,25 @@ timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's
       --exclude-pixelcade        Exclude Pixelcade from Serum/VNI colorization (optional)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
+  -j, --dump-json=FILE           Write machine-readable JSON sidecar from generated .565.txt dump (auto-enables --dump-565, not with --dump-zip)
+      --serum-profile            Enable libserum dynamic hotpath profiling (SERUM_PROFILE_DYNAMIC_HOTPATHS=1)
+      --serum-profile-sparse     Enable libserum dynamic+sparse profiling (SERUM_PROFILE_DYNAMIC_HOTPATHS=1, SERUM_PROFILE_SPARSE_VECTORS=1)
   -R, --raw                      Force raw dump parsing
+  -h, --help                     Show help
+```
+
+## Serum Converter
+
+`dmdutil-convert-serum` converts a `cRZ` or `cROM` into `cROMc` using `libserum`.
+
+Options:
+```
+  -i, --input=FILE               Input cRZ/cROM file
+  -a, --alt-color-path=PATH      Alt color base path (optional, auto-derived from input if omitted)
+  -r, --rom=NAME                 ROM name (optional, defaults from input filename)
+      --strip-sd                 Remove SD (32p) colorization and keep HD only
+      --strip-hd                 Remove HD (64p) colorization and keep SD only
+  -l, --logging                  Enable libserum logs
   -h, --help                     Show help
 ```
 
