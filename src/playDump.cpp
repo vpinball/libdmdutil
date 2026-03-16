@@ -17,6 +17,9 @@
 
 // clang-format off
 #if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <psapi.h>
 #elif defined(__APPLE__)
@@ -49,14 +52,15 @@ void DMDUTILCALLBACK LogToStdoutCallback(DMDUtil_LogLevel logLevel, const char* 
   fputc('\n', stdout);
 }
 
-void CrashSignalHandler(int sig, siginfo_t* info, void* context)
-{
 #if defined(_WIN32)
-  (void)info;
-  (void)context;
+void CrashSignalHandler(int sig)
+{
   (void)sig;
   std::abort();
+}
 #else
+void CrashSignalHandler(int sig, siginfo_t* info, void* context)
+{
   (void)info;
   (void)context;
 
@@ -78,8 +82,8 @@ void CrashSignalHandler(int sig, siginfo_t* info, void* context)
   }
 
   _exit(128 + sig);
-#endif
 }
+#endif
 
 void InstallCrashTraceHandlers()
 {
