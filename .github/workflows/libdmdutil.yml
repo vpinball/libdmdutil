@@ -154,7 +154,7 @@ jobs:
           fi
           echo "artifact_path=${ARTIFACT_PATH}" >> $GITHUB_OUTPUT
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}
           path: ${{ steps.artifacts.outputs.artifact_path }}
@@ -164,7 +164,7 @@ jobs:
     needs: [ version, build ]
     name: Build libdmdutil-macos
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
       - name: Unpack artifacts
         run: |
           cd libdmdutil-${{ needs.version.outputs.tag }}-macos-x64
@@ -196,7 +196,7 @@ jobs:
           cd tmp
           tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-macos.tar.gz *
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: libdmdutil-${{ needs.version.outputs.tag }}-macos
           path: libdmdutil-${{ needs.version.outputs.tag }}-macos.tar.gz
