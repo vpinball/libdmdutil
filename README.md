@@ -275,6 +275,10 @@ When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
   -j, --dump-json=FILE           Write machine-readable JSON sidecar from generated .565.txt dump (auto-enables --dump-565, not with --dump-zip)
+      --coverage-json=FILE       Write input-frame coverage checklist JSON (includes first-occurrence signatures + optional transition windows)
+      --coverage-filter=FILE     Load coverage checklist JSON and play only covered frames (uses selected indices when present)
+      --coverage-transition-tail=N  Coverage export: include N following frames for each first-seen signature transition
+      --coverage-max-frames=N    Coverage export: cap selected frame count (0 = unlimited)
       --serum-profile            Enable libserum dynamic hotpath profiling (SERUM_PROFILE_DYNAMIC_HOTPATHS=1)
       --serum-profile-sparse     Enable libserum dynamic+sparse profiling (SERUM_PROFILE_DYNAMIC_HOTPATHS=1, SERUM_PROFILE_SPARSE_VECTORS=1)
   -R, --raw                      Force raw dump parsing
@@ -293,6 +297,20 @@ Options:
       --strip-sd                 Remove SD (32p) colorization and keep HD only
       --strip-hd                 Remove HD (64p) colorization and keep SD only
   -l, --logging                  Enable libserum logs
+  -h, --help                     Show help
+```
+
+## Dump JSON Comparator
+
+`dmdutil-compare-dumps` compares two machine-readable dump JSON files created by `dmdutil-play-dump --dump-json`.
+
+Options:
+```
+  -e, --expected=FILE            Expected JSON dump
+  -a, --actual=FILE              Actual JSON dump
+  -m, --max-diffs=N              Maximum mismatches to print (default: 25)
+      --ignore-duration          Ignore durationMs differences
+      --ignore-timestamp         Ignore timestampMs differences
   -h, --help                     Show help
 ```
 

@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 // clang-format off
@@ -1025,6 +1026,213 @@ static uint64_t HashFrameRgb565(const std::vector<uint16_t>& data16)
   return hash;
 }
 
+static uint64_t HashFrameInputSignature(const Frame& frame)
+{
+  uint64_t hash = 1469598103934665603ull;  // FNV-1a
+  auto mixByte = [&](uint8_t v)
+  {
+    hash ^= v;
+    hash *= 1099511628211ull;
+  };
+  auto mixU16 = [&](uint16_t v)
+  {
+    mixByte((uint8_t)(v & 0xff));
+    mixByte((uint8_t)((v >> 8) & 0xff));
+  };
+  auto mixU32 = [&](uint32_t v)
+  {
+    mixByte((uint8_t)(v & 0xff));
+    mixByte((uint8_t)((v >> 8) & 0xff));
+    mixByte((uint8_t)((v >> 16) & 0xff));
+    mixByte((uint8_t)((v >> 24) & 0xff));
+  };
+  mixU16(frame.width);
+  mixU16(frame.height);
+  mixByte((uint8_t)frame.format);
+  if (frame.format == FrameFormat::RGB565)
+  {
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(frame.data16.data());
+    const size_t byteCount = frame.data16.size() * sizeof(uint16_t);
+    for (size_t i = 0; i < byteCount; ++i) mixByte(bytes[i]);
+  }
+  else
+  {
+    for (uint8_t b : frame.data) mixByte(b);
+  }
+  mixU32((uint32_t)frame.data.size());
+  mixU32((uint32_t)frame.data16.size());
+  return hash;
+}
+
+struct CoverageFilterSpec
+{
+  std::unordered_set<uint64_t> signatures;
+  std::unordered_set<uint32_t> selectedIndices;
+};
+
+static void ParseUnsignedValues(const std::string& content, const std::string& key, std::vector<uint64_t>& outValues)
+{
+  size_t pos = 0;
+  while (true)
+  {
+    pos = content.find(key, pos);
+    if (pos == std::string::npos) break;
+    pos += key.size();
+    while (pos < content.size() && (content[pos] == ' ' || content[pos] == '\t')) ++pos;
+    size_t endPos = pos;
+    while (endPos < content.size() && content[endPos] >= '0' && content[endPos] <= '9') ++endPos;
+    if (endPos > pos)
+    {
+      const std::string number = content.substr(pos, endPos - pos);
+      uint64_t value = strtoull(number.c_str(), nullptr, 10);
+      outValues.push_back(value);
+    }
+    pos = endPos;
+  }
+}
+
+static bool LoadCoverageFilterSpec(const std::string& path, CoverageFilterSpec& out)
+{
+  std::ifstream in(path, std::ios::binary);
+  if (!in)
+  {
+    return false;
+  }
+  std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+  std::vector<uint64_t> signatures;
+  ParseUnsignedValues(content, "\"inputSigFNV1a64\":", signatures);
+  for (const uint64_t signature : signatures)
+  {
+    out.signatures.insert(signature);
+  }
+
+  // New schema can include explicit selected frame indices.
+  std::vector<uint64_t> selectedIndices;
+  ParseUnsignedValues(content, "\"selectedIndex\":", selectedIndices);
+  for (const uint64_t index : selectedIndices)
+  {
+    if (index <= std::numeric_limits<uint32_t>::max())
+    {
+      out.selectedIndices.insert(static_cast<uint32_t>(index));
+    }
+  }
+
+  return !out.signatures.empty() || !out.selectedIndices.empty();
+}
+
+static bool WriteCoverageJson(const std::string& outputPath, const std::string& inputPath,
+                              const std::vector<Frame>& frames, const std::vector<uint64_t>& signatures,
+                              uint32_t transitionTail, uint32_t maxSelectedFrames)
+{
+  if (frames.size() != signatures.size())
+  {
+    return false;
+  }
+  std::ofstream out(outputPath, std::ios::binary | std::ios::trunc);
+  if (!out)
+  {
+    return false;
+  }
+
+  std::unordered_set<uint64_t> seen;
+  std::vector<size_t> firstIndices;
+  firstIndices.reserve(signatures.size());
+  for (size_t i = 0; i < signatures.size(); ++i)
+  {
+    if (seen.insert(signatures[i]).second)
+    {
+      firstIndices.push_back(i);
+    }
+  }
+
+  std::vector<uint8_t> selectedMask(frames.size(), 0);
+  std::vector<size_t> selectedIndices;
+  selectedIndices.reserve(firstIndices.size());
+  auto markSelected = [&](size_t index)
+  {
+    if (index >= selectedMask.size() || selectedMask[index] != 0)
+    {
+      return;
+    }
+    selectedMask[index] = 1;
+    selectedIndices.push_back(index);
+  };
+
+  for (const size_t index : firstIndices)
+  {
+    markSelected(index);
+  }
+
+  if (transitionTail > 0 && frames.size() >= 2)
+  {
+    std::unordered_set<uint64_t> seenTransitions;
+    for (size_t i = 1; i < signatures.size(); ++i)
+    {
+      const uint64_t prev = signatures[i - 1];
+      const uint64_t curr = signatures[i];
+      if (prev == curr)
+      {
+        continue;
+      }
+      const uint64_t transitionKey = prev ^ (curr + 0x9e3779b97f4a7c15ull + (prev << 6) + (prev >> 2));
+      if (!seenTransitions.insert(transitionKey).second)
+      {
+        continue;
+      }
+      markSelected(i - 1);
+      markSelected(i);
+      const size_t last = std::min(signatures.size() - 1, i + static_cast<size_t>(transitionTail));
+      for (size_t j = i + 1; j <= last; ++j)
+      {
+        markSelected(j);
+      }
+    }
+  }
+
+  std::sort(selectedIndices.begin(), selectedIndices.end());
+  if (maxSelectedFrames > 0 && selectedIndices.size() > maxSelectedFrames)
+  {
+    selectedIndices.resize(maxSelectedFrames);
+  }
+
+  out << "{\n";
+  out << "  \"schema\": \"dmdutil.playdump.coverage.v2\",\n";
+  out << "  \"input\": \"" << inputPath << "\",\n";
+  out << "  \"frameCount\": " << frames.size() << ",\n";
+  out << "  \"uniqueCount\": " << firstIndices.size() << ",\n";
+  out << "  \"selectedCount\": " << selectedIndices.size() << ",\n";
+  out << "  \"transitionTail\": " << transitionTail << ",\n";
+  out << "  \"selectedIndices\": [\n";
+  for (size_t n = 0; n < selectedIndices.size(); ++n)
+  {
+    out << "    {\"selectedIndex\": " << selectedIndices[n] << "}";
+    if (n + 1 < selectedIndices.size()) out << ",";
+    out << "\n";
+  }
+  out << "  ],\n";
+  out << "  \"signatures\": [\n";
+  for (size_t n = 0; n < firstIndices.size(); ++n)
+  {
+    const size_t i = firstIndices[n];
+    const Frame& frame = frames[i];
+    const char* format = frame.format == FrameFormat::RGB565 ? "rgb565"
+                         : frame.format == FrameFormat::RGB888 ? "rgb888"
+                                                               : "indexed";
+    out << "    {\"inputSigFNV1a64\": " << signatures[i]
+        << ", \"firstIndex\": " << i
+        << ", \"timestampMs\": " << frame.timestampMs
+        << ", \"width\": " << frame.width
+        << ", \"height\": " << frame.height
+        << ", \"format\": \"" << format << "\"}";
+    if (n + 1 < firstIndices.size()) out << ",";
+    out << "\n";
+  }
+  out << "  ]\n";
+  out << "}\n";
+  return true;
+}
+
 static bool FindLatestRgb565Dump(const std::string& dumpPath, const std::string& romName, std::string& outPath)
 {
   namespace fs = std::filesystem;
@@ -1173,6 +1381,22 @@ static struct cag_option options[] = {
      .access_name = "serum-profile-sparse",
      .description = "Enable libserum dynamic+sparse profiling logs (SERUM_PROFILE_DYNAMIC_HOTPATHS=1, "
                     "SERUM_PROFILE_SPARSE_VECTORS=1)"},
+    {.identifier = 'k',
+     .access_name = "coverage-json",
+     .value_name = "FILE",
+     .description = "Write coverage checklist JSON (first occurrences plus optional transition windows)"},
+    {.identifier = 'K',
+     .access_name = "coverage-filter",
+     .value_name = "FILE",
+     .description = "Load coverage checklist JSON and play covered frames (selected indices or signature fallback)"},
+    {.identifier = 'T',
+     .access_name = "coverage-transition-tail",
+     .value_name = "N",
+     .description = "Coverage export: include N following frames for each first-seen signature transition"},
+    {.identifier = 'M',
+     .access_name = "coverage-max-frames",
+     .value_name = "N",
+     .description = "Coverage export: cap number of selected frame indices (0 = unlimited)"},
     {.identifier = 'R', .access_letters = "R", .access_name = "raw", .description = "Force raw dump parsing"},
     {.identifier = 'h', .access_letters = "h", .access_name = "help", .description = "Show help"}};
 
@@ -1186,7 +1410,11 @@ int main(int argc, char* argv[])
   const char* opt_server = nullptr;
   const char* opt_dump_path = nullptr;
   const char* opt_dump_json = nullptr;
+  const char* opt_coverage_json = nullptr;
+  const char* opt_coverage_filter = nullptr;
   const char* opt_rom = nullptr;
+  uint32_t opt_coverage_transition_tail = 0;
+  uint32_t opt_coverage_max_frames = 0;
   uint8_t opt_depth = 2;
   bool opt_no_local = false;
   bool opt_dump_txt = false;
@@ -1280,6 +1508,38 @@ int main(int argc, char* argv[])
       case 'Q':
         opt_serum_profile_sparse = true;
         break;
+      case 'k':
+        opt_coverage_json = cag_option_get_value(&cag_context);
+        break;
+      case 'K':
+        opt_coverage_filter = cag_option_get_value(&cag_context);
+        break;
+      case 'T':
+      {
+        const char* valueStr = cag_option_get_value(&cag_context);
+        if (valueStr)
+        {
+          int value = atoi(valueStr);
+          if (value >= 0)
+          {
+            opt_coverage_transition_tail = static_cast<uint32_t>(value);
+          }
+        }
+        break;
+      }
+      case 'M':
+      {
+        const char* valueStr = cag_option_get_value(&cag_context);
+        if (valueStr)
+        {
+          int value = atoi(valueStr);
+          if (value >= 0)
+          {
+            opt_coverage_max_frames = static_cast<uint32_t>(value);
+          }
+        }
+        break;
+      }
       case 'h':
         std::cerr << "Usage: " << argv[0] << " [OPTION]...\n";
         cag_option_print(options, CAG_ARRAY_SIZE(options), stdout);
@@ -1310,6 +1570,16 @@ int main(int argc, char* argv[])
   if (opt_dump_json && opt_dump_json[0] == '\0')
   {
     std::cerr << "Error: --dump-json requires a non-empty file path\n";
+    return 1;
+  }
+  if (opt_coverage_json && opt_coverage_json[0] == '\0')
+  {
+    std::cerr << "Error: --coverage-json requires a non-empty file path\n";
+    return 1;
+  }
+  if (opt_coverage_filter && opt_coverage_filter[0] == '\0')
+  {
+    std::cerr << "Error: --coverage-filter requires a non-empty file path\n";
     return 1;
   }
   if (opt_dump_json && opt_dump_zip)
@@ -1371,6 +1641,67 @@ int main(int argc, char* argv[])
       break;
   }
   FinalizeFrameDurations(frames);
+
+  std::vector<uint64_t> frameInputSignatures;
+  frameInputSignatures.reserve(frames.size());
+  for (const Frame& frame : frames)
+  {
+    frameInputSignatures.push_back(HashFrameInputSignature(frame));
+  }
+
+  if (opt_coverage_filter && opt_coverage_filter[0] != '\0')
+  {
+    CoverageFilterSpec filterSpec;
+    if (!LoadCoverageFilterSpec(opt_coverage_filter, filterSpec))
+    {
+      std::cerr << "Error: Failed to load coverage filter " << opt_coverage_filter << "\n";
+      return 1;
+    }
+
+    std::vector<Frame> filteredFrames;
+    std::vector<uint64_t> filteredSignatures;
+    filteredFrames.reserve(frames.size());
+    filteredSignatures.reserve(frameInputSignatures.size());
+
+    if (!filterSpec.selectedIndices.empty())
+    {
+      for (size_t i = 0; i < frames.size(); ++i)
+      {
+        if (filterSpec.selectedIndices.find(static_cast<uint32_t>(i)) == filterSpec.selectedIndices.end())
+        {
+          continue;
+        }
+        filteredFrames.push_back(frames[i]);
+        filteredSignatures.push_back(frameInputSignatures[i]);
+      }
+      std::cout << "Coverage filter loaded " << filterSpec.selectedIndices.size()
+                << " selected indices, selected " << filteredFrames.size() << " frames out of " << frames.size()
+                << "\n";
+    }
+    else
+    {
+      std::unordered_set<uint64_t> seen;
+      for (size_t i = 0; i < frames.size(); ++i)
+      {
+        const uint64_t sig = frameInputSignatures[i];
+        if (filterSpec.signatures.find(sig) == filterSpec.signatures.end())
+        {
+          continue;
+        }
+        if (!seen.insert(sig).second)
+        {
+          continue;  // keep first occurrence only
+        }
+        filteredFrames.push_back(frames[i]);
+        filteredSignatures.push_back(sig);
+      }
+      std::cout << "Coverage filter loaded " << filterSpec.signatures.size() << " signatures, selected "
+                << filteredFrames.size() << " frames out of " << frames.size() << "\n";
+    }
+
+    frames.swap(filteredFrames);
+    frameInputSignatures.swap(filteredSignatures);
+  }
 
   std::string romName;
   if (opt_rom && opt_rom[0] != '\0')
@@ -1574,6 +1905,17 @@ int main(int argc, char* argv[])
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - dumpStartTime).count();
     std::cout << "JSON dump written to " << opt_dump_json << " (source: " << latestRgb565DumpPath
               << ", elapsed=" << elapsed << "ms)\n";
+  }
+
+  if (opt_coverage_json && opt_coverage_json[0] != '\0')
+  {
+    if (!WriteCoverageJson(opt_coverage_json, inputPath, frames, frameInputSignatures, opt_coverage_transition_tail,
+                           opt_coverage_max_frames))
+    {
+      std::cerr << "Error: Failed to write coverage JSON " << opt_coverage_json << "\n";
+      return 1;
+    }
+    std::cout << "Coverage JSON written to " << opt_coverage_json << "\n";
   }
 
   if (serumProfilingEnabled)

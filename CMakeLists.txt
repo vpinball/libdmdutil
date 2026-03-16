@@ -238,6 +238,11 @@ if(BUILD_SHARED)
       )
       target_link_libraries(dmdutil-convert-serum PUBLIC dmdutil_shared)
 
+      add_executable(dmdutil-compare-dumps
+         src/compareJsonDumps.cpp
+      )
+      target_link_libraries(dmdutil-compare-dumps PUBLIC dmdutil_shared)
+
       if(POST_BUILD_COPY_EXT_LIBS)
          add_dependencies(dmdserver copy_ext_libs)
          add_dependencies(dmdserver_test copy_ext_libs)
@@ -245,6 +250,7 @@ if(BUILD_SHARED)
          add_dependencies(dmdutil-generate-scenes copy_ext_libs)
          add_dependencies(dmdutil-play-dump copy_ext_libs)
          add_dependencies(dmdutil-convert-serum copy_ext_libs)
+         add_dependencies(dmdutil-compare-dumps copy_ext_libs)
       endif()
    endif()
 endif()
