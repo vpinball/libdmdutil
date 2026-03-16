@@ -15,9 +15,10 @@
 #include <thread>
 #include <vector>
 
+// clang-format off
 #if defined(_WIN32)
-#include <psapi.h>
 #include <windows.h>
+#include <psapi.h>
 #elif defined(__APPLE__)
 #include <execinfo.h>
 #include <mach/mach.h>
@@ -26,6 +27,7 @@
 #include <execinfo.h>
 #include <unistd.h>
 #endif
+// clang-format on
 
 #include "DMDUtil/DMDUtil.h"
 #include "cargs.h"
