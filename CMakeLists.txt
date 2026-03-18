@@ -51,6 +51,8 @@ if(PLATFORM STREQUAL "win")
    if(ARCH STREQUAL "x86")
       add_compile_definitions(WIN32)
    endif()
+elseif(PLATFORM STREQUAL "win-mingw")
+   add_compile_options(-Wa,-mbig-obj)
 elseif(PLATFORM STREQUAL "macos")
    if (ARCH STREQUAL "arm64")
       set(CMAKE_OSX_ARCHITECTURES arm64)
@@ -97,7 +99,7 @@ set(DMDUTIL_SOURCES
 
 set(DMDUTIL_COMPILE_DEFINITIONS "")
 
-if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
+if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
    list(APPEND DMDUTIL_SOURCES
       src/PixelcadeDMD.cpp
       src/PIN2DMD.cpp
@@ -127,6 +129,12 @@ if(BUILD_SHARED)
       else()
         target_link_libraries(dmdutil_shared PUBLIC cargs zedmd serum vni libusb-1.0 libserialport sockpp pupdmd ws2_32)
       endif()
+   elseif(PLATFORM STREQUAL "win-mingw")
+      target_link_directories(dmdutil_shared PUBLIC
+         third-party/build-libs/${PLATFORM}/${ARCH}
+         third-party/runtime-libs/${PLATFORM}/${ARCH}
+      )
+      target_link_libraries(dmdutil_shared PUBLIC cargs64 zedmd64 serum64 vni64 usb64-1.0 serialport64 sockpp64 pupdmd64 ws2_32)
    elseif(PLATFORM STREQUAL "macos")
       target_link_directories(dmdutil_shared PUBLIC
          third-party/runtime-libs/${PLATFORM}/${ARCH}
@@ -149,23 +157,32 @@ if(BUILD_SHARED)
       target_link_libraries(dmdutil_shared PUBLIC zedmd serum vni sockpp pupdmd)
    endif()
 
-   if(PLATFORM STREQUAL "win" AND ARCH STREQUAL "x64")
+   if((PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw") AND ARCH STREQUAL "x64")
       set(DMDUTIL_OUTPUT_NAME "dmdutil64")
    else()
       set(DMDUTIL_OUTPUT_NAME "dmdutil")
    endif()
 
-   set_target_properties(dmdutil_shared PROPERTIES
-      OUTPUT_NAME ${DMDUTIL_OUTPUT_NAME}
-      VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
-   )
+   if(PLATFORM STREQUAL "win-mingw")
+      set_target_properties(dmdutil_shared PROPERTIES
+         PREFIX ""
+         IMPORT_PREFIX ""
+         OUTPUT_NAME ${DMDUTIL_OUTPUT_NAME}
+         VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
+      )
+   else()
+      set_target_properties(dmdutil_shared PROPERTIES
+         OUTPUT_NAME ${DMDUTIL_OUTPUT_NAME}
+         VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
+      )
+   endif()
 
    install(TARGETS dmdutil_shared
       LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
    )
    install(DIRECTORY include/DMDUtil DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
-   if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
+   if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdserver
          src/server.cpp
          src/Logger.cpp
@@ -210,8 +227,9 @@ if(BUILD_STATIC)
       target_compile_definitions(dmdutil_static PUBLIC ${DMDUTIL_COMPILE_DEFINITIONS})
    endif()
 
-   if(PLATFORM STREQUAL "win")
+   if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw")
       set_target_properties(dmdutil_static PROPERTIES
+         PREFIX ""
          OUTPUT_NAME "dmdutil_static"
       )
    else()
@@ -225,7 +243,7 @@ if(BUILD_STATIC)
    )
    install(DIRECTORY include/DMDUtil DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
-   if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
+   if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdutil_test_s
          src/test.cpp
       )
@@ -240,6 +258,12 @@ if(BUILD_STATIC)
           else()
             target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs zedmd serum vni libusb-1.0 libserialport sockpp pupdmd ws2_32)
           endif()
+      elseif(PLATFORM STREQUAL "win-mingw")
+         target_link_directories(dmdutil_test_s PUBLIC
+            third-party/build-libs/${PLATFORM}/${ARCH}
+            third-party/runtime-libs/${PLATFORM}/${ARCH}
+         )
+         target_link_libraries(dmdutil_test_s PUBLIC dmdutil_static cargs64 zedmd64 serum64 vni64 usb64-1.0 serialport64 sockpp64 pupdmd64 ws2_32)
       elseif(PLATFORM STREQUAL "macos")
          target_link_directories(dmdutil_test_s PUBLIC
             third-party/runtime-libs/${PLATFORM}/${ARCH}
@@ -258,7 +282,7 @@ if(BUILD_STATIC)
    endif()
 endif()
 
-if(POST_BUILD_COPY_EXT_LIBS AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux"))
+if(POST_BUILD_COPY_EXT_LIBS AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux"))
    add_custom_target(copy_ext_libs ALL)
 
    if(PLATFORM STREQUAL "win")
@@ -302,6 +326,21 @@ if(POST_BUILD_COPY_EXT_LIBS AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "m
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
          )
       endif()
+   elseif(PLATFORM STREQUAL "win-mingw")
+      add_dependencies(copy_ext_libs dmdutil_shared)
+      add_custom_command(TARGET copy_ext_libs POST_BUILD
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libusb64-1.0.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libcargs64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/zedmd64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/serum64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libserialport64-0.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libsockpp64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/pupdmd64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libgcc_s_seh-1.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libstdc++-6.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+         COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/libwinpthread-1.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
+      )
    elseif(PLATFORM STREQUAL "macos")
       add_custom_command(TARGET copy_ext_libs POST_BUILD
          COMMAND cp -a "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.dylib" "${CMAKE_BINARY_DIR}/"
