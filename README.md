@@ -317,7 +317,12 @@ Options:
 
 ## Building:
 
-#### Windows (x64)
+#### Windows x64 (MSVC)
+
+Requires [MSYS2](https://www.msys2.org/) dependencies:
+```shell
+pacman -S make diffutils mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libwinpthread mingw-w64-ucrt-x86_64-cmake
+```
 
 ```shell
 platforms/win/x64/external.sh
@@ -325,12 +330,28 @@ cmake -G "Visual Studio 17 2022" -DPLATFORM=win -DARCH=x64 -B build
 cmake --build build --config Release
 ```
 
-#### Windows (x86)
+#### Windows x86 (MSVC)
+
+Requires [MSYS2](https://www.msys2.org/) dependencies:
+```shell
+pacman -S make diffutils mingw-w64-i686-gcc mingw-w64-i686-libwinpthread mingw-w64-i686-cmake
+```
 
 ```shell
 platforms/win/x86/external.sh
 cmake -G "Visual Studio 17 2022" -A Win32 -DPLATFORM=win -DARCH=x86 -B build
 cmake --build build --config Release
+```
+
+#### Windows MinGW / MSYS2 UCRT64 (x64)
+
+Requires [MSYS2](https://www.msys2.org/) dependencies:
+```shell
+pacman -S make diffutils autoconf automake libtool mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libwinpthread mingw-w64-ucrt-x86_64-cmake
+```
+
+```shell
+MSYSTEM=UCRT64 /usr/bin/bash -l -c "cd $(pwd) && platforms/win-mingw/x64/external.sh && cmake -DCMAKE_BUILD_TYPE=Release -DPLATFORM=win-mingw -DARCH=x64 -B build && cmake --build build -- -j$(nproc)"
 ```
 
 #### Linux (x64)
