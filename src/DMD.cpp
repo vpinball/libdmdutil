@@ -6,8 +6,8 @@
 #include "DMDUtil/RGB24DMD.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#include <winsock2.h>  // Windows byte-order functions
 #include <process.h>
+#include <winsock2.h>  // Windows byte-order functions
 #else
 #include <arpa/inet.h>  // Linux/macOS byte-order functions
 #include <unistd.h>
@@ -30,6 +30,7 @@
 #include <chrono>
 #include <cstring>
 #include <filesystem>
+#include <limits>
 #include <unordered_set>
 
 #include "AlphaNumeric.h"
@@ -278,6 +279,7 @@ DMD::DMD()
     m_pUpdateBufferQueue[i] = new Update();
     m_updateBufferQueueTimestamp[i] = 0;
     m_updateBufferQueueHasTimestamp[i] = false;
+    m_updateBufferQueueFrameContext[i] = FrameContext{};
   }
   m_updateBufferQueuePosition.store(0, std::memory_order_release);
   m_stopFlag.store(false, std::memory_order_release);
@@ -331,16 +333,20 @@ DMD::~DMD()
   m_dmdCV.notify_all();
 
   Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining DmdFrameThread");
-  if (m_pDmdFrameThread->joinable()) m_pDmdFrameThread->join();
-  else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: DmdFrameThread not joinable");
+  if (m_pDmdFrameThread->joinable())
+    m_pDmdFrameThread->join();
+  else
+    Log(DMDUtil_LogLevel_ERROR, "DMD destructor: DmdFrameThread not joinable");
   delete m_pDmdFrameThread;
   m_pDmdFrameThread = nullptr;
 
   if (m_pLevelDMDThread)
   {
     Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining LevelDMDThread");
-    if (m_pLevelDMDThread->joinable()) m_pLevelDMDThread->join();
-    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: LevelDMDThread not joinable");
+    if (m_pLevelDMDThread->joinable())
+      m_pLevelDMDThread->join();
+    else
+      Log(DMDUtil_LogLevel_ERROR, "DMD destructor: LevelDMDThread not joinable");
     delete m_pLevelDMDThread;
     m_pLevelDMDThread = nullptr;
   }
@@ -348,8 +354,10 @@ DMD::~DMD()
   if (m_pRGB24DMDThread)
   {
     Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining RGB24DMDThread");
-    if (m_pRGB24DMDThread->joinable()) m_pRGB24DMDThread->join();
-    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: RGB24DMDThread not joinable");
+    if (m_pRGB24DMDThread->joinable())
+      m_pRGB24DMDThread->join();
+    else
+      Log(DMDUtil_LogLevel_ERROR, "DMD destructor: RGB24DMDThread not joinable");
     delete m_pRGB24DMDThread;
     m_pRGB24DMDThread = nullptr;
   }
@@ -357,8 +365,10 @@ DMD::~DMD()
   if (m_pConsoleDMDThread)
   {
     Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining ConsoleDMDThread");
-    if (m_pConsoleDMDThread->joinable()) m_pConsoleDMDThread->join();
-    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: ConsoleDMDThread not joinable");
+    if (m_pConsoleDMDThread->joinable())
+      m_pConsoleDMDThread->join();
+    else
+      Log(DMDUtil_LogLevel_ERROR, "DMD destructor: ConsoleDMDThread not joinable");
     delete m_pConsoleDMDThread;
     m_pConsoleDMDThread = nullptr;
   }
@@ -366,8 +376,10 @@ DMD::~DMD()
   if (m_pZeDMDThread)
   {
     Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining ZeDMDThread");
-    if (m_pZeDMDThread->joinable()) m_pZeDMDThread->join();
-    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: ZeDMDThread not joinable");
+    if (m_pZeDMDThread->joinable())
+      m_pZeDMDThread->join();
+    else
+      Log(DMDUtil_LogLevel_ERROR, "DMD destructor: ZeDMDThread not joinable");
     delete m_pZeDMDThread;
     m_pZeDMDThread = nullptr;
   }
@@ -403,8 +415,10 @@ DMD::~DMD()
   if (m_pPupDMDThread)
   {
     Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining PupDMDThread");
-    if (m_pPupDMDThread->joinable()) m_pPupDMDThread->join();
-    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: PupDMDThread not joinable");
+    if (m_pPupDMDThread->joinable())
+      m_pPupDMDThread->join();
+    else
+      Log(DMDUtil_LogLevel_ERROR, "DMD destructor: PupDMDThread not joinable");
     delete m_pPupDMDThread;
     m_pPupDMDThread = nullptr;
   }
@@ -412,8 +426,10 @@ DMD::~DMD()
   if (m_pSerumThread)
   {
     Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining SerumThread");
-    if (m_pSerumThread->joinable()) m_pSerumThread->join();
-    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: SerumThread not joinable");
+    if (m_pSerumThread->joinable())
+      m_pSerumThread->join();
+    else
+      Log(DMDUtil_LogLevel_ERROR, "DMD destructor: SerumThread not joinable");
     delete m_pSerumThread;
     m_pSerumThread = nullptr;
   }
@@ -421,8 +437,10 @@ DMD::~DMD()
   if (m_pVniThread)
   {
     Log(DMDUtil_LogLevel_INFO, "DMD destructor: joining VniThread");
-    if (m_pVniThread->joinable()) m_pVniThread->join();
-    else Log(DMDUtil_LogLevel_ERROR, "DMD destructor: VniThread not joinable");
+    if (m_pVniThread->joinable())
+      m_pVniThread->join();
+    else
+      Log(DMDUtil_LogLevel_ERROR, "DMD destructor: VniThread not joinable");
     delete m_pVniThread;
     m_pVniThread = nullptr;
   }
@@ -717,10 +735,12 @@ void DMD::UpdateDataWithTimestampInternal(const uint8_t* pData, int depth, uint1
   QueueUpdate(dmdUpdate, buffered, true, timestampMs);
 }
 
-void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bool hasTimestamp, uint32_t timestampMs)
+void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bool hasTimestamp, uint32_t timestampMs,
+                      const FrameContext* frameContext)
 {
+  const FrameContext frameContextCopy = frameContext ? *frameContext : FrameContext{};
   std::thread(
-      [this, dmdUpdate, buffered, hasTimestamp, timestampMs]()
+      [this, dmdUpdate, buffered, hasTimestamp, timestampMs, frameContextCopy]()
       {
         std::unique_lock<std::shared_mutex> ul(m_dmdSharedMutex);
         uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
@@ -728,6 +748,7 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bo
         memcpy(m_pUpdateBufferQueue[slot], dmdUpdate.get(), sizeof(Update));
         m_updateBufferQueueHasTimestamp[slot] = hasTimestamp;
         m_updateBufferQueueTimestamp[slot] = timestampMs;
+        m_updateBufferQueueFrameContext[slot] = frameContextCopy;
         m_updateBufferQueuePosition.store(updateBufferQueuePosition, std::memory_order_release);
 
         Log(DMDUtil_LogLevel_DEBUG, "Queued Frame: position=%d, mode=%d, depth=%d", updateBufferQueuePosition,
@@ -742,8 +763,7 @@ void DMD::QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bo
         ul.unlock();
         m_dmdCV.notify_all();
 
-        const bool sendToDMDServer =
-            !IsSerumMode(dmdUpdate->mode) || dmdUpdate->mode == Mode::SerumCommand;
+        const bool sendToDMDServer = !IsSerumMode(dmdUpdate->mode) || dmdUpdate->mode == Mode::SerumCommand;
         if (m_pDMDServerConnector && sendToDMDServer)
         {
           StreamHeader streamHeader;
@@ -788,6 +808,33 @@ void DMD::UpdateDataWithTimestamp(const uint8_t* pData, int depth, uint16_t widt
   UpdateDataWithTimestampInternal(pData, depth, width, height, r, g, b, Mode::Data, timestampMs, buffered);
 }
 
+void DMD::UpdateDataWithMetadataAndTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height,
+                                             uint8_t r, uint8_t g, uint8_t b, uint32_t timestampMs,
+                                             const FrameContext& frameContext, bool buffered)
+{
+  auto dmdUpdate = std::make_shared<Update>();
+  if (pData)
+  {
+    memcpy(dmdUpdate->data, pData, (size_t)width * height);
+    dmdUpdate->hasData = true;
+  }
+  else
+  {
+    dmdUpdate->hasData = false;
+  }
+  dmdUpdate->mode = Mode::Data;
+  dmdUpdate->depth = depth;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
+  dmdUpdate->hasSegData = false;
+  dmdUpdate->hasSegData2 = false;
+  dmdUpdate->r = r;
+  dmdUpdate->g = g;
+  dmdUpdate->b = b;
+
+  QueueUpdate(dmdUpdate, buffered, true, timestampMs, &frameContext);
+}
+
 void DMD::UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                           uint8_t b, bool buffered)
 {
@@ -809,6 +856,29 @@ void DMD::UpdateRGB24DataWithTimestamp(const uint8_t* pData, uint16_t width, uin
                                        bool buffered)
 {
   UpdateDataWithTimestampInternal(pData, 24, width, height, 0, 0, 0, Mode::RGB24, timestampMs, buffered);
+}
+
+void DMD::UpdateRGB24DataWithMetadataAndTimestamp(const uint8_t* pData, uint16_t width, uint16_t height,
+                                                  uint32_t timestampMs, const FrameContext& frameContext, bool buffered)
+{
+  auto dmdUpdate = std::make_shared<Update>();
+  dmdUpdate->mode = Mode::RGB24;
+  dmdUpdate->depth = 24;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
+  if (pData)
+  {
+    memcpy(dmdUpdate->data, pData, (size_t)width * height * 3u);
+    dmdUpdate->hasData = true;
+  }
+  else
+  {
+    dmdUpdate->hasData = false;
+  }
+  dmdUpdate->hasSegData = false;
+  dmdUpdate->hasSegData2 = false;
+
+  QueueUpdate(dmdUpdate, buffered, true, timestampMs, &frameContext);
 }
 
 void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered)
@@ -856,6 +926,29 @@ void DMD::UpdateRGB16DataWithTimestamp(const uint16_t* pData, uint16_t width, ui
   QueueUpdate(dmdUpdate, buffered, true, timestampMs);
 }
 
+void DMD::UpdateRGB16DataWithMetadataAndTimestamp(const uint16_t* pData, uint16_t width, uint16_t height,
+                                                  uint32_t timestampMs, const FrameContext& frameContext, bool buffered)
+{
+  auto dmdUpdate = std::make_shared<Update>();
+  dmdUpdate->mode = Mode::RGB16;
+  dmdUpdate->depth = 24;
+  dmdUpdate->width = width;
+  dmdUpdate->height = height;
+  if (pData)
+  {
+    memcpy(dmdUpdate->segData, pData, (size_t)width * height * sizeof(uint16_t));
+    dmdUpdate->hasData = true;
+  }
+  else
+  {
+    dmdUpdate->hasData = false;
+  }
+  dmdUpdate->hasSegData = false;
+  dmdUpdate->hasSegData2 = false;
+
+  QueueUpdate(dmdUpdate, buffered, true, timestampMs, &frameContext);
+}
+
 void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                                  uint8_t g, uint8_t b)
 {
@@ -889,6 +982,33 @@ void DMD::UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pDat
   dmdUpdate->b = b;
 
   QueueUpdate(dmdUpdate, false);
+}
+
+bool DMD::WaitForSerumColorizeCapture(uint64_t sourceOrdinal, SerumCapture& capture, uint32_t timeoutMs)
+{
+  std::unique_lock<std::mutex> lock(m_serumCaptureMutex);
+  auto ready = [&]() { return m_serumColorizeCaptures.find(sourceOrdinal) != m_serumColorizeCaptures.end(); };
+  if (timeoutMs == 0)
+  {
+    if (!ready())
+    {
+      return false;
+    }
+  }
+  else if (!m_serumCaptureCv.wait_for(lock, std::chrono::milliseconds(timeoutMs), ready))
+  {
+    return false;
+  }
+
+  auto captureIt = m_serumColorizeCaptures.find(sourceOrdinal);
+  if (captureIt == m_serumColorizeCaptures.end())
+  {
+    return false;
+  }
+
+  capture = captureIt->second;
+  m_serumColorizeCaptures.erase(m_serumColorizeCaptures.begin(), std::next(captureIt));
+  return true;
 }
 
 void DMD::FindDisplays()
@@ -1152,10 +1272,9 @@ void DMD::ZeDMDThread()
       {
         if (IsSerumMode(updateMode, true)) continue;
       }
-      else if ((m_pSerum || m_pVni) &&
-               (!IsSerumMode(updateMode, showNotColorizedFrames) ||
-                (m_pZeDMD->GetWidth() == 256 && updateMode == Mode::SerumV2_32_64) ||
-                (m_pZeDMD->GetWidth() < 256 && updateMode == Mode::SerumV2_64_32)))
+      else if ((m_pSerum || m_pVni) && (!IsSerumMode(updateMode, showNotColorizedFrames) ||
+                                        (m_pZeDMD->GetWidth() == 256 && updateMode == Mode::SerumV2_32_64) ||
+                                        (m_pZeDMD->GetWidth() < 256 && updateMode == Mode::SerumV2_64_32)))
       {
         continue;
       }
@@ -1229,7 +1348,8 @@ void DMD::ZeDMDThread()
             memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, frameSize);
             update = true;
           }
-          else if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
+          else if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) &&
+                    m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
                    (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::NotColorized))
           {
             memcpy(indexBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, frameSize);
@@ -1468,7 +1588,25 @@ void DMD::SerumThread()
 
           if (m_pSerum)
           {
+            FrameContext frameContext{};
+            GetQueueFrameContext(bufferPositionMod, frameContext);
+
+            const auto colorizeStart = std::chrono::steady_clock::now();
             uint32_t result = Serum_Colorize(m_pUpdateBufferQueue[bufferPositionMod]->data);
+            const uint32_t colorizeTimeUs = static_cast<uint32_t>(
+                std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - colorizeStart)
+                    .count());
+            uint32_t averageColorizeTimeUs = 0;
+            if (m_serumColorizeCount < std::numeric_limits<uint64_t>::max())
+            {
+              m_serumColorizeTimeTotalUs += colorizeTimeUs;
+              ++m_serumColorizeCount;
+              averageColorizeTimeUs = static_cast<uint32_t>(m_serumColorizeTimeTotalUs / m_serumColorizeCount);
+            }
+
+            Serum_Runtime_Metadata runtimeMetadata{};
+            runtimeMetadata.size = sizeof(runtimeMetadata);
+            Serum_GetRuntimeMetadata(&runtimeMetadata);
 
             if (result != IDENTIFY_NO_FRAME && result != IDENTIFY_SAME_FRAME)
             {
@@ -1480,8 +1618,13 @@ void DMD::SerumThread()
               uint32_t queuedTimestamp = 0;
               bool hasTimestamp = GetQueueTimestamp(bufferPositionMod, queuedTimestamp);
 
+              std::shared_ptr<Update> primaryOutput;
               QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES,
-                               hasTimestamp, queuedTimestamp);
+                               hasTimestamp, queuedTimestamp, &primaryOutput);
+              RecordSerumColorizeCapture(frameContext, primaryOutput, hasTimestamp, queuedTimestamp, false, result,
+                                         runtimeMetadata.serumVersion, runtimeMetadata.frameID,
+                                         runtimeMetadata.triggerID, runtimeMetadata.rotationtimer,
+                                         runtimeMetadata.featureFlags, colorizeTimeUs, averageColorizeTimeUs);
 
               if (result > 0 && ((result & 0xffff) < 2048))
               {
@@ -1517,6 +1660,17 @@ void DMD::SerumThread()
               uint32_t queuedTimestamp = 0;
               bool hasTimestamp = GetQueueTimestamp(bufferPositionMod, queuedTimestamp);
               QueueUpdate(noSerumUpdate, false, hasTimestamp, queuedTimestamp);
+              RecordSerumColorizeCapture(frameContext, std::shared_ptr<Update>(), hasTimestamp, queuedTimestamp, false,
+                                         result, runtimeMetadata.serumVersion, runtimeMetadata.frameID,
+                                         runtimeMetadata.triggerID, runtimeMetadata.rotationtimer,
+                                         runtimeMetadata.featureFlags, colorizeTimeUs, averageColorizeTimeUs);
+            }
+            else
+            {
+              RecordSerumColorizeCapture(frameContext, std::shared_ptr<Update>(), false, 0, false, result,
+                                         runtimeMetadata.serumVersion, runtimeMetadata.frameID,
+                                         runtimeMetadata.triggerID, runtimeMetadata.rotationtimer,
+                                         runtimeMetadata.featureFlags, colorizeTimeUs, averageColorizeTimeUs);
             }
           }
         }
@@ -1712,7 +1866,8 @@ void DMD::VniThread()
 #endif
 }
 
-void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool hasTimestamp, uint32_t timestampMs)
+void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool hasTimestamp, uint32_t timestampMs,
+                           std::shared_ptr<Update>* primaryOutput)
 {
   if (!render32 && !render64) return;
 
@@ -1750,6 +1905,11 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
     memcpy(serumUpdate->data, m_pSerum->frame, frameBytes);
     memcpy(serumUpdate->segData, m_pSerum->palette, PALETTE_SIZE);
 
+    if (primaryOutput)
+    {
+      *primaryOutput = serumUpdate;
+      primaryOutput = nullptr;
+    }
     QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
   }
   else if (m_pSerum->SerumVersion == SERUM_V2)
@@ -1771,6 +1931,11 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
         serumUpdate->height = 32;
         memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
 
+        if (primaryOutput)
+        {
+          *primaryOutput = serumUpdate;
+          primaryOutput = nullptr;
+        }
         QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
     }
@@ -1791,6 +1956,11 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
         serumUpdate->height = 64;
         memcpy(serumUpdate->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
 
+        if (primaryOutput)
+        {
+          *primaryOutput = serumUpdate;
+          primaryOutput = nullptr;
+        }
         QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
     }
@@ -1811,6 +1981,11 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
         serumUpdate->height = 32;
         memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
 
+        if (primaryOutput)
+        {
+          *primaryOutput = serumUpdate;
+          primaryOutput = nullptr;
+        }
         QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
       }
 
@@ -1834,6 +2009,11 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
         serumUpdateHD->height = 64;
         memcpy(serumUpdateHD->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
 
+        if (primaryOutput)
+        {
+          *primaryOutput = serumUpdateHD;
+          primaryOutput = nullptr;
+        }
         QueueUpdate(serumUpdateHD, false, hasTimestamp, timestampMs);
       }
     }
@@ -2621,10 +2801,8 @@ void DMD::GenerateRandomSuffix(char* buffer, size_t length)
   const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
   const uint64_t charsetSize = (uint64_t)(sizeof(charset) - 1);  // exclude null terminator
 
-  const uint64_t nowSteady =
-      (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
-  const uint64_t nowSystem =
-      (uint64_t)std::chrono::system_clock::now().time_since_epoch().count();
+  const uint64_t nowSteady = (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
+  const uint64_t nowSystem = (uint64_t)std::chrono::system_clock::now().time_since_epoch().count();
   const uint64_t threadHash = (uint64_t)std::hash<std::thread::id>{}(std::this_thread::get_id());
 #if defined(_WIN32) || defined(_WIN64)
   const uint64_t processId = (uint64_t)_getpid();
@@ -2686,6 +2864,61 @@ bool DMD::DumpersReached(uint16_t targetPosition) const
       m_dump888Position.load(std::memory_order_acquire) != targetPosition)
     return false;
   return true;
+}
+
+void DMD::RecordSerumColorizeCapture(const FrameContext& frameContext, const std::shared_ptr<Update>& primaryOutput,
+                                     bool hasTimestamp, uint32_t outputTimestampMs, bool isRotation,
+                                     uint32_t serumResult, uint32_t serumVersion, uint32_t serumFrameId,
+                                     uint32_t serumTriggerId, uint32_t serumRotationTimer, uint32_t serumFeatureFlags,
+                                     uint32_t colorizeTimeUs, uint32_t averageColorizeTimeUs)
+{
+  if (!frameContext.valid)
+  {
+    return;
+  }
+
+  SerumCapture capture;
+  capture.valid = true;
+  capture.hasOutput = (primaryOutput != nullptr);
+  capture.isRotation = isRotation;
+  capture.hasTimestamp = hasTimestamp;
+  capture.sourceOrdinal = frameContext.sourceOrdinal;
+  capture.sourceFrameIndex = frameContext.sourceFrameIndex;
+  capture.originalFrameIndex = frameContext.originalFrameIndex;
+  capture.inputCrc32 = frameContext.inputCrc32;
+  capture.inputTimestampMs = frameContext.inputTimestampMs;
+  capture.inputDurationMs = frameContext.inputDurationMs;
+  capture.serumResult = serumResult;
+  capture.serumVersion = serumVersion;
+  capture.serumFrameId = serumFrameId;
+  capture.serumTriggerId = serumTriggerId;
+  capture.serumRotationTimer = serumRotationTimer;
+  capture.serumFeatureFlags = serumFeatureFlags;
+  capture.colorizeTimeUs = colorizeTimeUs;
+  capture.averageColorizeTimeUs = averageColorizeTimeUs;
+  capture.outputTimestampMs = outputTimestampMs;
+  if (primaryOutput)
+  {
+    capture.update = *primaryOutput;
+  }
+
+  std::lock_guard<std::mutex> lock(m_serumCaptureMutex);
+  m_serumColorizeCaptures[frameContext.sourceOrdinal] = std::move(capture);
+  while (m_serumColorizeCaptures.size() > 64)
+  {
+    m_serumColorizeCaptures.erase(m_serumColorizeCaptures.begin());
+  }
+  m_serumCaptureCv.notify_all();
+}
+
+bool DMD::GetQueueFrameContext(uint8_t bufferPositionMod, FrameContext& frameContext) const
+{
+  if (bufferPositionMod >= DMDUTIL_FRAME_BUFFER_SIZE)
+  {
+    return false;
+  }
+  frameContext = m_updateBufferQueueFrameContext[bufferPositionMod];
+  return frameContext.valid;
 }
 
 bool DMD::WaitForDumpers(uint16_t targetPosition, uint32_t timeoutMs)

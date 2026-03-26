@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -17,6 +18,12 @@ struct DumpFrame
   uint64_t width = 0;
   uint64_t height = 0;
   uint64_t hash = 0;
+  bool hasOutput = true;
+  bool hasHasOutputField = false;
+  bool hasSerumFrameId = false;
+  bool hasSerumFeatureFlags = false;
+  uint64_t serumFrameId = 0;
+  uint64_t serumFeatureFlags = 0;
 };
 
 static bool ParseUIntField(const std::string& object, const char* key, uint64_t& outValue)
@@ -26,7 +33,7 @@ static bool ParseUIntField(const std::string& object, const char* key, uint64_t&
   {
     return false;
   }
-  size_t pos = keyPos + std::char_traits<char>::length(key);
+  size_t pos = keyPos + std::strlen(key);
   while (pos < object.size() && (object[pos] == ' ' || object[pos] == '\t')) ++pos;
   size_t endPos = pos;
   while (endPos < object.size() && object[endPos] >= '0' && object[endPos] <= '9') ++endPos;
@@ -36,6 +43,28 @@ static bool ParseUIntField(const std::string& object, const char* key, uint64_t&
   }
   outValue = strtoull(object.substr(pos, endPos - pos).c_str(), nullptr, 10);
   return true;
+}
+
+static bool ParseBoolField(const std::string& object, const char* key, bool& outValue)
+{
+  const size_t keyPos = object.find(key);
+  if (keyPos == std::string::npos)
+  {
+    return false;
+  }
+  size_t pos = keyPos + std::strlen(key);
+  while (pos < object.size() && (object[pos] == ' ' || object[pos] == '\t')) ++pos;
+  if (object.compare(pos, 4, "true") == 0)
+  {
+    outValue = true;
+    return true;
+  }
+  if (object.compare(pos, 5, "false") == 0)
+  {
+    outValue = false;
+    return true;
+  }
+  return false;
 }
 
 static bool LoadDumpFrames(const std::string& path, std::vector<DumpFrame>& outFrames)
@@ -60,14 +89,52 @@ static bool LoadDumpFrames(const std::string& path, std::vector<DumpFrame>& outF
     {
       return false;
     }
+
     const std::string object = content.substr(objStart, objEnd - objStart + 1);
     DumpFrame frame{};
-    if (!ParseUIntField(object, "\"index\":", frame.index) || !ParseUIntField(object, "\"timestampMs\":", frame.timestampMs) ||
-        !ParseUIntField(object, "\"durationMs\":", frame.durationMs) || !ParseUIntField(object, "\"width\":", frame.width) ||
-        !ParseUIntField(object, "\"height\":", frame.height) || !ParseUIntField(object, "\"hashFNV1a64\":", frame.hash))
+    if (!ParseUIntField(object, "\"index\":", frame.index))
     {
       return false;
     }
+
+    if (!ParseUIntField(object, "\"timestampMs\":", frame.timestampMs))
+    {
+      if (!ParseUIntField(object, "\"outputTimestampMs\":", frame.timestampMs))
+      {
+        ParseUIntField(object, "\"inputTimestampMs\":", frame.timestampMs);
+      }
+    }
+
+    if (!ParseUIntField(object, "\"durationMs\":", frame.durationMs))
+    {
+      ParseUIntField(object, "\"inputDurationMs\":", frame.durationMs);
+    }
+
+    if (!ParseUIntField(object, "\"width\":", frame.width))
+    {
+      if (!ParseUIntField(object, "\"outputWidth\":", frame.width))
+      {
+        ParseUIntField(object, "\"inputWidth\":", frame.width);
+      }
+    }
+
+    if (!ParseUIntField(object, "\"height\":", frame.height))
+    {
+      if (!ParseUIntField(object, "\"outputHeight\":", frame.height))
+      {
+        ParseUIntField(object, "\"inputHeight\":", frame.height);
+      }
+    }
+
+    if (!ParseUIntField(object, "\"hashFNV1a64\":", frame.hash))
+    {
+      ParseUIntField(object, "\"outputHashFNV1a64\":", frame.hash);
+    }
+
+    frame.hasHasOutputField = ParseBoolField(object, "\"hasOutput\":", frame.hasOutput);
+    frame.hasSerumFrameId = ParseUIntField(object, "\"serumFrameId\":", frame.serumFrameId);
+    frame.hasSerumFeatureFlags = ParseUIntField(object, "\"serumFeatureFlags\":", frame.serumFeatureFlags);
+
     outFrames.push_back(frame);
     pos = objEnd + 1;
   }
@@ -184,7 +251,13 @@ int main(int argc, char* argv[])
 
     const DumpFrame& e = expectedFrames[i];
     const DumpFrame& a = actualFrames[i];
+    const bool compareHasOutput = e.hasHasOutputField || a.hasHasOutputField;
+    const bool compareSerumFrameId = e.hasSerumFrameId || a.hasSerumFrameId;
+    const bool compareSerumFeatureFlags = e.hasSerumFeatureFlags || a.hasSerumFeatureFlags;
     const bool mismatch = e.hash != a.hash || e.width != a.width || e.height != a.height ||
+                          (compareHasOutput && e.hasOutput != a.hasOutput) ||
+                          (compareSerumFrameId && e.serumFrameId != a.serumFrameId) ||
+                          (compareSerumFeatureFlags && e.serumFeatureFlags != a.serumFeatureFlags) ||
                           (!ignoreDuration && e.durationMs != a.durationMs) ||
                           (!ignoreTimestamp && e.timestampMs != a.timestampMs);
 
@@ -198,6 +271,19 @@ int main(int argc, char* argv[])
       std::cout << "Diff[" << diffCount + 1 << "] frame " << i << ": "
                 << "hash " << e.hash << " vs " << a.hash << ", "
                 << "size " << e.width << "x" << e.height << " vs " << a.width << "x" << a.height;
+      if (compareHasOutput)
+      {
+        std::cout << ", hasOutput " << (e.hasOutput ? "true" : "false") << " vs "
+                  << (a.hasOutput ? "true" : "false");
+      }
+      if (compareSerumFrameId)
+      {
+        std::cout << ", serumFrameId " << e.serumFrameId << " vs " << a.serumFrameId;
+      }
+      if (compareSerumFeatureFlags)
+      {
+        std::cout << ", serumFeatureFlags " << e.serumFeatureFlags << " vs " << a.serumFeatureFlags;
+      }
       if (!ignoreDuration)
       {
         std::cout << ", duration " << e.durationMs << " vs " << a.durationMs;

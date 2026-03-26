@@ -23,3 +23,14 @@ third-party/include/TimeUtils.h
 third-party/include/vni.h
 third-party/include/libusb-1.0
 .DS_Store
+
+# Local dump/debug artifacts
+*.565.txt
+*.888.txt
+*_dump.json
+*_coverage.json
+*_coverage_*.json
+dump*.txt
+dump*.txt.zip
+test*.raw
+test*.txt
