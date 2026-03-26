@@ -1,3 +1,9 @@
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#endif
+
 #include "DMDUtil/DMD.h"
 
 #include "DMDUtil/Config.h"
@@ -1597,7 +1603,7 @@ void DMD::SerumThread()
                 std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - colorizeStart)
                     .count());
             uint32_t averageColorizeTimeUs = 0;
-            if (m_serumColorizeCount < std::numeric_limits<uint64_t>::max())
+            if (m_serumColorizeCount < (std::numeric_limits<uint64_t>::max)())
             {
               m_serumColorizeTimeTotalUs += colorizeTimeUs;
               ++m_serumColorizeCount;
