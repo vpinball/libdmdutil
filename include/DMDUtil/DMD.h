@@ -339,7 +339,7 @@ class DMDUTILAPI DMD
   bool m_dumpSuffixValid = false;
 
   bool m_hasUpdateBuffered = false;
-  static bool m_finding;
+  static std::atomic<bool> m_finding;
 
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
