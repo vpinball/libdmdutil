@@ -150,11 +150,11 @@ int main(int argc, char* argv[])
   uint8_t flags = FLAG_REQUEST_32P_FRAMES | FLAG_REQUEST_64P_FRAMES;
   if (opt_strip_sd)
   {
-    flags = FLAG_REQUEST_64P_FRAMES;
+    flags = FLAG_REQUEST_64P_FRAMES | FLAG_REQUEST_FORCE;
   }
   else if (opt_strip_hd)
   {
-    flags = FLAG_REQUEST_32P_FRAMES;
+    flags = FLAG_REQUEST_32P_FRAMES | FLAG_REQUEST_FORCE;
   }
 
   if (opt_logging)

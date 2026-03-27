@@ -218,7 +218,7 @@ class DMDServerConnector
   sockpp::tcp_connector* m_pConnector;
 };
 
-bool DMD::m_finding = false;
+std::atomic<bool> DMD::m_finding{false};
 
 void DMD::Update::convertToHostByteOrder()
 {
@@ -514,7 +514,7 @@ bool DMD::ConnectDMDServer()
   return (m_pDMDServerConnector);
 }
 
-bool DMD::IsFinding() { return m_finding; }
+bool DMD::IsFinding() { return m_finding.load(std::memory_order_acquire); }
 
 bool DMD::HasDisplay() const
 {
@@ -1015,7 +1015,7 @@ bool DMD::WaitForSerumColorizeCapture(uint64_t sourceOrdinal, SerumCapture& capt
 
 void DMD::FindDisplays()
 {
-  if (m_finding) return;
+  if (m_finding.load(std::memory_order_acquire)) return;
 
   Config* const pConfig = Config::GetInstance();
 
@@ -1026,7 +1026,7 @@ void DMD::FindDisplays()
 
   if (pConfig->IsLocalDisplaysActive())
   {
-    m_finding = true;
+    m_finding.store(true, std::memory_order_release);
 
     std::thread(
         [this]()
@@ -1146,7 +1146,7 @@ void DMD::FindDisplays()
           }
 #endif
 
-          m_finding = false;
+          m_finding.store(false, std::memory_order_release);
         })
         .detach();
   }
@@ -1510,6 +1510,13 @@ void DMD::SerumThread()
         {
           if (strcmp(m_romName, name) != 0)
           {
+            // don't load Serum until all displays are found
+            if (m_finding.load(std::memory_order_acquire))
+            {
+              QueueBuffer();
+              continue;
+            }
+
             strcpy(name, m_romName);
 
             if (m_pSerum)
@@ -1523,10 +1530,28 @@ void DMD::SerumThread()
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
             flags = 0;
+            const bool zedmdOnly = m_pZeDMD && m_rgb24DMDs.empty() && m_levelDMDs.empty()
+#if !(                                                                                                                \
+    (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+    defined(__ANDROID__))
+                                   && !m_pPixelcadeDMD
+#endif
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
+                                   && !m_PIN2DMDConnected
+#endif
+                ;
+
+            if (zedmdOnly)
+            {
+              // A single ZeDMD only needs the frame height it can actually render.
+              flags = (m_pZeDMD->GetHeight() == 64) ? FLAG_REQUEST_64P_FRAMES : FLAG_REQUEST_32P_FRAMES;
+            }
 
             // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P
             // saves memory.
-            if (m_pZeDMD)
+            if (!zedmdOnly && m_pZeDMD)
             {
               if (m_pZeDMD->GetHeight() == 64)
                 flags |= FLAG_REQUEST_64P_FRAMES;
