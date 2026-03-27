@@ -1,4 +1,4 @@
-# libdmdutil
+#libdmdutil
 
 A cross platform library for performing DMD tasks.
 
@@ -12,32 +12,31 @@ This library is currently used by [Visual Pinball Standalone](https://github.com
 .
 void setup()
 {
-   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
-   pConfig->SetZeDMD(true);
-   pConfig->SetZeDMDDevice("/dev/cu.usbserial-0001");
-   pConfig->SetPixelcadeDMD(false);
+  DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
+  pConfig->SetZeDMD(true);
+  pConfig->SetZeDMDDevice("/dev/cu.usbserial-0001");
+  pConfig->SetPixelcadeDMD(false);
 }
 
 void test()
 {
-   DMDUtil::DMD* pDmd = new DMDUtil::DMD();
-   pDmd->FindDisplays();
+  DMDUtil::DMD* pDmd = new DMDUtil::DMD();
+  pDmd->FindDisplays();
 
-   DMDUtil::RGB24DMD* pRGB24DMD = pDmd->CreateRGB24DMD(128, 32);
+  DMDUtil::RGB24DMD* pRGB24DMD = pDmd->CreateRGB24DMD(128, 32);
 
-   uint8_t* pData = (uint8_t*)malloc(128 * 32 * 3);
-   .
-   .
-   .
-   pDmd->UpdateRGB24Data((const UINT8*)pData, 128, 32);
+  uint8_t* pData = (uint8_t*)malloc(128 * 32 * 3);
+  ...
+  pDmd->UpdateRGB24Data((const UINT8*)pData, 128, 32);
 
-   uint8_t* pRGB24Data = pRGB24DMD->GetRGB24Data();
+  uint8_t* pRGB24Data = pRGB24DMD->GetRGB24Data();
 
-   if (pRGB24Data) {
-      // Render pRGB24Data
-   }
+  if (pRGB24Data)
+  {
+    // Render pRGB24Data
+  }
 
-   pDmd->DestroyRGB24DMD(pRGB24DMD);
+  pDmd->DestroyRGB24DMD(pRGB24DMD);
 }
 ```
 
@@ -65,14 +64,14 @@ The DmdStreamHeader is defined as a struct:
 ```cpp
   struct DMDUtil::DMD::StreamHeader
   {
-    char header[10] = "DMDStream"; // \0 terminated string
-    uint8_t version = 1;
-    Mode mode = Mode::Data;        // int
-    uint16_t width = 0;
-    uint16_t height = 0;
-    uint8_t buffered = 0;          // 0 => not buffered, 1 => buffered
-    uint8_t disconnectOthers = 0;  // 0 => no, 1 => yes
-    uint32_t length = 0;
+  char header[10] = "DMDStream";  // \0 terminated string
+  uint8_t version = 1;
+  Mode mode = Mode::Data;  // int
+  uint16_t width = 0;
+  uint16_t height = 0;
+  uint8_t buffered = 0;          // 0 => not buffered, 1 => buffered
+  uint8_t disconnectOthers = 0;  // 0 => no, 1 => yes
+  uint32_t length = 0;
   };
 
 ```
@@ -152,69 +151,79 @@ The "paused" connections aren't really paused. Their data is still accepted but 
 
 ```ini
 [DMDServer]
-# Address (interface) to bind for incoming connections
-# Use 0.0.0.0 to accept connections from external devices on all interfaces
+#Address(interface) to bind for incoming connections
+#Use 0.0.0.0 to accept connections from external devices on all interfaces
 Addr = 127.0.0.1
-# The port to listen for TCP connections.
+#The port to listen for TCP connections.
 Port = 6789
-# Set to 1 if Serum colorization should be used, 0 if not.
+#Set to 1 if Serum colorization should be used, 0 if not.
 AltColor = 1
-# Overwrite the AltColorPath sent by the client and set it to a fixed value.
+#Overwrite the AltColorPath sent by the client and set it to a fixed value.
 AltColorPath =
-# Set to 1 if PUP DMD frame matching should be used, 0 if not.
+#Set to 1 if PUP DMD frame matching should be used, 0 if not.
 PUPCapture = 1
-# Set to 1 if Serum PUP frame matching should be used, 0 if not.
+#Set to 1 if Serum PUP frame matching should be used, 0 if not.
 SerumPUPTriggers = 0
-# Overwrite the PUPVideosPath sent by the client and set it to a fixed value.
+#Overwrite the PUPVideosPath sent by the client and set it to a fixed value.
 PUPVideosPath =
-# Set to 1 if PUP DMD frame matching should respect the exact colors, 0 if not.
+#Set to 1 if PUP DMD frame matching should respect the exact colors, 0 if not.
 PUPExactColorMatch = 0
 
 [ZeDMD]
-# Set to 1 if ZeDMD is attached.
+#Set to 1 if ZeDMD is attached.
 Enabled = 1
-# Disable auto-detection and provide a fixed serial port.
+#Disable auto - detection and provide a fixed serial port.
 Device =
-# Set to 1 to enable ZeDMD debug mode.
+#Set to 1 to enable ZeDMD debug mode.
 Debug = 0
-# Overwrite ZeDMD internal RGB order setting. Valid values are 0-5. -1 disables the setting.
-# The RGB level could be set at any time, but since ZeDMD version 3.6.0, ZeDMD need to be
-# rebooted to apply this the setting. So it is essential to set SaveSettings to 1 if a new
-# RGBOrder should be applied.
+#Overwrite ZeDMD internal RGB order setting.Valid values are 0 - 5. - 1 disables the setting.
+#The RGB level could be set at any time, but since ZeDMD version 3.6.0, ZeDMD need to be
+#rebooted to apply this the setting.So it is essential to set SaveSettings to 1 if a new
+#RGBOrder should be applied.
 RGBOrder = -1
-# Overwrite ZeDMD internal brightness setting. Valid values are 0-15. -1 disables the setting.
-# The brightness level could be adjust at runtime, SaveSettings set to 1 will save the setting
-# in ZeDMD, too.
+#Overwrite ZeDMD internal brightness setting.Valid values are 0 - 15. - 1 disables the setting.
+#The brightness level could be adjust at runtime, SaveSettings set to 1 will save the setting
+#in ZeDMD, too.
 Brightness = -1
-# Set to 1 to permantenly store the overwritten settings above in ZeDMD internally.
+#Set to 1 to permantenly store the overwritten settings above in ZeDMD internally.
 SaveSettings = 0
 
 [ZeDMD-WiFi]
-# Set to 1 if ZeDMD-WiFi is available.
+#Set to 1 if ZeDMD - WiFi is available.
 Enabled = 0
-# Enter your ZeDMD WiFi IP address here
+#Enter your ZeDMD WiFi IP address here
 WiFiAddr =
 
 [ZeDMD-SPI]
-# Set to 1 if ZeDMD-SPI is available.
+#Set to 1 if ZeDMD - SPI is available.
 Enabled = 0
-# Frequency in hz
+#Frequency in hz
 Speed = 72000000
-# Forced pause between frames in microseconds
+#Forced pause between frames in microseconds
 FramePause = 2
-# Enter your panel layout as it is not detected automatically via SPI
+#Enter your panel layout as it is not detected automatically via SPI
 Width = 128
 Height = 32
 
 [Pixelcade]
-# Set to 1 if Pixelcade is attached
+#Set to 1 if Pixelcade is attached
 Enabled = 1
-# Disable auto-detection and provide a fixed serial port
+#Disable auto - detection and provide a fixed serial port
 Device =
 
 [PIN2DMD]
-# Set to 1 if PIN2DMD is attached
+#Set to 1 if PIN2DMD is attached
 Enabled = 0
+
+[Serum]
+#Set to 1 to render non - colorized frames on ZeDMD while keeping Serum / VNI for other displays.
+ExcludeZeDMD = 0
+#Set to 1 to render non - colorized frames on RGB24DMD while keeping Serum / VNI for other displays.
+ExcludeRGB24DMD = 0
+#Set to 1 to render non - colorized frames on PIN2DMD while keeping Serum / VNI for other displays.
+ExcludePIN2DMD = 0
+#Set to 1 to render non - colorized frames on Pixelcade while keeping Serum / VNI for other displays.
+ExcludePixelcade = 0
 ```
 
 ## Serum PUP Scenes Generator
@@ -237,15 +246,17 @@ The `dmdutil-generate-scenes` tool generates a dump of such scene frames accordi
 
 ## DMD Dump Player
 
-`dmdutil-play-dump` plays an existing txt, rgb565, rgb888, or raw dump and sends the frames to all attached DMDs. Txt/raw inputs are sent as
+`dmdutil-play-dump` plays an existing txt, rgb565, rgb888, raw, or zipped dump and sends the frames to all attached DMDs. Zipped dumps are auto-detected.
+Txt/raw inputs are sent as
 2-bit or 4-bit data frames, while rgb565/rgb888 inputs are sent as color frames. The timestamps in the dump represent the absolute time
 (ms since start). It can optionally connect to a remote DMD server and can dump txt/rgb565/rgb888 while playing (raw output is not supported).
 Dump output uses the live DMD dumpers (same as libdmdutil), so colorized frames are preserved. By default, playback uses the original frame
 timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's original duration is shorter, the original duration is used.
+When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage is also logged periodically and at the end.
 
 `dmdutil-play-dump` accepts these command line options:
 ```
-  -i, --input=FILE               Input dump file (.txt, .565.txt, .888.txt, or .raw)
+  -i, --input=FILE               Input dump file (.txt, .565.txt, .888.txt, .raw, or .zip)
   -a, --alt-color-path=PATH      Alt color base path (optional, enables Serum colorization)
   -d, --depth=VALUE              Bit depth to send (2 or 4) (optional, default is 2)
   -s, --server=HOST[:PORT]       Connect to a DMD server (optional)
@@ -253,10 +264,54 @@ timings from the dump. Use `--delay-ms` to cap the per-frame delay; if a frame's
   -t, --dump-txt                 Dump txt while playing
   -5, --dump-565                 Dump rgb565 while playing
   -8, --dump-888                 Dump rgb888 while playing
+  -z, --dump-zip                 Write txt/565/888 dumps as .zip files
   -w, --delay-ms[=MS]            Fixed delay between frames in milliseconds (optional, default is 8 when specified without a value)
+      --startup-delay-ms=MS      Send one black warmup frame, then wait MS before playback to allow colorization loading
+  -l, --logging                  Enable debug logging to stdout (optional, default is no logging)
+      --exclude-zedmd            Exclude ZeDMD from Serum/VNI colorization (optional)
+      --exclude-rgb24dmd         Exclude RGB24DMD from Serum/VNI colorization (optional)
+      --exclude-pin2dmd          Exclude PIN2DMD from Serum/VNI colorization (optional)
+      --exclude-pixelcade        Exclude Pixelcade from Serum/VNI colorization (optional)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
+  -j, --dump-json=FILE           Write machine-readable JSON dump; Serum playback records live runtime metadata when captures are available, otherwise it falls back to converting the generated .565.txt dump (auto-enables --dump-565, not with --dump-zip)
+      --coverage-json=FILE       Write an input-frame coverage JSON report and a filtered text dump beside it; Serum playback also uses live runtime metadata to cover feature mixes, transitions, short animated runs, and emits featureSummary totals for the selected subset
+      --coverage-transition-tail=N  Coverage export: include N following frames for each selected signature/feature transition window in both the JSON report and the generated filtered dump
+      --coverage-max-frames=N    Coverage export: cap selected frame count (0 = unlimited)
+      --start-frame=N            Replay/dump only frames starting at zero-based frame index N
+      --end-frame=N              Replay/dump only frames up to zero-based frame index N
+      --serum-profile            Enable libserum dynamic hotpath profiling (SERUM_PROFILE_DYNAMIC_HOTPATHS=1)
+      --serum-profile-sparse     Enable libserum dynamic+sparse profiling (SERUM_PROFILE_DYNAMIC_HOTPATHS=1, SERUM_PROFILE_SPARSE_VECTORS=1)
   -R, --raw                      Force raw dump parsing
+  -h, --help                     Show help
+```
+
+## Serum Converter
+
+`dmdutil-convert-serum` converts a `cRZ` or `cROM` into `cROMc` using `libserum`.
+
+Options:
+```
+  -i, --input=FILE               Input cRZ/cROM file
+  -a, --alt-color-path=PATH      Alt color base path (optional, auto-derived from input if omitted)
+  -r, --rom=NAME                 ROM name (optional, defaults from input filename)
+      --strip-sd                 Remove SD (32p) colorization and keep HD only
+      --strip-hd                 Remove HD (64p) colorization and keep SD only
+  -l, --logging                  Enable libserum logs
+  -h, --help                     Show help
+```
+
+## Dump JSON Comparator
+
+`dmdutil-compare-dumps` compares two machine-readable dump JSON files created by `dmdutil-play-dump --dump-json`.
+
+Options:
+```
+  -e, --expected=FILE            Expected JSON dump
+  -a, --actual=FILE              Actual JSON dump
+  -m, --max-diffs=N              Maximum mismatches to print (default: 25)
+      --ignore-duration          Ignore durationMs differences
+      --ignore-timestamp         Ignore timestampMs differences
   -h, --help                     Show help
 ```
 

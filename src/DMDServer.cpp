@@ -150,6 +150,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
         switch (pStreamHeader->mode)
         {
           case DMDUtil::DMD::Mode::Data:
+          case DMDUtil::DMD::Mode::SerumCommand:
             if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::PathsHeader))) == sizeof(DMDUtil::DMD::PathsHeader))
             {
               DMDUtil::DMD::PathsHeader pathsHeader;

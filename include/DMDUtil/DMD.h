@@ -18,6 +18,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <map>
 #include <mutex>
 #include <queue>
 #include <shared_mutex>
@@ -91,13 +92,14 @@ class DMDUTILAPI DMD
     SerumV2_64_32 = 9,
     NotColorized = 10,
     Vni = 11,
+    SerumCommand = 12,
   };
 
   bool IsSerumMode(Mode mode, bool showNotColorized = false)
   {
     return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
             mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 || mode == Mode::Vni ||
-            (showNotColorized && mode == Mode::NotColorized));
+            mode == Mode::SerumCommand || (showNotColorized && mode == Mode::NotColorized));
   }
 
   bool IsSerumV2Mode(Mode mode)
@@ -126,6 +128,41 @@ class DMDUTILAPI DMD
 
     DMDUTILAPI void convertToHostByteOrder();
     DMDUTILAPI Update toNetworkByteOrder() const;
+  };
+
+  struct FrameContext
+  {
+    bool valid = false;
+    uint64_t sourceOrdinal = 0;
+    uint32_t sourceFrameIndex = 0;
+    uint32_t originalFrameIndex = 0;
+    uint32_t inputCrc32 = 0;
+    uint32_t inputTimestampMs = 0;
+    uint32_t inputDurationMs = 0;
+  };
+
+  struct SerumCapture
+  {
+    bool valid = false;
+    bool hasOutput = false;
+    bool isRotation = false;
+    bool hasTimestamp = false;
+    uint64_t sourceOrdinal = 0;
+    uint32_t sourceFrameIndex = 0;
+    uint32_t originalFrameIndex = 0;
+    uint32_t inputCrc32 = 0;
+    uint32_t inputTimestampMs = 0;
+    uint32_t inputDurationMs = 0;
+    uint32_t serumResult = 0xffffffff;
+    uint32_t serumVersion = 0;
+    uint32_t serumFrameId = 0xffffffff;
+    uint32_t serumTriggerId = 0xffffffff;
+    uint32_t serumRotationTimer = 0;
+    uint32_t serumFeatureFlags = 0;
+    uint32_t colorizeTimeUs = 0;
+    uint32_t averageColorizeTimeUs = 0;
+    uint32_t outputTimestampMs = 0;
+    Update update;
   };
 
   struct StreamHeader
@@ -180,6 +217,9 @@ class DMDUTILAPI DMD
                   bool buffered = false);
   void UpdateDataWithTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                                uint8_t b, uint32_t timestampMs, bool buffered = false);
+  void UpdateDataWithMetadataAndTimestamp(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
+                                          uint8_t g, uint8_t b, uint32_t timestampMs, const FrameContext& frameContext,
+                                          bool buffered = false);
   void UpdateRGB24Data(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
                        uint8_t b, bool buffer = false);
   void UpdateRGB24Data(const uint8_t* pData, uint16_t width, uint16_t height, bool buffered = false);
@@ -187,13 +227,20 @@ class DMDUTILAPI DMD
                                     uint8_t g, uint8_t b, uint32_t timestampMs, bool buffered = false);
   void UpdateRGB24DataWithTimestamp(const uint8_t* pData, uint16_t width, uint16_t height, uint32_t timestampMs,
                                     bool buffered = false);
+  void UpdateRGB24DataWithMetadataAndTimestamp(const uint8_t* pData, uint16_t width, uint16_t height,
+                                               uint32_t timestampMs, const FrameContext& frameContext,
+                                               bool buffered = false);
   void UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered = false);
   void UpdateRGB16DataWithTimestamp(const uint16_t* pData, uint16_t width, uint16_t height, uint32_t timestampMs,
                                     bool buffered = false);
+  void UpdateRGB16DataWithMetadataAndTimestamp(const uint16_t* pData, uint16_t width, uint16_t height,
+                                               uint32_t timestampMs, const FrameContext& frameContext,
+                                               bool buffered = false);
   void UpdateAlphaNumericData(AlphaNumericLayout layout, const uint16_t* pData1, const uint16_t* pData2, uint8_t r,
                               uint8_t g, uint8_t b);
+  bool WaitForSerumColorizeCapture(uint64_t sourceOrdinal, SerumCapture& capture, uint32_t timeoutMs);
   void QueueUpdate(const std::shared_ptr<Update> dmdUpdate, bool buffered, bool hasTimestamp = false,
-                   uint32_t timestampMs = 0);
+                   uint32_t timestampMs = 0, const FrameContext* frameContext = nullptr);
   bool QueueBuffer();
 
  private:
@@ -201,8 +248,14 @@ class DMDUTILAPI DMD
   std::shared_ptr<Update> m_updateBuffered;
   uint32_t m_updateBufferQueueTimestamp[DMDUTIL_FRAME_BUFFER_SIZE] = {0};
   bool m_updateBufferQueueHasTimestamp[DMDUTIL_FRAME_BUFFER_SIZE] = {false};
+  FrameContext m_updateBufferQueueFrameContext[DMDUTIL_FRAME_BUFFER_SIZE];
   uint32_t m_serumLastTimestampMs = 0;
   bool m_serumHasTimestamp = false;
+  std::mutex m_serumCaptureMutex;
+  std::condition_variable m_serumCaptureCv;
+  std::map<uint64_t, SerumCapture> m_serumColorizeCaptures;
+  uint64_t m_serumColorizeTimeTotalUs = 0;
+  uint64_t m_serumColorizeCount = 0;
   std::mutex m_dumpPositionMutex;
   std::condition_variable m_dumpPositionCv;
   std::atomic<uint16_t> m_dumpTxtPosition{0};
@@ -216,6 +269,7 @@ class DMDUTILAPI DMD
 
   uint16_t GetNextBufferQueuePosition(uint16_t bufferPosition, const uint16_t updateBufferQueuePosition);
   bool ConnectDMDServer();
+  bool GetQueueFrameContext(uint8_t bufferPositionMod, FrameContext& frameContext) const;
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
   void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                   Mode mode, bool buffered = false);
@@ -224,7 +278,12 @@ class DMDUTILAPI DMD
   void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
   void HandleTrigger(uint16_t id);
   void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true, bool hasTimestamp = false,
-                        uint32_t timestampMs = 0);
+                        uint32_t timestampMs = 0, std::shared_ptr<Update>* primaryOutput = nullptr);
+  void RecordSerumColorizeCapture(const FrameContext& frameContext, const std::shared_ptr<Update>& primaryOutput,
+                                  bool hasTimestamp, uint32_t outputTimestampMs, bool isRotation, uint32_t serumResult,
+                                  uint32_t serumVersion, uint32_t serumFrameId, uint32_t serumTriggerId,
+                                  uint32_t serumRotationTimer, uint32_t serumFeatureFlags, uint32_t colorizeTimeUs,
+                                  uint32_t averageColorizeTimeUs);
   void GenerateRandomSuffix(char* buffer, size_t length);
   bool DumpersReached(uint16_t targetPosition) const;
 
@@ -274,7 +333,6 @@ class DMDUTILAPI DMD
   std::condition_variable_any m_dmdCV;
   std::atomic<bool> m_stopFlag;
   std::atomic<uint16_t> m_updateBufferQueuePosition;
-  std::atomic<uint16_t> m_pupSceneId;
   std::mutex m_dumpSuffixMutex;
   char m_dumpSuffixRom[DMDUTIL_MAX_NAME_SIZE] = {0};
   char m_dumpSuffix[9] = {0};
@@ -291,11 +349,9 @@ class DMDUTILAPI DMD
   std::thread* m_pPixelcadeDMDThread;
 #endif
 
-#if defined(DMDUTIL_ENABLE_PIN2DMD) &&                                                                                 \
-    !(                                                                                                                 \
-        (defined(__APPLE__) &&                                                                                         \
-         ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) ||                     \
-        defined(__ANDROID__))
+#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
+                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+                                         defined(__ANDROID__))
   void PIN2DMDThread();
   std::thread* m_pPIN2DMDThread;
   bool m_PIN2DMDConnected;

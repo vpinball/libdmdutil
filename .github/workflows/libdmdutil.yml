@@ -215,6 +215,8 @@ jobs:
           cp build/Release/dmdutil_test.exe tmp
           cp build/Release/dmdutil-generate-scenes.exe tmp
           cp build/Release/dmdutil-play-dump.exe tmp
+          cp build/Release/dmdutil-convert-serum.exe tmp
+          cp build/Release/dmdutil-compare-dumps.exe tmp
           cp -r test tmp/
           cd tmp && 7z a -r ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.zip *
       - if: (matrix.platform == 'win-mingw')
@@ -239,6 +241,8 @@ jobs:
           cp build/dmdutil_test tmp
           cp build/dmdutil-generate-scenes tmp
           cp build/dmdutil-play-dump tmp
+          cp build/dmdutil-convert-serum tmp
+          cp build/dmdutil-compare-dumps tmp
           cp -r test tmp/
           cd tmp && tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz *
       - if: (matrix.platform == 'linux')
@@ -254,6 +258,8 @@ jobs:
           cp build/dmdutil_test tmp
           cp build/dmdutil-generate-scenes tmp
           cp build/dmdutil-play-dump tmp
+          cp build/dmdutil-convert-serum tmp
+          cp build/dmdutil-compare-dumps tmp
           cp -r test tmp/
           cd tmp && tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz *
       - if: (matrix.platform == 'ios' || matrix.platform == 'ios-simulator' || matrix.platform == 'tvos')
@@ -315,7 +321,7 @@ jobs:
                 "macos-x64/$filename"
             fi
           done
-          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test dmdutil-generate-scenes dmdutil-play-dump; do
+          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test dmdutil-generate-scenes dmdutil-play-dump dmdutil-convert-serum dmdutil-compare-dumps; do
             lipo -create -output "tmp/$filename" \
                "macos-arm64/$filename" \
                "macos-x64/$filename"

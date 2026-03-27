@@ -37,11 +37,20 @@ elseif(PLATFORM STREQUAL "android")
 endif()
 
 file(READ include/DMDUtil/DMDUtil.h version)
-string(REGEX MATCH "DMDUTIL_VERSION_MAJOR[ ]+([0-9]+)" _tmp ${version})
+string(REGEX MATCH "#[ \t]*define[ \t]+DMDUTIL_VERSION_MAJOR[ \t]+([0-9]+)" _tmp "${version}")
+if("${CMAKE_MATCH_1}" STREQUAL "")
+   message(FATAL_ERROR "Failed to parse DMDUTIL_VERSION_MAJOR from include/DMDUtil/DMDUtil.h")
+endif()
 set(VERSION_MAJOR "${CMAKE_MATCH_1}")
-string(REGEX MATCH "DMDUTIL_VERSION_MINOR[ ]+([0-9]+)" _tmp ${version})
+string(REGEX MATCH "#[ \t]*define[ \t]+DMDUTIL_VERSION_MINOR[ \t]+([0-9]+)" _tmp "${version}")
+if("${CMAKE_MATCH_1}" STREQUAL "")
+   message(FATAL_ERROR "Failed to parse DMDUTIL_VERSION_MINOR from include/DMDUtil/DMDUtil.h")
+endif()
 set(VERSION_MINOR "${CMAKE_MATCH_1}")
-string(REGEX MATCH "DMDUTIL_VERSION_PATCH[ ]+([0-9]+)" _tmp ${version})
+string(REGEX MATCH "#[ \t]*define[ \t]+DMDUTIL_VERSION_PATCH[ \t]+([0-9]+)" _tmp "${version}")
+if("${CMAKE_MATCH_1}" STREQUAL "")
+   message(FATAL_ERROR "Failed to parse DMDUTIL_VERSION_PATCH from include/DMDUtil/DMDUtil.h")
+endif()
 set(VERSION_PATCH "${CMAKE_MATCH_1}")
 
 project(dmdutil VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
@@ -86,6 +95,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
    endif()
 endif()
 
+set(MINIZ_SOURCE "third-party/include/miniz/miniz.c")
+set(MINIZ_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third-party/include")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${MINIZ_SOURCE}")
+   message(FATAL_ERROR "Could not find required local miniz source: ${MINIZ_SOURCE}")
+endif()
+
 set(DMDUTIL_SOURCES
    src/Config.cpp
    src/DMD.cpp
@@ -95,9 +110,8 @@ set(DMDUTIL_SOURCES
    src/Logger.cpp
    src/AlphaNumeric.cpp
    src/DMDServer.cpp
+   ${MINIZ_SOURCE}
 )
-
-set(DMDUTIL_COMPILE_DEFINITIONS "")
 
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
    list(APPEND DMDUTIL_SOURCES
@@ -109,15 +123,13 @@ endif()
 set(DMDUTIL_INCLUDE_DIRS
    ${CMAKE_CURRENT_SOURCE_DIR}/include
    third-party/include
+   ${MINIZ_INCLUDE_DIR}
 )
 
 if(BUILD_SHARED)
    add_library(dmdutil_shared SHARED ${DMDUTIL_SOURCES})
 
    target_include_directories(dmdutil_shared PUBLIC ${DMDUTIL_INCLUDE_DIRS})
-   if(DMDUTIL_COMPILE_DEFINITIONS)
-      target_compile_definitions(dmdutil_shared PUBLIC ${DMDUTIL_COMPILE_DEFINITIONS})
-   endif()
 
    if(PLATFORM STREQUAL "win")
       target_link_directories(dmdutil_shared PUBLIC
@@ -206,8 +218,19 @@ if(BUILD_SHARED)
 
       add_executable(dmdutil-play-dump
          src/playDump.cpp
+         ${MINIZ_SOURCE}
       )
       target_link_libraries(dmdutil-play-dump PUBLIC dmdutil_shared)
+
+      add_executable(dmdutil-convert-serum
+         src/convertSerum.cpp
+      )
+      target_link_libraries(dmdutil-convert-serum PUBLIC dmdutil_shared)
+
+      add_executable(dmdutil-compare-dumps
+         src/compareJsonDumps.cpp
+      )
+      target_link_libraries(dmdutil-compare-dumps PUBLIC dmdutil_shared)
 
       if(POST_BUILD_COPY_EXT_LIBS)
          add_dependencies(dmdserver copy_ext_libs)
@@ -215,6 +238,8 @@ if(BUILD_SHARED)
          add_dependencies(dmdutil_test copy_ext_libs)
          add_dependencies(dmdutil-generate-scenes copy_ext_libs)
          add_dependencies(dmdutil-play-dump copy_ext_libs)
+         add_dependencies(dmdutil-convert-serum copy_ext_libs)
+         add_dependencies(dmdutil-compare-dumps copy_ext_libs)
       endif()
    endif()
 endif()
@@ -223,9 +248,6 @@ if(BUILD_STATIC)
    add_library(dmdutil_static STATIC ${DMDUTIL_SOURCES})
 
    target_include_directories(dmdutil_static PUBLIC ${DMDUTIL_INCLUDE_DIRS})
-   if(DMDUTIL_COMPILE_DEFINITIONS)
-      target_compile_definitions(dmdutil_static PUBLIC ${DMDUTIL_COMPILE_DEFINITIONS})
-   endif()
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw")
       set_target_properties(dmdutil_static PROPERTIES
