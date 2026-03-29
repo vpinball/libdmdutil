@@ -403,6 +403,7 @@ if(POST_BUILD_COPY_EXT_LIBS AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "w
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/build-libs/${PLATFORM}/${ARCH}/vni.lib" "$<TARGET_FILE_DIR:dmdutil_shared>"
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
          )
+         endif()
       endif()
    elseif(PLATFORM STREQUAL "win-mingw")
       add_dependencies(copy_ext_libs dmdutil_shared)
@@ -422,6 +423,7 @@ if(POST_BUILD_COPY_EXT_LIBS AND (PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "w
          add_custom_command(TARGET copy_ext_libs POST_BUILD
          COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/vni64.dll" "$<TARGET_FILE_DIR:dmdutil_shared>"
       )
+      endif()
    elseif(PLATFORM STREQUAL "macos")
       add_custom_command(TARGET copy_ext_libs POST_BUILD
          COMMAND cp -a "${CMAKE_SOURCE_DIR}/third-party/runtime-libs/${PLATFORM}/${ARCH}/*.dylib" "${CMAKE_BINARY_DIR}/"
