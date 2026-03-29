@@ -50,7 +50,9 @@
 #include "serum-decode.h"
 #include "serum.h"
 #include "sockpp/tcp_connector.h"
+#ifdef DMDUTIL_ENABLE_VNI
 #include "vni.h"
+#endif
 
 namespace
 {
@@ -1728,6 +1730,7 @@ void DMD::SerumThread()
 
 void DMD::VniThread()
 {
+#ifdef DMDUTIL_ENABLE_VNI
   Config* const pConfig = Config::GetInstance();
 
   if (!pConfig->IsAltColor())
@@ -1890,6 +1893,7 @@ void DMD::VniThread()
       }
     }
   }
+#endif
 }
 
 void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool hasTimestamp, uint32_t timestampMs,
