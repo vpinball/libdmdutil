@@ -1549,8 +1549,8 @@ void DMD::SerumThread()
               flags = (m_pZeDMD->GetHeight() == 64) ? FLAG_REQUEST_64P_FRAMES : FLAG_REQUEST_32P_FRAMES;
             }
 
-            // At the moment, ZeDMD HD and RGB24DMD are the only devices supporting 64P frames. Not requesting 64P
-            // saves memory.
+            // At the moment, ZeDMD HD, PIN2DMD HD and RGB24DMD are the only devices supporting 64P frames.
+            // Not requesting 64P saves memory.
             if (!zedmdOnly && m_pZeDMD)
             {
               if (m_pZeDMD->GetHeight() == 64)
@@ -1600,6 +1600,7 @@ void DMD::SerumThread()
 #endif
 
             if (!flags) flags |= FLAG_REQUEST_32P_FRAMES;
+            flags |= FLAG_REQUEST_FALLBACK;
 
             m_pSerum = (name[0] != '\0') ? Serum_Load(m_altColorPath, m_romName, flags) : nullptr;
             if (m_pSerum)
