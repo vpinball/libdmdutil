@@ -63,7 +63,7 @@ jobs:
       # install dependencies
       #
       - if: (matrix.platform == 'win')
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
       - if: (matrix.platform == 'win')
         run: |
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
