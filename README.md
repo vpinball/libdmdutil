@@ -321,12 +321,12 @@ Options:
 
 Requires [MSYS2](https://www.msys2.org/) dependencies:
 ```shell
-pacman -S make diffutils mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libwinpthread mingw-w64-ucrt-x86_64-cmake
+pacman -S make diffutils autoconf automake libtool mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libwinpthread mingw-w64-ucrt-x86_64-cmake
 ```
 
 ```shell
 platforms/win/x64/external.sh
-cmake -G "Visual Studio 17 2022" -DPLATFORM=win -DARCH=x64 -B build
+cmake -G "Visual Studio 18 2026" -DPLATFORM=win -DARCH=x64 -B build
 cmake --build build --config Release
 ```
 
@@ -334,12 +334,12 @@ cmake --build build --config Release
 
 Requires [MSYS2](https://www.msys2.org/) dependencies:
 ```shell
-pacman -S make diffutils mingw-w64-i686-gcc mingw-w64-i686-libwinpthread mingw-w64-i686-cmake
+pacman -S make diffutils autoconf automake libtool mingw-w64-i686-gcc mingw-w64-i686-libwinpthread mingw-w64-i686-cmake
 ```
 
 ```shell
 platforms/win/x86/external.sh
-cmake -G "Visual Studio 17 2022" -A Win32 -DPLATFORM=win -DARCH=x86 -B build
+cmake -G "Visual Studio 18 2026" -A Win32 -DPLATFORM=win -DARCH=x86 -B build
 cmake --build build --config Release
 ```
 
