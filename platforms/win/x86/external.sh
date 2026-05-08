@@ -2,6 +2,13 @@
 
 set -e
 
+if [ -z "${MSYS2_PATH}" ]; then
+   MSYS2_PATH="/c/msys64"
+fi
+
+echo "MSYS2_PATH: ${MSYS2_PATH}"
+echo ""
+
 source ./platforms/config.sh
 
 echo "Building libraries..."
@@ -24,16 +31,17 @@ curl -sL https://github.com/libusb/libusb/archive/${LIBUSB_SHA}.tar.gz -o libusb
 tar xzf libusb-${LIBUSB_SHA}.tar.gz
 mv libusb-${LIBUSB_SHA} libusb
 cd libusb
-# remove patch after this is fixed: https://github.com/libusb/libusb/issues/1649#issuecomment-2940138443
-cp ../../platforms/win/x86/libusb/libusb_dll.vcxproj msvc
-msbuild.exe msvc/libusb_dll.vcxproj \
-   -p:Configuration=${BUILD_TYPE} \
-   -p:Platform=Win32 \
-   -p:PlatformToolset=v143
+CURRENT_DIR="$(pwd)"
+MSYSTEM=MINGW32 "${MSYS2_PATH}/usr/bin/bash.exe" -l -c "
+   cd \"${CURRENT_DIR}\" &&
+   ./autogen.sh &&
+   ./configure --enable-shared &&
+   make -j\$(nproc)
+"
 mkdir -p ../../third-party/include/libusb-1.0
 cp libusb/libusb.h ../../third-party/include/libusb-1.0
-cp build/v143/Win32/${BUILD_TYPE}/libusb_dll/../dll/libusb-1.0.lib ../../third-party/build-libs/win/x86
-cp build/v143/Win32/${BUILD_TYPE}/libusb_dll/../dll/libusb-1.0.dll ../../third-party/runtime-libs/win/x86
+cp libusb/.libs/libusb-1.0.dll.a ../../third-party/build-libs/win/x86/libusb-1.0.lib
+cp libusb/.libs/libusb-1.0.dll ../../third-party/runtime-libs/win/x86/
 cd ..
 
 #
@@ -46,7 +54,7 @@ mv libzedmd-${LIBZEDMD_SHA} libzedmd
 cd libzedmd
 BUILD_TYPE=${BUILD_TYPE} platforms/win/x86/external.sh
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -A Win32 \
    -DPLATFORM=win \
    -DARCH=x86 \
@@ -63,9 +71,12 @@ cp third-party/include/FrameUtil.h ../../third-party/include/
 cp third-party/build-libs/win/x86/cargs.lib ../../third-party/build-libs/win/x86/
 cp third-party/runtime-libs/win/x86/cargs.dll ../../third-party/runtime-libs/win/x86/
 cp third-party/build-libs/win/x86/libserialport.lib ../../third-party/build-libs/win/x86/
-cp third-party/runtime-libs/win/x86/libserialport.dll ../../third-party/runtime-libs/win/x86/
+cp third-party/runtime-libs/win/x86/libserialport-0.dll ../../third-party/runtime-libs/win/x86/
 cp third-party/build-libs/win/x86/sockpp.lib ../../third-party/build-libs/win/x86/
 cp third-party/runtime-libs/win/x86/sockpp.dll ../../third-party/runtime-libs/win/x86/
+cp third-party/runtime-libs/win/x86/libgcc_s_dw2-1.dll ../../third-party/runtime-libs/win/x86/
+cp third-party/runtime-libs/win/x86/libstdc++-6.dll ../../third-party/runtime-libs/win/x86/
+cp third-party/runtime-libs/win/x86/libwinpthread-1.dll ../../third-party/runtime-libs/win/x86/
 cp build/${BUILD_TYPE}/zedmd.lib ../../third-party/build-libs/win/x86/
 cp build/${BUILD_TYPE}/zedmd.dll ../../third-party/runtime-libs/win/x86/
 cp -r test ../../
@@ -80,7 +91,7 @@ tar xzf libserum-${LIBSERUM_SHA}.tar.gz
 mv libserum-${LIBSERUM_SHA} libserum
 cd libserum
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -A Win32 \
    -DPLATFORM=win \
    -DARCH=x86 \
@@ -107,7 +118,7 @@ tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
 mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
 cd libpupdmd
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -A Win32 \
    -DPLATFORM=win \
    -DARCH=x86 \
@@ -129,7 +140,7 @@ tar xzf libvni-${LIBVNI_SHA}.tar.gz
 mv libvni-${LIBVNI_SHA} libvni
 cd libvni
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -A Win32 \
    -DPLATFORM=win \
    -DARCH=x86 \

@@ -46,8 +46,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-2025, platform: win, arch: x64 }
-          - { os: windows-2025, platform: win, arch: x86 }
+          - { os: windows-2025-vs2026, platform: win, arch: x64 }
+          - { os: windows-2025-vs2026, platform: win, arch: x86 }
           - { os: windows-2025, platform: win-mingw, arch: x64 }
           - { os: macos-15, platform: macos, arch: arm64 }
           - { os: macos-15, platform: macos, arch: x64 }
@@ -68,13 +68,13 @@ jobs:
         run: |
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
             /c/msys64/usr/bin/bash.exe -l -c "pacman -S --noconfirm \
-              make diffutils \
+              make diffutils autoconf automake libtool \
               mingw-w64-ucrt-x86_64-gcc \
               mingw-w64-ucrt-x86_64-libwinpthread \
               mingw-w64-ucrt-x86_64-cmake"
           else
             /c/msys64/usr/bin/bash.exe -l -c "pacman -S --noconfirm \
-              make diffutils \
+              make diffutils autoconf automake libtool \
               mingw-w64-i686-gcc \
               mingw-w64-i686-libwinpthread \
               mingw-w64-i686-cmake"
@@ -104,13 +104,13 @@ jobs:
           ./platforms/${{ matrix.platform }}/${{ matrix.arch }}/external.sh
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
             cmake \
-              -G "Visual Studio 17 2022" \
+              -G "Visual Studio 18 2026" \
               -DPLATFORM=${{ matrix.platform }} \
               -DARCH=${{ matrix.arch }} \
               -B build
           else
             cmake \
-              -G "Visual Studio 17 2022" \
+              -G "Visual Studio 18 2026" \
               -A Win32 \
               -DPLATFORM=${{ matrix.platform }} \
               -DARCH=${{ matrix.arch }} \
@@ -200,14 +200,24 @@ jobs:
         run: |
           mkdir tmp
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
-            LIBS=(dmdutil64 cargs64 zedmd64 serum64 libusb64-1.0 libserialport64 sockpp64 pupdmd64 vni64)
+            LIBS=(dmdutil64 cargs64 zedmd64 serum64 libusb64-1.0 sockpp64 pupdmd64 vni64)
           else
-            LIBS=(dmdutil cargs zedmd serum libusb-1.0 libserialport sockpp pupdmd vni)
+            LIBS=(dmdutil cargs zedmd serum libusb-1.0 sockpp pupdmd vni)
           fi
           for LIB in "${LIBS[@]}"; do
              cp "build/Release/${LIB}.lib" tmp
              cp "build/Release/${LIB}.dll" tmp
           done
+          if [[ "${{ matrix.arch }}" == "x64" ]]; then
+            cp build/Release/libserialport64.lib tmp
+            cp build/Release/libserialport64-0.dll tmp
+          else
+            cp build/Release/libserialport.lib tmp
+            cp build/Release/libserialport-0.dll tmp
+          fi
+          cp build/Release/libgcc_s_*.dll tmp
+          cp build/Release/libstdc++-6.dll tmp
+          cp build/Release/libwinpthread-1.dll tmp
           cp build/Release/dmdserver.exe tmp
           cp build/Release/dmdserver_test.exe tmp
           cp build/Release/dmdutil_static.lib tmp

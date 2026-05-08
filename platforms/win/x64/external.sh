@@ -2,6 +2,13 @@
 
 set -e
 
+if [ -z "${MSYS2_PATH}" ]; then
+   MSYS2_PATH="/c/msys64"
+fi
+
+echo "MSYS2_PATH: ${MSYS2_PATH}"
+echo ""
+
 source ./platforms/config.sh
 
 echo "Building libraries..."
@@ -24,18 +31,23 @@ curl -sL https://github.com/libusb/libusb/archive/${LIBUSB_SHA}.tar.gz -o libusb
 tar xzf libusb-${LIBUSB_SHA}.tar.gz
 mv libusb-${LIBUSB_SHA} libusb
 cd libusb
-sed -i.bak 's/LIBRARY.*libusb-1.0/LIBRARY libusb64-1.0/' libusb/libusb-1.0.def
-# remove patch after this is fixed: https://github.com/libusb/libusb/issues/1649#issuecomment-2940138443
-cp ../../platforms/win/x64/libusb/libusb_dll.vcxproj msvc
-msbuild.exe msvc/libusb_dll.vcxproj \
-   -p:TargetName=libusb64-1.0 \
-   -p:Configuration=${BUILD_TYPE} \
-   -p:Platform=x64 \
-   -p:PlatformToolset=v143
+sed -i.bak 's/libusb-1\.0/libusb64-1.0/g' libusb/Makefile.am
+sed -i.bak 's/libusb_1_0/libusb64_1_0/g' libusb/Makefile.am
+mv libusb/libusb-1.0.def libusb/libusb64-1.0.def
+mv libusb/libusb-1.0.rc libusb/libusb64-1.0.rc
+sed -i.bak 's/libusb-1\.0/libusb64-1.0/g' libusb/libusb64-1.0.def
+sed -i.bak 's/libusb-1\.0/libusb64-1.0/g' libusb/libusb64-1.0.rc
+CURRENT_DIR="$(pwd)"
+MSYSTEM=UCRT64 "${MSYS2_PATH}/usr/bin/bash.exe" -l -c "
+   cd \"${CURRENT_DIR}\" &&
+   ./autogen.sh &&
+   ./configure --enable-shared &&
+   make -j\$(nproc)
+"
 mkdir -p ../../third-party/include/libusb-1.0
 cp libusb/libusb.h ../../third-party/include/libusb-1.0
-cp build/v143/x64/${BUILD_TYPE}/libusb_dll/../dll/libusb64-1.0.lib ../../third-party/build-libs/win/x64
-cp build/v143/x64/${BUILD_TYPE}/libusb_dll/../dll/libusb64-1.0.dll ../../third-party/runtime-libs/win/x64
+cp libusb/.libs/libusb64-1.0.dll.a ../../third-party/build-libs/win/x64/libusb64-1.0.lib
+cp libusb/.libs/libusb64-1.0.dll ../../third-party/runtime-libs/win/x64/
 cd ..
 
 #
@@ -48,7 +60,7 @@ mv libzedmd-${LIBZEDMD_SHA} libzedmd
 cd libzedmd
 BUILD_TYPE=${BUILD_TYPE} platforms/win/x64/external.sh
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
@@ -64,9 +76,12 @@ cp third-party/include/libserialport.h ../../third-party/include/
 cp third-party/build-libs/win/x64/cargs64.lib ../../third-party/build-libs/win/x64/
 cp third-party/runtime-libs/win/x64/cargs64.dll ../../third-party/runtime-libs/win/x64/
 cp third-party/build-libs/win/x64/libserialport64.lib ../../third-party/build-libs/win/x64/
-cp third-party/runtime-libs/win/x64/libserialport64.dll ../../third-party/runtime-libs/win/x64/
+cp third-party/runtime-libs/win/x64/libserialport64-0.dll ../../third-party/runtime-libs/win/x64/
 cp third-party/build-libs/win/x64/sockpp64.lib ../../third-party/build-libs/win/x64/
 cp third-party/runtime-libs/win/x64/sockpp64.dll ../../third-party/runtime-libs/win/x64/
+cp third-party/runtime-libs/win/x64/libgcc_s_seh-1.dll ../../third-party/runtime-libs/win/x64/
+cp third-party/runtime-libs/win/x64/libstdc++-6.dll ../../third-party/runtime-libs/win/x64/
+cp third-party/runtime-libs/win/x64/libwinpthread-1.dll ../../third-party/runtime-libs/win/x64/
 cp build/${BUILD_TYPE}/zedmd64.lib ../../third-party/build-libs/win/x64/
 cp build/${BUILD_TYPE}/zedmd64.dll ../../third-party/runtime-libs/win/x64/
 cp -r test ../../
@@ -81,7 +96,7 @@ tar xzf libserum-${LIBSERUM_SHA}.tar.gz
 mv libserum-${LIBSERUM_SHA} libserum
 cd libserum
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
@@ -107,7 +122,7 @@ tar xzf libpupdmd-${LIBPUPDMD_SHA}.tar.gz
 mv libpupdmd-${LIBPUPDMD_SHA} libpupdmd
 cd libpupdmd
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
@@ -128,7 +143,7 @@ tar xzf libvni-${LIBVNI_SHA}.tar.gz
 mv libvni-${LIBVNI_SHA} libvni
 cd libvni
 cmake \
-   -G "Visual Studio 17 2022" \
+   -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
