@@ -38,6 +38,13 @@ Config::Config()
   m_zedmdDevice.clear();
   m_zedmdDebug = false;
   m_zedmdBrightness = -1;
+  m_zedmdWiFiEnabled = false;
+  m_zedmdWiFiAddr.clear();
+  m_zedmdSpiEnabled = false;
+  m_zedmdSpiSpeed = 72000000;
+  m_zedmdSpiFramePause = 2;
+  m_zedmdWidth = 128;
+  m_zedmdHeight = 32;
   m_pixelcade = true;
   m_pixelcadeDevice.clear();
   m_PIN2DMD = true;
