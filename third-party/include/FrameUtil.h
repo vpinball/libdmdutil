@@ -275,8 +275,8 @@ inline void Helper::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, i
 
 inline float Helper::CalcBrightness(float x)
 {
-    // better spacing between palette entries
-    return x * x * (3.0f - 2.0f * x);
+  // better spacing between palette entries
+  return x * x * (3.0f - 2.0f * x);
 }
 
 inline void Helper::ScaleDownIndexed(uint8_t* pDestFrame, const uint16_t destWidth, const uint8_t destHeight,
