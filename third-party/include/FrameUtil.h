@@ -275,8 +275,11 @@ inline void Helper::SplitIntoRgbPlanes(const uint16_t* rgb565, int rgb565Size, i
 
 inline float Helper::CalcBrightness(float x)
 {
-  // function to improve the brightness with fx=ax²+bc+c, f(0)=0, f(1)=1, f'(1.1)=0
-  return (-x * x + 2.1f * x) / 1.1f;
+    // clamp to [0,1]
+    x = x < 0.0f ? 0.0f : (x > 1.0f ? 1.0f : x);
+
+    // fast gamma ≈ 2.2 (good perceptual match)
+    return x * (1.356f - 0.356f * x);
 }
 
 inline void Helper::ScaleDownIndexed(uint8_t* pDestFrame, const uint16_t destWidth, const uint8_t destHeight,
