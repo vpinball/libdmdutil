@@ -4,7 +4,7 @@
 
 #include "DMDUtil/DMDServer.h"
 #include "DMDUtil/DMDUtil.h"
-#include "Logger.h"
+#include "DMDUtil/Logger.h"
 #include "cargs.h"
 
 using namespace std;

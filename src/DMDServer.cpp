@@ -12,7 +12,7 @@
 #include <sstream>
 
 #include "DMDUtil/DMD.h"
-#include "Logger.h"
+#include "DMDUtil/Logger.h"
 #include "sockpp/tcp_acceptor.h"
 
 namespace DMDUtil

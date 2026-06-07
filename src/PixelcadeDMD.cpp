@@ -11,7 +11,7 @@
 #include <thread>
 
 #include "FrameUtil.h"
-#include "Logger.h"
+#include "DMDUtil/Logger.h"
 
 namespace DMDUtil
 {
