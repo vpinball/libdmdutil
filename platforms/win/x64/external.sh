@@ -142,6 +142,7 @@ curl -sL https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-$
 tar xzf libvni-${LIBVNI_SHA}.tar.gz
 mv libvni-${LIBVNI_SHA} libvni
 cd libvni
+platforms/win/x64/external.sh
 cmake \
    -G "Visual Studio 18 2026" \
    -DPLATFORM=win \
