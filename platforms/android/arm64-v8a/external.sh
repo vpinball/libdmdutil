@@ -101,6 +101,7 @@ curl -sL https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz -o libvni-$
 tar xzf libvni-${LIBVNI_SHA}.tar.gz
 mv libvni-${LIBVNI_SHA} libvni
 cd libvni
+platforms/android/arm64-v8a/external.sh
 cmake \
    -DPLATFORM=android \
    -DARCH=arm64-v8a \
