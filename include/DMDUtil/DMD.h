@@ -14,6 +14,7 @@
 #define DMDUTIL_MAX_NAME_SIZE 16
 #define DMDUTIL_MAX_PATH_SIZE 256
 #define DMDUTIL_MAX_TRANSITIONAL_FRAME_DURATION 25
+#define DMDUTIL_MAX_FRAME_PIXELS (256 * 64)
 
 #include <atomic>
 #include <condition_variable>
@@ -114,8 +115,8 @@ class DMDUTILAPI DMD
     Mode mode = Mode::Data;                                    // int
     AlphaNumericLayout layout = AlphaNumericLayout::NoLayout;  // int
     int depth = 2;
-    uint8_t data[256 * 64 * 3] = {0};
-    uint16_t segData[256 * 64] = {0};  // RGB16 or segment data or SerumV1 palette
+    uint8_t data[DMDUTIL_MAX_FRAME_PIXELS * 3] = {0};
+    uint16_t segData[DMDUTIL_MAX_FRAME_PIXELS] = {0};  // RGB16 or segment data or SerumV1 palette
     uint16_t segData2[128];
     bool hasData = false;
     bool hasSegData = false;
