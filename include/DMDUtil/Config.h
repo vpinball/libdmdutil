@@ -91,6 +91,8 @@ class DMDUTILAPI Config
   {
     m_filterTransitionalFrames = filterTransitionalFrames;
   }
+  int GetRoundedCorners() const { return m_roundedCorners; }
+  void SetRoundedCorners(int roundedCorners) { m_roundedCorners = roundedCorners; }
   bool IsZeDMD() const { return m_zedmd; }
   void SetZeDMD(bool zedmd) { m_zedmd = zedmd; }
   const char* GetZeDMDDevice() const { return m_zedmdDevice.c_str(); }
@@ -168,6 +170,7 @@ class DMDUTILAPI Config
   std::string m_dumpPath;
   bool m_dumpZip;
   bool m_filterTransitionalFrames;
+  int m_roundedCorners;
   bool m_zedmd;
   std::string m_zedmdDevice;
   bool m_zedmdDebug;

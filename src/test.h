@@ -164,7 +164,11 @@ void run(DMDUtil::DMD* pDmd)
     printf("Render raw: %s\n", filename);
     fileptr = fopen(filename, "rb");
     if (!fileptr) continue;
-    fread(buffer, size, 1, fileptr);
+    if (fread(buffer, size, 1, fileptr) != 1)
+    {
+      fclose(fileptr);
+      continue;
+    }
     fclose(fileptr);
 
     memcpy(rgb565, buffer, size);
@@ -182,7 +186,11 @@ void run(DMDUtil::DMD* pDmd)
       printf("Render raw: %s\n", filename);
       fileptr = fopen(filename, "rb");
       if (!fileptr) continue;
-      fread(buffer, size, 1, fileptr);
+      if (fread(buffer, size, 1, fileptr) != 1)
+      {
+        fclose(fileptr);
+        continue;
+      }
       fclose(fileptr);
 
       memcpy(rgb565, buffer, size);

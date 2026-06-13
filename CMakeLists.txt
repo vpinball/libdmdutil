@@ -99,6 +99,7 @@ set(DMDUTIL_SOURCES
    src/DMD.cpp
    src/LevelDMD.cpp
    src/RGB24DMD.cpp
+   src/OutputFilters.cpp
    src/ConsoleDMD.cpp
    src/Logger.cpp
    src/AlphaNumeric.cpp

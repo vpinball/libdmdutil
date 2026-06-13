@@ -4,7 +4,9 @@
 #include <cstring>
 #include <string>
 
+#include "DMDUtil/Config.h"
 #include "FrameUtil.h"
+#include "OutputFilters.h"
 
 namespace DMDUtil
 {
@@ -48,6 +50,11 @@ void RGB24DMD::Update(uint8_t* pData, uint16_t width, uint16_t height)
   {
     FrameUtil::Helper::ScaleUp(m_pData, pData, width, height, 24);
     m_update = true;
+  }
+
+  if (m_update)
+  {
+    ApplyRoundedCornersRGB24(m_pData, m_width, m_height, Config::GetInstance()->GetRoundedCorners());
   }
 }
 
