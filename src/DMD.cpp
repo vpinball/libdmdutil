@@ -688,9 +688,23 @@ bool DMD::DestroyConsoleDMD(ConsoleDMD* pConsoleDMD)
   return false;
 }
 
+namespace
+{
+bool IsSupportedUpdateSize(uint16_t width, uint16_t height)
+{
+  if ((size_t)width * height <= DMDUTIL_MAX_FRAME_PIXELS) return true;
+
+  Log(DMDUtil_LogLevel_ERROR, "Unsupported frame size %ux%u, the maximum is %u pixels", width, height,
+      DMDUTIL_MAX_FRAME_PIXELS);
+  return false;
+}
+}  // namespace
+
 void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
                      Mode mode, bool buffered)
 {
+  if (pData && !IsSupportedUpdateSize(width, height)) return;
+
   auto dmdUpdate = std::make_shared<Update>();
   if (pData)
   {
@@ -717,6 +731,8 @@ void DMD::UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t h
 void DMD::UpdateDataWithTimestampInternal(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
                                           uint8_t g, uint8_t b, Mode mode, uint32_t timestampMs, bool buffered)
 {
+  if (pData && !IsSupportedUpdateSize(width, height)) return;
+
   auto dmdUpdate = std::make_shared<Update>();
   if (pData)
   {
@@ -817,6 +833,8 @@ void DMD::UpdateDataWithMetadataAndTimestamp(const uint8_t* pData, int depth, ui
                                              uint8_t r, uint8_t g, uint8_t b, uint32_t timestampMs,
                                              const FrameContext& frameContext, bool buffered)
 {
+  if (pData && !IsSupportedUpdateSize(width, height)) return;
+
   auto dmdUpdate = std::make_shared<Update>();
   if (pData)
   {
@@ -866,6 +884,8 @@ void DMD::UpdateRGB24DataWithTimestamp(const uint8_t* pData, uint16_t width, uin
 void DMD::UpdateRGB24DataWithMetadataAndTimestamp(const uint8_t* pData, uint16_t width, uint16_t height,
                                                   uint32_t timestampMs, const FrameContext& frameContext, bool buffered)
 {
+  if (pData && !IsSupportedUpdateSize(width, height)) return;
+
   auto dmdUpdate = std::make_shared<Update>();
   dmdUpdate->mode = Mode::RGB24;
   dmdUpdate->depth = 24;
@@ -888,6 +908,8 @@ void DMD::UpdateRGB24DataWithMetadataAndTimestamp(const uint8_t* pData, uint16_t
 
 void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height, bool buffered)
 {
+  if (pData && !IsSupportedUpdateSize(width, height)) return;
+
   auto dmdUpdate = std::make_shared<Update>();
   dmdUpdate->mode = Mode::RGB16;
   dmdUpdate->depth = 24;
@@ -911,6 +933,8 @@ void DMD::UpdateRGB16Data(const uint16_t* pData, uint16_t width, uint16_t height
 void DMD::UpdateRGB16DataWithTimestamp(const uint16_t* pData, uint16_t width, uint16_t height, uint32_t timestampMs,
                                        bool buffered)
 {
+  if (pData && !IsSupportedUpdateSize(width, height)) return;
+
   auto dmdUpdate = std::make_shared<Update>();
   dmdUpdate->mode = Mode::RGB16;
   dmdUpdate->depth = 24;
@@ -934,6 +958,8 @@ void DMD::UpdateRGB16DataWithTimestamp(const uint16_t* pData, uint16_t width, ui
 void DMD::UpdateRGB16DataWithMetadataAndTimestamp(const uint16_t* pData, uint16_t width, uint16_t height,
                                                   uint32_t timestampMs, const FrameContext& frameContext, bool buffered)
 {
+  if (pData && !IsSupportedUpdateSize(width, height)) return;
+
   auto dmdUpdate = std::make_shared<Update>();
   dmdUpdate->mode = Mode::RGB16;
   dmdUpdate->depth = 24;
