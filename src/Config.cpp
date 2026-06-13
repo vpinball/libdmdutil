@@ -14,6 +14,13 @@ Config* Config::GetInstance()
   return m_pInstance;
 }
 
+void Config::SetInstance(Config* pInstance)
+{
+  if (m_pInstance == pInstance) return;
+  delete m_pInstance;
+  m_pInstance = pInstance;
+}
+
 Config::Config()
 {
   m_altColor = true;
