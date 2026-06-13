@@ -7,7 +7,7 @@ namespace DMDUtil
 
 void Log(DMDUtil_LogLevel logLevel, const char* format, ...)
 {
-  static Config* pConfig = pConfig->GetInstance();
+  static Config* pConfig = Config::GetInstance();
 
   DMDUtil_LogCallback logCallback = pConfig->GetLogCallback();
 

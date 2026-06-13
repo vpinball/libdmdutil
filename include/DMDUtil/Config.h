@@ -36,7 +36,8 @@ class DMDUTILAPI Config
 {
  public:
   static Config* GetInstance();
-  void parseConfigFile(const char* path);
+  static void SetInstance(Config* pInstance);
+  virtual void parseConfigFile(const char* path);
   bool IsAltColor() const { return m_altColor; }
   void SetAltColor(bool altColor) { m_altColor = altColor; }
   void SetAltColorPath(const char* path) { m_altColorPath = path; }
@@ -90,6 +91,8 @@ class DMDUTILAPI Config
   {
     m_filterTransitionalFrames = filterTransitionalFrames;
   }
+  int GetRoundedCorners() const { return m_roundedCorners; }
+  void SetRoundedCorners(int roundedCorners) { m_roundedCorners = roundedCorners; }
   bool IsZeDMD() const { return m_zedmd; }
   void SetZeDMD(bool zedmd) { m_zedmd = zedmd; }
   const char* GetZeDMDDevice() const { return m_zedmdDevice.c_str(); }
@@ -142,10 +145,11 @@ class DMDUTILAPI Config
     m_pupTriggerCallbackContext.pUserData = pUserData;
   }
 
- private:
+ protected:
   Config();
-  ~Config() {}
+  virtual ~Config() {}
 
+ private:
   static Config* m_pInstance;
   bool m_altColor;
   std::string m_altColorPath;
@@ -166,6 +170,7 @@ class DMDUTILAPI Config
   std::string m_dumpPath;
   bool m_dumpZip;
   bool m_filterTransitionalFrames;
+  int m_roundedCorners;
   bool m_zedmd;
   std::string m_zedmdDevice;
   bool m_zedmdDebug;

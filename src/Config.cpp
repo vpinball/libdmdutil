@@ -14,6 +14,13 @@ Config* Config::GetInstance()
   return m_pInstance;
 }
 
+void Config::SetInstance(Config* pInstance)
+{
+  if (m_pInstance == pInstance) return;
+  delete m_pInstance;
+  m_pInstance = pInstance;
+}
+
 Config::Config()
 {
   m_altColor = true;
@@ -34,6 +41,7 @@ Config::Config()
   m_dumpFrames = false;
   m_dumpZip = false;
   m_filterTransitionalFrames = false;
+  m_roundedCorners = 0;
   m_zedmd = true;
   m_zedmdDevice.clear();
   m_zedmdDebug = false;
@@ -373,6 +381,16 @@ void Config::parseConfigFile(const char* path)
   catch (const std::exception&)
   {
     SetFilterTransitionalFrames(false);
+  }
+
+  // OutputFilters
+  try
+  {
+    SetRoundedCorners(r.Get<int>("OutputFilters", "RoundedCorners", 0));
+  }
+  catch (const std::exception&)
+  {
+    SetRoundedCorners(0);
   }
 }
 

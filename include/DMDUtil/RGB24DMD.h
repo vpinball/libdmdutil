@@ -17,7 +17,7 @@ class DMDUTILAPI RGB24DMD
 {
  public:
   RGB24DMD(uint16_t width, uint16_t height);
-  ~RGB24DMD();
+  virtual ~RGB24DMD();
 
   virtual void Update(uint8_t* pRGB24Data, uint16_t width = 0, uint16_t height = 0);
   int GetWidth() const { return m_width; }
