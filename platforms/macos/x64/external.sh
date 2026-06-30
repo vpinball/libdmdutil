@@ -4,6 +4,7 @@ set -e
 
 source ./platforms/config.sh
 
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-${PPUC_MACOS_DEPLOYMENT_TARGET:-$(xcrun --sdk macosx --show-sdk-version 2>/dev/null || echo 14.0)}}"
 echo "Building libraries..."
 echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
@@ -37,8 +38,8 @@ cd libusb
 ./autogen.sh
 ./configure \
    --host=x86_64-apple-darwin \
-   CFLAGS="-arch x86_64" \
-   LDFLAGS="-Wl,-install_name,@rpath/libusb-1.0.dylib"
+   CFLAGS="-arch x86_64 -mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET}" \
+   LDFLAGS="-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} -Wl,-install_name,@rpath/libusb-1.0.dylib"
 make -j${NUM_PROCS}
 mkdir -p ${PPUC_SOURCE_ROOT}/third-party/include/libusb-1.0
 cp libusb/libusb.h ${PPUC_SOURCE_ROOT}/third-party/include/libusb-1.0
@@ -57,6 +58,8 @@ cmake \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
    -DBUILD_STATIC=OFF \
+   -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+   -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
@@ -84,6 +87,8 @@ cmake \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
    -DBUILD_STATIC=OFF \
+   -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+   -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
@@ -109,6 +114,8 @@ cmake \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
    -DBUILD_STATIC=OFF \
+   -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+   -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
@@ -128,6 +135,8 @@ cmake \
    -DARCH=x64 \
    -DBUILD_SHARED=ON \
    -DBUILD_STATIC=OFF \
+   -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+   -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET} \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
