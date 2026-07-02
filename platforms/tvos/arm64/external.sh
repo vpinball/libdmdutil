@@ -6,12 +6,12 @@ source ./platforms/config.sh
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
-ppuc_print_dependency_source LIBZEDMD libzedmd "${LIBZEDMD_SHA}"
+print_dependency_source LIBZEDMD "${LIBZEDMD_SHA}" LIBZEDMD_SOURCE_DIR
 echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
-ppuc_print_dependency_source LIBSERUM libserum "${LIBSERUM_SHA}"
+print_dependency_source LIBSERUM "${LIBSERUM_SHA}" LIBSERUM_SOURCE_DIR
 echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
 echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
-ppuc_print_dependency_source LIBVNI libvni "${LIBVNI_SHA}"
+print_dependency_source LIBVNI "${LIBVNI_SHA}" LIBVNI_SOURCE_DIR
 echo ""
 
 NUM_PROCS=$(sysctl -n hw.ncpu)
@@ -29,7 +29,7 @@ cd external
 # build libzedmd and copy to external
 #
 
-ppuc_prepare_dependency_source libzedmd "${LIBZEDMD_SHA}" "https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.tar.gz"
+prepare_dependency_source libzedmd "${LIBZEDMD_SHA}" "https://github.com/PPUC/libzedmd/archive/${LIBZEDMD_SHA}.tar.gz" tar LIBZEDMD_SOURCE_DIR
 cd libzedmd
 BUILD_TYPE=${BUILD_TYPE} platforms/tvos/arm64/external.sh
 cmake \
@@ -40,12 +40,12 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
-cp src/ZeDMD.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp -r third-party/include/komihash ${PPUC_SOURCE_ROOT}/third-party/include/
-cp -r third-party/include/sockpp ${PPUC_SOURCE_ROOT}/third-party/include/
-cp third-party/include/FrameUtil.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp -a third-party/build-libs/tvos/arm64/libsockpp.a ${PPUC_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
-cp build/libzedmd.a ${PPUC_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
+cp src/ZeDMD.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp -r third-party/include/komihash ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp -r third-party/include/sockpp ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp third-party/include/FrameUtil.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp -a third-party/build-libs/tvos/arm64/libsockpp.a ${PROJECT_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
+cp build/libzedmd.a ${PROJECT_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
 cp -r test ../../
 cd ..
 
@@ -53,7 +53,7 @@ cd ..
 # build libserum and copy to external
 #
 
-ppuc_prepare_dependency_source libserum "${LIBSERUM_SHA}" "https://github.com/PPUC/libserum/archive/${LIBSERUM_SHA}.tar.gz"
+prepare_dependency_source libserum "${LIBSERUM_SHA}" "https://github.com/PPUC/libserum/archive/${LIBSERUM_SHA}.tar.gz" tar LIBSERUM_SOURCE_DIR
 cd libserum
 cmake \
    -DPLATFORM=tvos \
@@ -63,13 +63,13 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
-cp -r third-party/include/lz4 ${PPUC_SOURCE_ROOT}/third-party/include/
-cp src/LZ4Stream.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp src/SceneGenerator.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp src/serum.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp src/TimeUtils.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp src/serum-decode.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp build/libserum.a ${PPUC_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
+cp -r third-party/include/lz4 ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp src/LZ4Stream.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp src/SceneGenerator.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp src/serum.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp src/TimeUtils.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp src/serum-decode.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp build/libserum.a ${PROJECT_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
 cd ..
 
 #
@@ -88,15 +88,15 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
-cp src/pupdmd.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp build/libpupdmd.a ${PPUC_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
+cp src/pupdmd.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp build/libpupdmd.a ${PROJECT_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
 cd ..
 
 #
 # build libvni and copy to external
 #
 
-ppuc_prepare_dependency_source libvni "${LIBVNI_SHA}" "https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz"
+prepare_dependency_source libvni "${LIBVNI_SHA}" "https://github.com/PPUC/libvni/archive/${LIBVNI_SHA}.tar.gz" tar LIBVNI_SOURCE_DIR
 cd libvni
 platforms/tvos/arm64/external.sh
 cmake \
@@ -107,6 +107,6 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
-cp src/vni.h ${PPUC_SOURCE_ROOT}/third-party/include/
-cp build/libvni.a ${PPUC_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
+cp src/vni.h ${PROJECT_SOURCE_ROOT}/third-party/include/
+cp build/libvni.a ${PROJECT_SOURCE_ROOT}/third-party/build-libs/tvos/arm64/
 cd ..
