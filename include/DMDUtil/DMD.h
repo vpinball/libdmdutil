@@ -85,11 +85,11 @@ class DMDUTILAPI DMD
     RGB24 = 2,  // RGB888
     RGB16 = 3,  // RGB565
     AlphaNumeric = 4,
-    SerumV1 = 5,
-    SerumV2_32 = 6,
-    SerumV2_32_64 = 7,
-    SerumV2_64 = 8,
-    SerumV2_64_32 = 9,
+    SerumV1 = 5,        // Serum v1 indexed color frame plus palette in segData.
+    SerumV2_32 = 6,     // Serum v2 RGB565 32p frame only, typically 128x32.
+    SerumV2_32_64 = 7,  // Serum v2 RGB565 32p frame when a matching 64p frame is also queued.
+    SerumV2_64 = 8,     // Serum v2 RGB565 64p frame only, typically 256x64.
+    SerumV2_64_32 = 9,  // Serum v2 RGB565 64p frame when a matching 32p frame is also queued.
     NotColorized = 10,
     Vni = 11,
     SerumCommand = 12,
