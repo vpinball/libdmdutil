@@ -1956,7 +1956,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
   {
     if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
     {
-      if (render32)
+      if (render32 || render64)
       {
         const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
         if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
