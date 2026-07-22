@@ -325,7 +325,11 @@ DMD::DMD()
   m_pDmdFrameThread = new std::thread(&DMD::DmdFrameThread, this);
   m_pPupDMDThread = new std::thread(&DMD::PupDMDThread, this);
   m_pSerumThread = new std::thread(&DMD::SerumThread, this);
+#ifdef DMDUTIL_ENABLE_VNI
   m_pVniThread = new std::thread(&DMD::VniThread, this);
+#else
+  m_pVniThread = nullptr;
+#endif
   m_pDMDServerConnector = nullptr;
 }
 
