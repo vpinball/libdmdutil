@@ -7,6 +7,7 @@
 #include "DMDUtil/Config.h"
 #include "FrameUtil.h"
 #include "OutputFilters.h"
+#include "ScalingMode.h"
 
 namespace DMDUtil
 {
@@ -48,7 +49,7 @@ void RGB24DMD::Update(uint8_t* pData, uint16_t width, uint16_t height)
   }
   else if (width == 128 && height == 32 && m_width == 256 && m_height == 64)
   {
-    FrameUtil::Helper::ScaleUp(m_pData, pData, width, height, 24);
+    FrameUtil::Helper::ScaleUpBy(GetScalingAlgorithm(), m_pData, pData, width, height, 24);
     m_update = true;
   }
 
