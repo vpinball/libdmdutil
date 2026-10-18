@@ -1987,6 +1987,12 @@ static struct cag_option options[] = {
      .access_name = "server",
      .value_name = "HOST[:PORT]",
      .description = "Connect to a DMD server (optional)"},
+    {.identifier = 'c',
+     .access_letters = "c",
+     .access_name = "config",
+     .value_name = "FILE",
+     .description = "Config file like dmdserver.ini, required for displays that can't be auto-detected like "
+                    "ZeDMD SPI or ZeDMD WiFi (optional, default is no config file)"},
     {.identifier = 'L', .access_letters = "L", .access_name = "no-local", .description = "Disable local displays"},
     {.identifier = 't', .access_letters = "t", .access_name = "dump-txt", .description = "Dump txt while playing"},
     {.identifier = '5', .access_letters = "5", .access_name = "dump-565", .description = "Dump rgb565 while playing"},
@@ -2099,6 +2105,21 @@ int main(int argc, char* argv[])
   bool opt_delay_set = true;
   bool opt_crash_trace = false;
 
+  // Load the config file first, so that the other command line options overwrite its values.
+  cag_option_init(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
+  while (cag_option_fetch(&cag_context))
+  {
+    if (cag_option_get_identifier(&cag_context) != 'c') continue;
+
+    const char* configPath = cag_option_get_value(&cag_context);
+    if (!configPath || !std::filesystem::is_regular_file(configPath))
+    {
+      std::cerr << "Error: Config file not found: " << (configPath ? configPath : "") << "\n";
+      return 1;
+    }
+    DMDUtil::Config::GetInstance()->parseConfigFile(configPath);
+  }
+
   cag_option_init(&cag_context, options, CAG_ARRAY_SIZE(options), argc, argv);
   while (cag_option_fetch(&cag_context))
   {
@@ -2107,6 +2128,9 @@ int main(int argc, char* argv[])
     {
       case 'i':
         opt_input = cag_option_get_value(&cag_context);
+        break;
+      case 'c':
+        // Already handled above.
         break;
       case 'a':
         opt_alt_color_path = cag_option_get_value(&cag_context);

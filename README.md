@@ -260,6 +260,7 @@ When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage
   -a, --alt-color-path=PATH      Alt color base path (optional, enables Serum colorization)
   -d, --depth=VALUE              Bit depth to send (2 or 4) (optional, default is 2)
   -s, --server=HOST[:PORT]       Connect to a DMD server (optional)
+  -c, --config=FILE              Config file like dmdserver.ini, required for displays that can't be auto-detected like ZeDMD SPI or ZeDMD WiFi (optional, default is no config file)
   -L, --no-local                 Disable local displays
   -t, --dump-txt                 Dump txt while playing
   -5, --dump-565                 Dump rgb565 while playing
