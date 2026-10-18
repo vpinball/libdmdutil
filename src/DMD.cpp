@@ -1452,15 +1452,23 @@ void DMD::SerumThread()
         return;
       }
 
-      if (nextRotation == 0)
       {
+        const auto hasWork = [&]()
+        {
+          return m_stopFlag.load(std::memory_order_relaxed) ||
+                 (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+        };
         std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
-        m_dmdCV.wait(sl,
-                     [&]()
-                     {
-                       return m_stopFlag.load(std::memory_order_relaxed) ||
-                              (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
-                     });
+        if (nextRotation == 0)
+        {
+          m_dmdCV.wait(sl, hasWork);
+        }
+        else
+        {
+          // Sleep until the next rotation is due instead of spinning, but wake up for new frames.
+          const int32_t untilRotation = static_cast<int32_t>(nextRotation - GetMonotonicTimeMs());
+          if (untilRotation > 0) m_dmdCV.wait_for(sl, std::chrono::milliseconds(untilRotation), hasWork);
+        }
         sl.unlock();
       }
 
@@ -1735,6 +1743,10 @@ void DMD::SerumThread()
             nextRotation = 0;
         }
       }
+
+      // A due rotation that can't run anymore would otherwise keep the wait above from sleeping.
+      if (nextRotation > 0 && now >= nextRotation && (!m_pSerum || m_pSerum->rotationtimer == 0 || !lastDmdUpdate))
+        nextRotation = 0;
     }
   }
 }
