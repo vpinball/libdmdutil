@@ -1432,6 +1432,25 @@ void DMD::SerumThread()
     Update* lastDmdUpdate = nullptr;
     uint8_t flags = 0;
 
+    const auto rotateIfDue = [&](uint32_t now)
+    {
+      if (!m_pSerum || nextRotation == 0 || m_pSerum->rotationtimer == 0 || !lastDmdUpdate || now < nextRotation)
+        return;
+
+      uint32_t result = Serum_Rotate();
+
+      Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
+
+      QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000, false, 0);
+
+      if (result > 0 && ((result & 0xffff) < 2048))
+      {
+        nextRotation = now + m_pSerum->rotationtimer;
+      }
+      else
+        nextRotation = 0;
+    };
+
     (void)m_stopFlag.load(std::memory_order_acquire);
 
     bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
@@ -1637,6 +1656,11 @@ void DMD::SerumThread()
 
           if (m_pSerum)
           {
+            // Serum_Colorize() restarts the timer of a rotation step that is already due when the same frame is
+            // identified again, e.g. a blinking word in a dynamic zone. Run the due step first, otherwise the
+            // rotation stutters whenever a frame arrives just after the step's time.
+            rotateIfDue(GetMonotonicTimeMs());
+
             FrameContext frameContext{};
             GetQueueFrameContext(bufferPositionMod, frameContext);
 
@@ -1725,24 +1749,8 @@ void DMD::SerumThread()
         }
       }
 
-      if (m_pSerum)
-      {
-        if (nextRotation > 0 && m_pSerum->rotationtimer > 0 && lastDmdUpdate && now >= nextRotation)
-        {
-          uint32_t result = Serum_Rotate();
-
-          Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
-
-          QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000, false, 0);
-
-          if (result > 0 && ((result & 0xffff) < 2048))
-          {
-            nextRotation = now + m_pSerum->rotationtimer;
-          }
-          else
-            nextRotation = 0;
-        }
-      }
+      now = GetMonotonicTimeMs();
+      rotateIfDue(now);
 
       // A due rotation that can't run anymore would otherwise keep the wait above from sleeping.
       if (nextRotation > 0 && now >= nextRotation && (!m_pSerum || m_pSerum->rotationtimer == 0 || !lastDmdUpdate))
