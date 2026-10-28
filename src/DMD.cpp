@@ -22,6 +22,7 @@
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
+#include "PinDMD3.h"
 #include "PixelcadeDMD.h"
 #endif
 
@@ -311,6 +312,8 @@ DMD::DMD()
     defined(__ANDROID__))
   m_pPixelcadeDMD = nullptr;
   m_pPixelcadeDMDThread = nullptr;
+  m_pPinDMD3 = nullptr;
+  m_pPinDMD3Thread = nullptr;
 #endif
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
@@ -460,6 +463,13 @@ DMD::~DMD()
     delete m_pPixelcadeDMDThread;
     m_pPixelcadeDMDThread = nullptr;
   }
+
+  if (m_pPinDMD3Thread)
+  {
+    m_pPinDMD3Thread->join();
+    delete m_pPinDMD3Thread;
+    m_pPinDMD3Thread = nullptr;
+  }
 #endif
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
@@ -479,6 +489,7 @@ DMD::~DMD()
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
   if (m_pPixelcadeDMD) delete m_pPixelcadeDMD;
+  if (m_pPinDMD3) delete m_pPinDMD3;
 #endif
 
   for (LevelDMD* pLevelDMD : m_levelDMDs) delete pLevelDMD;
@@ -531,6 +542,7 @@ bool DMD::HasDisplay() const
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
   if (m_pPixelcadeDMD != nullptr) return true;
+  if (m_pPinDMD3 != nullptr) return true;
 #endif
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
@@ -1126,6 +1138,14 @@ void DMD::FindDisplays()
           }
 
           m_pPixelcadeDMD = pPixelcadeDMD;
+
+          m_pPinDMD3 = nullptr;
+
+          if (pConfig->IsPinDMD3())
+          {
+            m_pPinDMD3 = PinDMD3::Connect(pConfig->GetPinDMD3Device());
+            if (m_pPinDMD3) m_pPinDMD3Thread = new std::thread(&DMD::PinDMD3Thread, this);
+          }
 #endif
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
@@ -1574,7 +1594,7 @@ void DMD::SerumThread()
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
-                                   && !m_pPixelcadeDMD
+                                   && !m_pPixelcadeDMD && !m_pPinDMD3
 #endif
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
                                                                  (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
@@ -1625,6 +1645,7 @@ void DMD::SerumThread()
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
             if (m_pPixelcadeDMD) flags |= FLAG_REQUEST_32P_FRAMES;
+            if (m_pPinDMD3) flags |= FLAG_REQUEST_32P_FRAMES;
 #endif
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
@@ -2306,6 +2327,184 @@ void DMD::PIN2DMDThread()
   }
 }
 #endif
+
+void DMD::PinDMD3Thread()
+{
+  uint16_t bufferPosition = 0;
+  uint16_t segData1[128] = {0};
+  uint16_t segData2[128] = {0};
+  uint8_t palette[256 * 3] = {0};
+  uint8_t renderBuffer[256 * 64] = {0};
+
+  const int targetWidth = m_pPinDMD3->GetWidth();
+  const int targetHeight = m_pPinDMD3->GetHeight();
+  const int targetLength = targetWidth * targetHeight;
+  const int maxSourceLength = 256 * 64;
+  uint8_t* rgb24Data = new uint8_t[maxSourceLength * 3];
+  uint8_t* scaledBuffer = new uint8_t[targetLength * 3];
+
+  memset(rgb24Data, 0, maxSourceLength * 3);
+  memset(scaledBuffer, 0, targetLength * 3);
+
+  (void)m_stopFlag.load(std::memory_order_acquire);
+
+  Config* const pConfig = Config::GetInstance();
+  bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+  bool excludeColorizedFrames = pConfig->IsExcludeColorizedFramesForPinDMD3();
+  const int roundedCorners = pConfig->GetRoundedCorners();
+
+  auto scaleToTarget = [&](const uint8_t* src, uint16_t width, uint16_t height, uint8_t* dst) -> bool
+  {
+    if (width == targetWidth && height == targetHeight)
+    {
+      memcpy(dst, src, targetLength * 3);
+      return true;
+    }
+
+    if (width == targetWidth && height == 16)
+    {
+      FrameUtil::Helper::Center(dst, targetWidth, targetHeight, src, targetWidth, 16, 24);
+      return true;
+    }
+
+    if (height == 64)
+    {
+      FrameUtil::Helper::ScaleDown(dst, targetWidth, targetHeight, src, width, 64, 24);
+      return true;
+    }
+
+    return false;
+  };
+
+  while (true)
+  {
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    m_dmdCV.wait(sl,
+                 [&]()
+                 {
+                   return m_stopFlag.load(std::memory_order_relaxed) ||
+                          (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+                 });
+    sl.unlock();
+    if (m_stopFlag.load(std::memory_order_acquire))
+    {
+      delete[] rgb24Data;
+      delete[] scaledBuffer;
+      return;
+    }
+
+    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
+    {
+      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+      uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+
+      const Mode updateMode = m_pUpdateBufferQueue[bufferPositionMod]->mode;
+      if (excludeColorizedFrames)
+      {
+        if (IsSerumMode(updateMode, true)) continue;
+      }
+      else if ((m_pSerum || m_pVni) && !IsSerumMode(updateMode, showNotColorizedFrames))
+      {
+        continue;
+      }
+
+      if (!(m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData))
+        continue;
+
+      uint16_t width = m_pUpdateBufferQueue[bufferPositionMod]->width;
+      uint16_t height = m_pUpdateBufferQueue[bufferPositionMod]->height;
+      int length = (int)width * height;
+
+      bool update = false;
+      if (m_pUpdateBufferQueue[bufferPositionMod]->depth != 24)
+      {
+        update = UpdatePalette(palette, m_pUpdateBufferQueue[bufferPositionMod]->depth,
+                               m_pUpdateBufferQueue[bufferPositionMod]->r, m_pUpdateBufferQueue[bufferPositionMod]->g,
+                               m_pUpdateBufferQueue[bufferPositionMod]->b);
+      }
+
+      if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::RGB24)
+      {
+        AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPositionMod]->data, rgb24Data, length, palette,
+                         m_pUpdateBufferQueue[bufferPositionMod]->depth);
+        update = true;
+      }
+      else if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::RGB16 ||
+               IsSerumV2Mode(m_pUpdateBufferQueue[bufferPositionMod]->mode))
+      {
+        const uint16_t* src = m_pUpdateBufferQueue[bufferPositionMod]->segData;
+        for (int i = 0; i < length; i++)
+        {
+          uint16_t value = src[i];
+          uint8_t r = (uint8_t)((value >> 11) & 0x1F);
+          uint8_t g = (uint8_t)((value >> 5) & 0x3F);
+          uint8_t b = (uint8_t)(value & 0x1F);
+          rgb24Data[i * 3] = (uint8_t)((r << 3) | (r >> 2));
+          rgb24Data[i * 3 + 1] = (uint8_t)((g << 2) | (g >> 4));
+          rgb24Data[i * 3 + 2] = (uint8_t)((b << 3) | (b >> 2));
+        }
+        update = true;
+      }
+      else
+      {
+        if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::SerumV1 ||
+            m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Vni)
+        {
+          size_t paletteBytes = PaletteBytesForDepth((uint8_t)m_pUpdateBufferQueue[bufferPositionMod]->depth);
+          if (paletteBytes > 0 && paletteBytes <= sizeof(palette))
+          {
+            memcpy(palette, m_pUpdateBufferQueue[bufferPositionMod]->segData, paletteBytes);
+          }
+          memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
+          update = true;
+        }
+        else if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) &&
+                  m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::Data) ||
+                 (showNotColorizedFrames && m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::NotColorized))
+        {
+          memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
+          update = true;
+        }
+        else if (m_pUpdateBufferQueue[bufferPositionMod]->mode == Mode::AlphaNumeric)
+        {
+          if (memcmp(segData1, m_pUpdateBufferQueue[bufferPositionMod]->segData, sizeof(segData1)) != 0)
+          {
+            memcpy(segData1, m_pUpdateBufferQueue[bufferPositionMod]->segData, sizeof(segData1));
+            update = true;
+          }
+
+          if (m_pUpdateBufferQueue[bufferPositionMod]->hasSegData2 &&
+              memcmp(segData2, m_pUpdateBufferQueue[bufferPositionMod]->segData2, sizeof(segData2)) != 0)
+          {
+            memcpy(segData2, m_pUpdateBufferQueue[bufferPositionMod]->segData2, sizeof(segData2));
+            update = true;
+          }
+
+          if (update)
+          {
+            if (m_pUpdateBufferQueue[bufferPositionMod]->hasSegData2)
+              m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->layout, segData1,
+                                      segData2);
+            else
+              m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->layout, segData1);
+          }
+        }
+
+        if (update)
+        {
+          FrameUtil::Helper::ConvertToRgb24(rgb24Data, renderBuffer, length, palette);
+        }
+      }
+
+      if (update && scaleToTarget(rgb24Data, width, height, scaledBuffer))
+      {
+        ApplyRoundedCornersRGB24(scaledBuffer, targetWidth, targetHeight, roundedCorners);
+        m_pPinDMD3->UpdateRGB24(scaledBuffer);
+      }
+    }
+  }
+}
 
 void DMD::PixelcadeDMDThread()
 {
