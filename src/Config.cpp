@@ -37,6 +37,7 @@ Config::Config()
   m_excludeColorizedFramesForRGB24DMD = false;
   m_excludeColorizedFramesForPIN2DMD = false;
   m_excludeColorizedFramesForPixelcade = false;
+  m_excludeColorizedFramesForPinDMD3 = false;
   m_dumpNotColorizedFrames = false;
   m_dumpFrames = false;
   m_dumpZip = false;
@@ -56,6 +57,8 @@ Config::Config()
   m_pixelcade = true;
   m_pixelcadeDevice.clear();
   m_PIN2DMD = true;
+  m_pinDMD3 = true;
+  m_pinDMD3Device.clear();
   m_dmdServer = false;
   m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;
@@ -272,6 +275,25 @@ void Config::parseConfigFile(const char* path)
     SetPIN2DMD(true);
   }
 
+  // PinDMD3
+  try
+  {
+    SetPinDMD3(r.Get<bool>("PinDMD3", "Enabled", true));
+  }
+  catch (const std::exception&)
+  {
+    SetPinDMD3(true);
+  }
+
+  try
+  {
+    SetPinDMD3Device(r.Get<std::string>("PinDMD3", "Device", "").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetPinDMD3Device("");
+  }
+
   // Serum
   try
   {
@@ -334,6 +356,15 @@ void Config::parseConfigFile(const char* path)
   catch (const std::exception&)
   {
     SetExcludeColorizedFramesForPixelcade(false);
+  }
+
+  try
+  {
+    SetExcludeColorizedFramesForPinDMD3(r.Get<bool>("Serum", "ExcludePinDMD3", false));
+  }
+  catch (const std::exception&)
+  {
+    SetExcludeColorizedFramesForPinDMD3(false);
   }
 
   // VNI

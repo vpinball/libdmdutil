@@ -3,7 +3,7 @@
 Thank you for your interest in contributing to **libdmdutil** — the open-source, cross-platform library for
 performing DMD tasks, used by [PPUC](https://github.com/PPUC/ppuc), [Visual Pinball](https://github.com/vpinball/vpinball),
 and [Batocera](https://batocera.org) to drive displays such as
-[ZeDMD](https://github.com/PPUC/zedmd), [Pixelcade](https://pixelcade.org), and [PIN2DMD](https://pin2dmd.com).
+[ZeDMD](https://github.com/PPUC/zedmd), [Pixelcade](https://pixelcade.org), [PIN2DMD](https://pin2dmd.com), and [PinDMD3](http://pindmd.com).
 This document contains rules and guidelines relevant for contributing to any area of the project.
 
 ---

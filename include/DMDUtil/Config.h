@@ -78,6 +78,11 @@ class DMDUTILAPI Config
   {
     m_excludeColorizedFramesForPixelcade = excludeColorizedFramesForPixelcade;
   }
+  bool IsExcludeColorizedFramesForPinDMD3() const { return m_excludeColorizedFramesForPinDMD3; }
+  void SetExcludeColorizedFramesForPinDMD3(bool excludeColorizedFramesForPinDMD3)
+  {
+    m_excludeColorizedFramesForPinDMD3 = excludeColorizedFramesForPinDMD3;
+  }
   bool IsDumpNotColorizedFrames() const { return m_dumpNotColorizedFrames; }
   void SetDumpNotColorizedFrames(bool dumpNotColorizedFrames) { m_dumpNotColorizedFrames = dumpNotColorizedFrames; }
   bool IsDumpFrames() const { return m_dumpFrames; }
@@ -121,6 +126,10 @@ class DMDUTILAPI Config
   const char* GetPixelcadeDevice() const { return m_pixelcadeDevice.c_str(); }
   bool IsPIN2DMD() const { return m_PIN2DMD; }
   void SetPIN2DMD(bool PIN2DMD) { m_PIN2DMD = PIN2DMD; }
+  bool IsPinDMD3() const { return m_pinDMD3; }
+  void SetPinDMD3(bool pinDMD3) { m_pinDMD3 = pinDMD3; }
+  void SetPinDMD3Device(const char* port) { m_pinDMD3Device = port; }
+  const char* GetPinDMD3Device() const { return m_pinDMD3Device.c_str(); }
   void SetDMDServer(bool dmdServer)
   {
     m_dmdServer = dmdServer;
@@ -165,6 +174,7 @@ class DMDUTILAPI Config
   bool m_excludeColorizedFramesForRGB24DMD;
   bool m_excludeColorizedFramesForPIN2DMD;
   bool m_excludeColorizedFramesForPixelcade;
+  bool m_excludeColorizedFramesForPinDMD3;
   bool m_dumpNotColorizedFrames;
   bool m_dumpFrames;
   std::string m_dumpPath;
@@ -189,6 +199,8 @@ class DMDUTILAPI Config
   bool m_pixelcade;
   std::string m_pixelcadeDevice;
   bool m_PIN2DMD;
+  bool m_pinDMD3;
+  std::string m_pinDMD3Device;
   DMDUtil_LogLevel m_logLevel;
   DMDUtil_LogCallback m_logCallback;
   DMDUtil_PUPTriggerCallbackContext m_pupTriggerCallbackContext;

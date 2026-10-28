@@ -67,6 +67,7 @@ enum class AlphaNumericLayout
 class AlphaNumeric;
 class Serum;
 class PixelcadeDMD;
+class PinDMD3;
 class LevelDMD;
 class RGB24DMD;
 class ConsoleDMD;
@@ -348,6 +349,9 @@ class DMDUTILAPI DMD
   void PixelcadeDMDThread();
   PixelcadeDMD* m_pPixelcadeDMD;
   std::thread* m_pPixelcadeDMDThread;
+  void PinDMD3Thread();
+  PinDMD3* m_pPinDMD3;
+  std::thread* m_pPinDMD3Thread;
 #endif
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \

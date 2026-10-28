@@ -116,6 +116,7 @@ if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL
    list(APPEND DMDUTIL_SOURCES
       src/PixelcadeDMD.cpp
       src/PIN2DMD.cpp
+      src/PinDMD3.cpp
    )
 endif()
 
