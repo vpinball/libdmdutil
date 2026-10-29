@@ -68,6 +68,7 @@ class AlphaNumeric;
 class Serum;
 class PixelcadeDMD;
 class PinDMD3;
+class DMDExtStream;
 class LevelDMD;
 class RGB24DMD;
 class ConsoleDMD;
@@ -353,6 +354,10 @@ class DMDUTILAPI DMD
   PinDMD3* m_pPinDMD3;
   std::thread* m_pPinDMD3Thread;
 #endif
+
+  void DMDExtStreamThread();
+  DMDExtStream* m_pDMDExtStream;
+  std::thread* m_pDMDExtStreamThread;
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
                                                                  (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \

@@ -104,6 +104,7 @@ set(DMDUTIL_SOURCES
    src/Logger.cpp
    src/AlphaNumeric.cpp
    src/DMDServer.cpp
+   src/DMDExtStream.cpp
    ${MINIZ_SOURCE}
 )
 

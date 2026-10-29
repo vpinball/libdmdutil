@@ -2,7 +2,7 @@
 
 A cross platform library for performing DMD tasks.
 
-This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/PPUC/libserum), outputing to [ZeDMD](https://github.com/PPUC/zedmd), [Pixelcade](https://pixelcade.org), [PIN2DMD](https://pin2dmd.com/) and [PinDMD3](http://pindmd.com/) devices, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
+This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/PPUC/libserum), outputing to [ZeDMD](https://github.com/PPUC/zedmd), [Pixelcade](https://pixelcade.org), [PIN2DMD](https://pin2dmd.com/) and [PinDMD3](http://pindmd.com/) devices, streaming frames to a [dmd-extensions](https://github.com/freezy/dmd-extensions) WebSocket server, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
 
 ## Usage:
 
@@ -221,6 +221,16 @@ Enabled = 0
 #Disable auto - detection and provide a fixed serial port
 Device =
 
+[DMDExtStream]
+#Set to 1 to stream frames to a dmd-extensions WebSocket server (dmdext server)
+Enabled = 0
+#WebSocket URL of the dmd-extensions server
+Url = ws://127.0.0.1/dmd
+#Set to 1 to keep retrying the connection if it fails or drops
+Retry = 0
+#Seconds between retry attempts
+RetryInterval = 5
+
 [Serum]
 #Set to 1 to render non - colorized frames on ZeDMD while keeping Serum / VNI for other displays.
 ExcludeZeDMD = 0
@@ -232,6 +242,8 @@ ExcludePIN2DMD = 0
 ExcludePixelcade = 0
 #Set to 1 to render non - colorized frames on PinDMD3 while keeping Serum / VNI for other displays.
 ExcludePinDMD3 = 0
+#Set to 1 to render non - colorized frames on DMDExtStream while keeping Serum / VNI for other displays.
+ExcludeDMDExtStream = 0
 ```
 
 ## Serum PUP Scenes Generator
@@ -282,6 +294,7 @@ When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage
       --exclude-pin2dmd          Exclude PIN2DMD from Serum/VNI colorization (optional)
       --exclude-pixelcade        Exclude Pixelcade from Serum/VNI colorization (optional)
       --exclude-pindmd3          Exclude PinDMD3 from Serum/VNI colorization (optional)
+      --exclude-dmdextstream    Exclude DMDExtStream from Serum/VNI colorization (optional)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
   -j, --dump-json=FILE           Write machine-readable JSON dump; Serum playback records live runtime metadata when captures are available, otherwise it falls back to converting the generated .565.txt dump (auto-enables --dump-565, not with --dump-zip)
