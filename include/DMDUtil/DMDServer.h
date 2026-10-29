@@ -38,7 +38,9 @@ class DMDUTILAPI DMDServer
   std::mutex m_threadMutex;
   uint32_t m_disconnectOtherClients{0};
   std::vector<uint32_t> m_threads;
+  std::vector<std::pair<uint32_t, std::thread>> m_clientThreads;
   std::thread* m_acceptThread{nullptr};
+  void JoinClientThreads(bool all);
 };
 
 }  // namespace DMDUtil

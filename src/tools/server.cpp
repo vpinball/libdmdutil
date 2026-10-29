@@ -121,6 +121,7 @@ int main(int argc, char* argv[])
     else if (identifier == 'v')
     {
       opt_verbose = true;
+      pConfig->SetLogLevel(DMDUtil_LogLevel_DEBUG);
       pConfig->SetLogCallback(LogCallback);
     }
     else if (identifier == 'l')

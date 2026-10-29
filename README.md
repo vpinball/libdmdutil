@@ -15,7 +15,7 @@ void setup()
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
   pConfig->SetZeDMD(true);
   pConfig->SetZeDMDDevice("/dev/cu.usbserial-0001");
-  pConfig->SetPixelcadeDMD(false);
+  pConfig->SetPixelcade(false);
 }
 
 void test()

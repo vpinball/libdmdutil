@@ -8,6 +8,10 @@ option(BUILD_STATIC "Option to build static library" ON)
 option(POST_BUILD_COPY_EXT_LIBS "Option to copy external libraries to build directory" ON)
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan for Debug builds" OFF)
 option(ENABLE_VNI "Enable VNI colorization support" ON)
+option(ENABLE_PIXELCADE "Enable Pixelcade support" ON)
+option(ENABLE_PIN2DMD "Enable PIN2DMD support" ON)
+option(ENABLE_PINDMD3 "Enable PinDMD3 support" ON)
+option(ENABLE_DMDEXTSTREAM "Enable streaming to a dmd-extensions server" ON)
 
 message(STATUS "PLATFORM: ${PLATFORM}")
 message(STATUS "ARCH: ${ARCH}")
@@ -17,6 +21,10 @@ message(STATUS "BUILD_STATIC: ${BUILD_STATIC}")
 message(STATUS "POST_BUILD_COPY_EXT_LIBS: ${POST_BUILD_COPY_EXT_LIBS}")
 message(STATUS "ENABLE_SANITIZERS: ${ENABLE_SANITIZERS}")
 message(STATUS "ENABLE_VNI: ${ENABLE_VNI}")
+message(STATUS "ENABLE_PIXELCADE: ${ENABLE_PIXELCADE}")
+message(STATUS "ENABLE_PIN2DMD: ${ENABLE_PIN2DMD}")
+message(STATUS "ENABLE_PINDMD3: ${ENABLE_PINDMD3}")
+message(STATUS "ENABLE_DMDEXTSTREAM: ${ENABLE_DMDEXTSTREAM}")
 
 if(PLATFORM STREQUAL "ios" OR PLATFORM STREQUAL "ios-simulator")
    set(CMAKE_SYSTEM_NAME iOS)
@@ -104,7 +112,6 @@ set(DMDUTIL_SOURCES
    src/Logger.cpp
    src/AlphaNumeric.cpp
    src/DMDServer.cpp
-   src/DMDExtStream.cpp
    ${MINIZ_SOURCE}
 )
 
@@ -112,13 +119,24 @@ set(DMDUTIL_COMPILE_DEFINITIONS "")
 if(ENABLE_VNI)
    list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_VNI)
 endif()
+if(ENABLE_DMDEXTSTREAM)
+   list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_DMDEXTSTREAM)
+   list(APPEND DMDUTIL_SOURCES src/DMDExtStream.cpp)
+endif()
 
 if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
-   list(APPEND DMDUTIL_SOURCES
-      src/PixelcadeDMD.cpp
-      src/PIN2DMD.cpp
-      src/PinDMD3.cpp
-   )
+   if(ENABLE_PIXELCADE)
+      list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_PIXELCADE)
+      list(APPEND DMDUTIL_SOURCES src/PixelcadeDMD.cpp)
+   endif()
+   if(ENABLE_PIN2DMD)
+      list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_PIN2DMD)
+      list(APPEND DMDUTIL_SOURCES src/PIN2DMD.cpp)
+   endif()
+   if(ENABLE_PINDMD3)
+      list(APPEND DMDUTIL_COMPILE_DEFINITIONS DMDUTIL_ENABLE_PINDMD3)
+      list(APPEND DMDUTIL_SOURCES src/PinDMD3.cpp)
+   endif()
 endif()
 
 set(DMDUTIL_INCLUDE_DIRS
@@ -221,39 +239,45 @@ if(BUILD_SHARED)
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdserver
-         src/server.cpp
+         src/tools/server.cpp
          src/Logger.cpp
       )
       target_link_libraries(dmdserver PUBLIC dmdutil_shared)
 
       add_executable(dmdserver_test
-         src/testDmdServer.cpp
+         src/tools/testDmdServer.cpp
       )
       target_link_libraries(dmdserver_test PUBLIC dmdutil_shared)
 
       add_executable(dmdutil_test
-         src/test.cpp
+         src/tools/test.cpp
       )
       target_link_libraries(dmdutil_test PUBLIC dmdutil_shared)
 
+      add_executable(dmdutil_unit_test
+         src/tools/unitTest.cpp
+      )
+      target_link_libraries(dmdutil_unit_test PUBLIC dmdutil_shared)
+
       add_executable(dmdutil-generate-scenes
-         src/generateScenesDump.cpp
+         src/tools/generateScenesDump.cpp
       )
       target_link_libraries(dmdutil-generate-scenes PUBLIC dmdutil_shared)
 
       add_executable(dmdutil-play-dump
-         src/playDump.cpp
+         src/tools/playDump.cpp
+         src/tools/DumpLoader.cpp
          ${MINIZ_SOURCE}
       )
       target_link_libraries(dmdutil-play-dump PUBLIC dmdutil_shared)
 
       add_executable(dmdutil-convert-serum
-         src/convertSerum.cpp
+         src/tools/convertSerum.cpp
       )
       target_link_libraries(dmdutil-convert-serum PUBLIC dmdutil_shared)
 
       add_executable(dmdutil-compare-dumps
-         src/compareJsonDumps.cpp
+         src/tools/compareJsonDumps.cpp
       )
       target_link_libraries(dmdutil-compare-dumps PUBLIC dmdutil_shared)
 
@@ -261,6 +285,7 @@ if(BUILD_SHARED)
          add_dependencies(dmdserver copy_ext_libs)
          add_dependencies(dmdserver_test copy_ext_libs)
          add_dependencies(dmdutil_test copy_ext_libs)
+         add_dependencies(dmdutil_unit_test copy_ext_libs)
          add_dependencies(dmdutil-generate-scenes copy_ext_libs)
          add_dependencies(dmdutil-play-dump copy_ext_libs)
          add_dependencies(dmdutil-convert-serum copy_ext_libs)
@@ -295,7 +320,7 @@ if(BUILD_STATIC)
 
    if(PLATFORM STREQUAL "win" OR PLATFORM STREQUAL "win-mingw" OR PLATFORM STREQUAL "macos" OR PLATFORM STREQUAL "linux")
       add_executable(dmdutil_test_s
-         src/test.cpp
+         src/tools/test.cpp
       )
 
       if(PLATFORM STREQUAL "win")
