@@ -38,6 +38,7 @@ Config::Config()
   m_excludeColorizedFramesForPIN2DMD = false;
   m_excludeColorizedFramesForPixelcade = false;
   m_excludeColorizedFramesForPinDMD3 = false;
+  m_excludeColorizedFramesForDMDExtStream = false;
   m_dumpNotColorizedFrames = false;
   m_dumpFrames = false;
   m_dumpZip = false;
@@ -59,6 +60,10 @@ Config::Config()
   m_PIN2DMD = true;
   m_pinDMD3 = true;
   m_pinDMD3Device.clear();
+  m_dmdExtStream = false;
+  m_dmdExtStreamUrl = "ws://127.0.0.1/dmd";
+  m_dmdExtStreamRetry = false;
+  m_dmdExtStreamRetryInterval = 5;
   m_dmdServer = false;
   m_dmdServerAddr = "localhost";
   m_dmdServerPort = 6789;
@@ -294,6 +299,43 @@ void Config::parseConfigFile(const char* path)
     SetPinDMD3Device("");
   }
 
+  // DMDExtStream
+  try
+  {
+    SetDMDExtStream(r.Get<bool>("DMDExtStream", "Enabled", false));
+  }
+  catch (const std::exception&)
+  {
+    SetDMDExtStream(false);
+  }
+
+  try
+  {
+    SetDMDExtStreamUrl(r.Get<std::string>("DMDExtStream", "Url", "ws://127.0.0.1/dmd").c_str());
+  }
+  catch (const std::exception&)
+  {
+    SetDMDExtStreamUrl("ws://127.0.0.1/dmd");
+  }
+
+  try
+  {
+    SetDMDExtStreamRetry(r.Get<bool>("DMDExtStream", "Retry", false));
+  }
+  catch (const std::exception&)
+  {
+    SetDMDExtStreamRetry(false);
+  }
+
+  try
+  {
+    SetDMDExtStreamRetryInterval(r.Get<int>("DMDExtStream", "RetryInterval", 5));
+  }
+  catch (const std::exception&)
+  {
+    SetDMDExtStreamRetryInterval(5);
+  }
+
   // Serum
   try
   {
@@ -365,6 +407,15 @@ void Config::parseConfigFile(const char* path)
   catch (const std::exception&)
   {
     SetExcludeColorizedFramesForPinDMD3(false);
+  }
+
+  try
+  {
+    SetExcludeColorizedFramesForDMDExtStream(r.Get<bool>("Serum", "ExcludeDMDExtStream", false));
+  }
+  catch (const std::exception&)
+  {
+    SetExcludeColorizedFramesForDMDExtStream(false);
   }
 
   // VNI

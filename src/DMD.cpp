@@ -41,6 +41,7 @@
 #include <unordered_set>
 
 #include "AlphaNumeric.h"
+#include "DMDExtStream.h"
 #include "FrameUtil.h"
 #include "DMDUtil/Logger.h"
 #include "OutputFilters.h"
@@ -316,6 +317,9 @@ DMD::DMD()
   m_pPinDMD3Thread = nullptr;
 #endif
 
+  m_pDMDExtStream = nullptr;
+  m_pDMDExtStreamThread = nullptr;
+
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
                                                                  (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
                                          defined(__ANDROID__))
@@ -472,6 +476,13 @@ DMD::~DMD()
   }
 #endif
 
+  if (m_pDMDExtStreamThread)
+  {
+    m_pDMDExtStreamThread->join();
+    delete m_pDMDExtStreamThread;
+    m_pDMDExtStreamThread = nullptr;
+  }
+
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
                                                                  (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
                                          defined(__ANDROID__))
@@ -491,6 +502,7 @@ DMD::~DMD()
   if (m_pPixelcadeDMD) delete m_pPixelcadeDMD;
   if (m_pPinDMD3) delete m_pPinDMD3;
 #endif
+  delete m_pDMDExtStream;
 
   for (LevelDMD* pLevelDMD : m_levelDMDs) delete pLevelDMD;
   for (RGB24DMD* pRGB24DMD : m_rgb24DMDs) delete pRGB24DMD;
@@ -544,6 +556,8 @@ bool DMD::HasDisplay() const
   if (m_pPixelcadeDMD != nullptr) return true;
   if (m_pPinDMD3 != nullptr) return true;
 #endif
+
+  if (m_pDMDExtStream != nullptr) return true;
 
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
                                                                  (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
@@ -1148,6 +1162,15 @@ void DMD::FindDisplays()
           }
 #endif
 
+          m_pDMDExtStream = nullptr;
+
+          if (pConfig->IsDMDExtStream())
+          {
+            m_pDMDExtStream = DMDExtStream::Create(pConfig->GetDMDExtStreamUrl(), pConfig->IsDMDExtStreamRetry(),
+                                                     pConfig->GetDMDExtStreamRetryInterval());
+            if (m_pDMDExtStream) m_pDMDExtStreamThread = new std::thread(&DMD::DMDExtStreamThread, this);
+          }
+
 #if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
                                                                  (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
                                          defined(__ANDROID__))
@@ -1590,7 +1613,7 @@ void DMD::SerumThread()
 
             if (m_altColorPath[0] == '\0') strcpy(m_altColorPath, Config::GetInstance()->GetAltColorPath());
             flags = 0;
-            const bool zedmdOnly = m_pZeDMD && m_rgb24DMDs.empty() && m_levelDMDs.empty()
+            const bool zedmdOnly = m_pZeDMD && m_rgb24DMDs.empty() && m_levelDMDs.empty() && !m_pDMDExtStream
 #if !(                                                                                                                \
     (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
     defined(__ANDROID__))
@@ -1659,6 +1682,8 @@ void DMD::SerumThread()
                 flags |= FLAG_REQUEST_32P_FRAMES;
             }
 #endif
+
+            if (m_pDMDExtStream) flags |= FLAG_REQUEST_32P_FRAMES;
 
             if (!flags) flags |= FLAG_REQUEST_32P_FRAMES;
             flags |= FLAG_REQUEST_FALLBACK;
@@ -2720,6 +2745,254 @@ void DMD::PixelcadeDMDThread()
   }
 }
 #endif
+
+void DMD::DMDExtStreamThread()
+{
+  uint16_t bufferPosition = 0;
+  uint16_t segData1[128] = {0};
+  uint16_t segData2[128] = {0};
+  uint8_t palette[256 * 3] = {0};
+  uint8_t palette16[16 * 3] = {0};
+  uint8_t renderBuffer[256 * 64] = {0};
+
+  const int targetWidth = m_pDMDExtStream->GetWidth();
+  const int targetHeight = m_pDMDExtStream->GetHeight();
+  const int targetLength = targetWidth * targetHeight;
+  const int maxSourceLength = 256 * 64;
+  uint8_t* rgb24Data = new uint8_t[maxSourceLength * 3];
+  uint8_t* scaledBuffer = new uint8_t[targetLength * 3];
+  uint8_t* scaledIndexed = new uint8_t[targetLength];
+
+  memset(rgb24Data, 0, maxSourceLength * 3);
+  memset(scaledBuffer, 0, targetLength * 3);
+  memset(scaledIndexed, 0, targetLength);
+
+  (void)m_stopFlag.load(std::memory_order_acquire);
+
+  Config* const pConfig = Config::GetInstance();
+  bool showNotColorizedFrames = pConfig->IsShowNotColorizedFrames();
+  bool excludeColorizedFrames = pConfig->IsExcludeColorizedFramesForDMDExtStream();
+  const int roundedCorners = pConfig->GetRoundedCorners();
+
+  enum class FrameKind
+  {
+    None,
+    Gray,
+    Colored,
+    Rgb
+  };
+
+  auto scaleToTarget = [&](const uint8_t* src, uint16_t width, uint16_t height, uint8_t* dst) -> bool
+  {
+    if (width == targetWidth && height == targetHeight)
+    {
+      memcpy(dst, src, targetLength * 3);
+      return true;
+    }
+
+    if (width == targetWidth && height == 16)
+    {
+      FrameUtil::Helper::Center(dst, targetWidth, targetHeight, src, targetWidth, 16, 24);
+      return true;
+    }
+
+    if (height == 64)
+    {
+      FrameUtil::Helper::ScaleDown(dst, targetWidth, targetHeight, src, width, 64, 24);
+      return true;
+    }
+
+    return false;
+  };
+
+  auto scaleIndexedToTarget = [&](const uint8_t* src, uint16_t width, uint16_t height, uint8_t* dst) -> bool
+  {
+    if (width == targetWidth && height == targetHeight)
+    {
+      memcpy(dst, src, targetLength);
+      return true;
+    }
+
+    if (width == targetWidth && height == 16)
+    {
+      FrameUtil::Helper::CenterIndexed(dst, targetWidth, targetHeight, src, targetWidth, 16);
+      return true;
+    }
+
+    if (height == 64)
+    {
+      FrameUtil::Helper::ScaleDownIndexed(dst, targetWidth, targetHeight, src, width, 64);
+      return true;
+    }
+
+    return false;
+  };
+
+  while (true)
+  {
+    std::shared_lock<std::shared_mutex> sl(m_dmdSharedMutex);
+    auto hasWork = [&]()
+    {
+      return m_stopFlag.load(std::memory_order_relaxed) ||
+             (m_updateBufferQueuePosition.load(std::memory_order_relaxed) != bufferPosition);
+    };
+    if (m_pDMDExtStream->IsRetryEnabled())
+      m_dmdCV.wait_for(sl, std::chrono::seconds(1), hasWork);
+    else
+      m_dmdCV.wait(sl, hasWork);
+    sl.unlock();
+    if (m_stopFlag.load(std::memory_order_acquire))
+    {
+      delete[] rgb24Data;
+      delete[] scaledBuffer;
+      delete[] scaledIndexed;
+      return;
+    }
+
+    if (!m_pDMDExtStream->IsConnected()) m_pDMDExtStream->EnsureConnected();
+
+    const uint16_t updateBufferQueuePosition = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    while (!m_stopFlag.load(std::memory_order_relaxed) && bufferPosition != updateBufferQueuePosition)
+    {
+      bufferPosition = GetNextBufferQueuePosition(bufferPosition, updateBufferQueuePosition);
+      uint8_t bufferPositionMod = bufferPosition % DMDUTIL_FRAME_BUFFER_SIZE;
+
+      const Mode updateMode = m_pUpdateBufferQueue[bufferPositionMod]->mode;
+      if (excludeColorizedFrames)
+      {
+        if (IsSerumMode(updateMode, true)) continue;
+      }
+      else if ((m_pSerum || m_pVni) && !IsSerumMode(updateMode, showNotColorizedFrames))
+      {
+        continue;
+      }
+
+      if (!(m_pUpdateBufferQueue[bufferPositionMod]->hasData || m_pUpdateBufferQueue[bufferPositionMod]->hasSegData))
+        continue;
+
+      if (!m_pDMDExtStream->EnsureConnected()) continue;
+
+      m_pDMDExtStream->SetGameName(m_romName);
+
+      uint16_t width = m_pUpdateBufferQueue[bufferPositionMod]->width;
+      uint16_t height = m_pUpdateBufferQueue[bufferPositionMod]->height;
+      int length = (int)width * height;
+      const int depth = m_pUpdateBufferQueue[bufferPositionMod]->depth;
+
+      FrameKind kind = FrameKind::None;
+      bool update = false;
+      if (depth != 24)
+      {
+        update = UpdatePalette(palette, (uint8_t)depth, m_pUpdateBufferQueue[bufferPositionMod]->r,
+                               m_pUpdateBufferQueue[bufferPositionMod]->g, m_pUpdateBufferQueue[bufferPositionMod]->b);
+      }
+
+      if (updateMode == Mode::RGB24)
+      {
+        AdjustRGB24Depth(m_pUpdateBufferQueue[bufferPositionMod]->data, rgb24Data, length, palette, (uint8_t)depth);
+        kind = FrameKind::Rgb;
+      }
+      else if (updateMode == Mode::RGB16 || IsSerumV2Mode(updateMode))
+      {
+        const uint16_t* src = m_pUpdateBufferQueue[bufferPositionMod]->segData;
+        for (int i = 0; i < length; i++)
+        {
+          uint16_t value = src[i];
+          uint8_t r = (uint8_t)((value >> 11) & 0x1F);
+          uint8_t g = (uint8_t)((value >> 5) & 0x3F);
+          uint8_t b = (uint8_t)(value & 0x1F);
+          rgb24Data[i * 3] = (uint8_t)((r << 3) | (r >> 2));
+          rgb24Data[i * 3 + 1] = (uint8_t)((g << 2) | (g >> 4));
+          rgb24Data[i * 3 + 2] = (uint8_t)((b << 3) | (b >> 2));
+        }
+        kind = FrameKind::Rgb;
+      }
+      else if (updateMode == Mode::SerumV1 || updateMode == Mode::Vni)
+      {
+        size_t paletteBytes = PaletteBytesForDepth((uint8_t)depth);
+        if (paletteBytes > 0 && paletteBytes <= sizeof(palette))
+        {
+          memcpy(palette, m_pUpdateBufferQueue[bufferPositionMod]->segData, paletteBytes);
+        }
+        memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
+
+        if (depth == 2 || depth == 4)
+        {
+          kind = FrameKind::Colored;
+        }
+        else
+        {
+          FrameUtil::Helper::ConvertToRgb24(rgb24Data, renderBuffer, length, palette);
+          kind = FrameKind::Rgb;
+        }
+      }
+      else if (((excludeColorizedFrames || !(m_pSerum || m_pVni)) && updateMode == Mode::Data) ||
+               (showNotColorizedFrames && updateMode == Mode::NotColorized))
+      {
+        memcpy(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->data, length);
+        kind = FrameKind::Gray;
+      }
+      else if (updateMode == Mode::AlphaNumeric)
+      {
+        if (memcmp(segData1, m_pUpdateBufferQueue[bufferPositionMod]->segData, sizeof(segData1)) != 0)
+        {
+          memcpy(segData1, m_pUpdateBufferQueue[bufferPositionMod]->segData, sizeof(segData1));
+          update = true;
+        }
+
+        if (m_pUpdateBufferQueue[bufferPositionMod]->hasSegData2 &&
+            memcmp(segData2, m_pUpdateBufferQueue[bufferPositionMod]->segData2, sizeof(segData2)) != 0)
+        {
+          memcpy(segData2, m_pUpdateBufferQueue[bufferPositionMod]->segData2, sizeof(segData2));
+          update = true;
+        }
+
+        if (update)
+        {
+          if (m_pUpdateBufferQueue[bufferPositionMod]->hasSegData2)
+            m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->layout, segData1, segData2);
+          else
+            m_pAlphaNumeric->Render(renderBuffer, m_pUpdateBufferQueue[bufferPositionMod]->layout, segData1);
+          kind = FrameKind::Gray;
+        }
+      }
+
+      if (kind == FrameKind::Gray && depth != 2 && depth != 4)
+      {
+        FrameUtil::Helper::ConvertToRgb24(rgb24Data, renderBuffer, length, palette);
+        kind = FrameKind::Rgb;
+      }
+
+      if (kind == FrameKind::Rgb)
+      {
+        if (scaleToTarget(rgb24Data, width, height, scaledBuffer))
+        {
+          ApplyRoundedCornersRGB24(scaledBuffer, targetWidth, targetHeight, roundedCorners);
+          m_pDMDExtStream->SendRgb24(scaledBuffer);
+        }
+      }
+      else if (kind == FrameKind::Gray)
+      {
+        if (scaleIndexedToTarget(renderBuffer, width, height, scaledIndexed))
+        {
+          m_pDMDExtStream->SendColor(m_pUpdateBufferQueue[bufferPositionMod]->r,
+                                      m_pUpdateBufferQueue[bufferPositionMod]->g,
+                                      m_pUpdateBufferQueue[bufferPositionMod]->b);
+          m_pDMDExtStream->SendGray(scaledIndexed, depth);
+        }
+      }
+      else if (kind == FrameKind::Colored)
+      {
+        if (scaleIndexedToTarget(renderBuffer, width, height, scaledIndexed))
+        {
+          memset(palette16, 0, sizeof(palette16));
+          memcpy(palette16, palette, (size_t)(1 << depth) * 3);
+          m_pDMDExtStream->SendColoredGray4(scaledIndexed, palette16);
+        }
+      }
+    }
+  }
+}
 
 void DMD::LevelDMDThread()
 {

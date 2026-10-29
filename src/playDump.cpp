@@ -2029,6 +2029,9 @@ static struct cag_option options[] = {
     {.identifier = 'D',
      .access_name = "exclude-pindmd3",
      .description = "Exclude PinDMD3 from Serum/VNI colorization (optional)"},
+    {.identifier = 'N',
+     .access_name = "exclude-dmdextstream",
+     .description = "Exclude DMDExtStream from Serum/VNI colorization (optional)"},
     {.identifier = 'o',
      .access_letters = "o",
      .access_name = "dump-path",
@@ -2200,6 +2203,9 @@ int main(int argc, char* argv[])
         break;
       case 'D':
         DMDUtil::Config::GetInstance()->SetExcludeColorizedFramesForPinDMD3(true);
+        break;
+      case 'N':
+        DMDUtil::Config::GetInstance()->SetExcludeColorizedFramesForDMDExtStream(true);
         break;
       case 'r':
         opt_rom = cag_option_get_value(&cag_context);
