@@ -128,6 +128,22 @@ std::string Base64(const uint8_t* pData, size_t length)
   return out;
 }
 
+void MaskPayload(uint8_t* pDst, const uint8_t* pSrc, const uint8_t* pMask, size_t length)
+{
+  uint32_t mask;
+  memcpy(&mask, pMask, sizeof(mask));
+
+  size_t i = 0;
+  for (; i + sizeof(mask) <= length; i += sizeof(mask))
+  {
+    uint32_t word;
+    memcpy(&word, pSrc + i, sizeof(word));
+    word ^= mask;
+    memcpy(pDst + i, &word, sizeof(word));
+  }
+  for (; i < length; i++) pDst[i] = pSrc[i] ^ pMask[i & 3];
+}
+
 std::string ToLower(std::string s)
 {
   std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)tolower(c); });
@@ -504,7 +520,7 @@ void DMDExtStream::ReaderThread()
 
     if (masked)
     {
-      for (size_t i = 0; i < payload.size(); i++) payload[i] ^= mask[i % 4];
+      MaskPayload(payload.data(), payload.data(), mask, payload.size());
     }
 
     if (opcode == DMDEXTSTREAM_OPCODE_CLOSE)
@@ -560,7 +576,7 @@ bool DMDExtStream::SendFrame(uint8_t opcode, const uint8_t* pData, size_t length
 
   size_t offset = m_wsFrame.size();
   m_wsFrame.resize(offset + length);
-  for (size_t i = 0; i < length; i++) m_wsFrame[offset + i] = pData[i] ^ mask[i % 4];
+  MaskPayload(m_wsFrame.data() + offset, pData, mask, length);
 
   if (m_pConnector->write_n(m_wsFrame.data(), m_wsFrame.size()) != (ssize_t)m_wsFrame.size())
   {

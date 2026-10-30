@@ -1090,16 +1090,7 @@ bool DMD::ConvertColorUpdateToRgb24(const Update& update, uint8_t* pPalette, uin
 
   if (update.mode == Mode::RGB16 || IsSerumV2Mode(update.mode))
   {
-    for (int i = 0; i < length; i++)
-    {
-      const uint16_t value = update.segData[i];
-      const uint8_t r = (uint8_t)((value >> 11) & 0x1F);
-      const uint8_t g = (uint8_t)((value >> 5) & 0x3F);
-      const uint8_t b = (uint8_t)(value & 0x1F);
-      pRgb24[i * 3] = (uint8_t)((r << 3) | (r >> 2));
-      pRgb24[i * 3 + 1] = (uint8_t)((g << 2) | (g >> 4));
-      pRgb24[i * 3 + 2] = (uint8_t)((b << 3) | (b >> 2));
-    }
+    Rgb565ToRgb888(update.segData, pRgb24, (size_t)length);
     return true;
   }
 
@@ -1680,7 +1671,7 @@ void DMD::DumpDMDColorThread(bool rgb888)
         else
         {
           ConvertColorUpdateToRgb24(update, palette, rgb24Temp.data());
-          Rgb24ToRgb565(rgb24Temp.data(), (uint16_t*)nextFrame, length);
+          Rgb888ToRgb565(rgb24Temp.data(), (uint16_t*)nextFrame, length);
         }
 
         if (!updateFrame && memcmp(frames[1].data(), nextFrame, frameBytes) == 0) return;
