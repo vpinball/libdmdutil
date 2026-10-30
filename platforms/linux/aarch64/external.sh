@@ -5,11 +5,19 @@ set -e
 source ./platforms/config.sh
 
 echo "Building libraries..."
-echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
+if [ "${ENABLE_PIN2DMD}" != "OFF" ]; then
+   echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
+fi
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
-echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
-echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
-echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
+if [ "${ENABLE_SERUM}" != "OFF" ]; then
+   echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
+fi
+if [ "${ENABLE_PUP}" != "OFF" ]; then
+   echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+fi
+if [ "${ENABLE_VNI}" != "OFF" ]; then
+   echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
+fi
 echo ""
 
 NUM_PROCS=$(nproc)
@@ -18,6 +26,7 @@ rm -rf external
 mkdir external
 cd external
 
+if [ "${ENABLE_PIN2DMD}" != "OFF" ]; then
 #
 # build libusb and copy to third-party
 #
@@ -34,6 +43,7 @@ mkdir -p ../../third-party/include/libusb-1.0
 cp libusb/libusb.h ../../third-party/include/libusb-1.0
 cp -a libusb/.libs/libusb-1.0.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
+fi
 
 #
 # build libzedmd and copy to external
@@ -66,6 +76,7 @@ cp -a build/libzedmd.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cp -r test ../../
 cd ..
 
+if [ "${ENABLE_SERUM}" != "OFF" ]; then
 #
 # build libserum and copy to external
 #
@@ -91,7 +102,9 @@ cp src/TimeUtils.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp -a build/libserum.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
+fi
 
+if [ "${ENABLE_PUP}" != "OFF" ]; then
 #
 # build libpupdmd and copy to external
 #
@@ -111,7 +124,9 @@ cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
 cp -a build/libpupdmd.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
+fi
 
+if [ "${ENABLE_VNI}" != "OFF" ]; then
 #
 # build libvni and copy to external
 #
@@ -132,3 +147,4 @@ cmake --build build -- -j${NUM_PROCS}
 cp src/vni.h ../../third-party/include/
 cp -a build/libvni.{so,so.*} ../../third-party/runtime-libs/linux/aarch64/
 cd ..
+fi

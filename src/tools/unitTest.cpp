@@ -77,7 +77,7 @@ void TestConfig()
 #else
   Check(!pConfig->IsDMDExtStream(), "config: DMDExtStream section ignored when compiled out");
 #endif
-#ifdef DMDUTIL_ENABLE_PINDMD3
+#if defined(DMDUTIL_ENABLE_PINDMD3) && (defined(DMDUTIL_ENABLE_SERUM) || defined(DMDUTIL_ENABLE_VNI))
   Check(pConfig->IsExcludeColorizedFramesForPinDMD3(), "config: ExcludePinDMD3");
 #else
   Check(!pConfig->IsExcludeColorizedFramesForPinDMD3(), "config: ExcludePinDMD3 ignored when compiled out");

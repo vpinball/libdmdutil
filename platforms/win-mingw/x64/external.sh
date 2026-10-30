@@ -5,11 +5,19 @@ set -e
 source ./platforms/config.sh
 
 echo "Building libraries..."
-echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
+if [ "${ENABLE_PIN2DMD}" != "OFF" ]; then
+   echo "  LIBUSB_SHA: ${LIBUSB_SHA}"
+fi
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
-echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
-echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
-echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
+if [ "${ENABLE_SERUM}" != "OFF" ]; then
+   echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
+fi
+if [ "${ENABLE_PUP}" != "OFF" ]; then
+   echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+fi
+if [ "${ENABLE_VNI}" != "OFF" ]; then
+   echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
+fi
 echo ""
 
 NUM_PROCS=$(nproc)
@@ -18,6 +26,7 @@ rm -rf external
 mkdir external
 cd external
 
+if [ "${ENABLE_PIN2DMD}" != "OFF" ]; then
 #
 # build libusb and copy to third-party
 #
@@ -41,6 +50,7 @@ cp libusb/libusb.h ../../third-party/include/libusb-1.0
 cp libusb/.libs/libusb64-1.0.dll.a ../../third-party/build-libs/win-mingw/x64/
 cp libusb/.libs/libusb64-1.0.dll ../../third-party/runtime-libs/win-mingw/x64/
 cd ..
+fi
 
 #
 # build libzedmd and copy to external
@@ -76,6 +86,7 @@ cp build/zedmd64.dll ../../third-party/runtime-libs/win-mingw/x64/
 cp -r test ../../
 cd ..
 
+if [ "${ENABLE_SERUM}" != "OFF" ]; then
 #
 # build libserum and copy to external
 #
@@ -102,7 +113,9 @@ cp src/serum-decode.h ../../third-party/include/
 cp build/serum64.dll.a ../../third-party/build-libs/win-mingw/x64/
 cp build/serum64.dll ../../third-party/runtime-libs/win-mingw/x64/
 cd ..
+fi
 
+if [ "${ENABLE_PUP}" != "OFF" ]; then
 #
 # build libpupdmd and copy to external
 #
@@ -123,7 +136,9 @@ cp src/pupdmd.h ../../third-party/include/
 cp build/pupdmd64.dll.a ../../third-party/build-libs/win-mingw/x64/
 cp build/pupdmd64.dll ../../third-party/runtime-libs/win-mingw/x64/
 cd ..
+fi
 
+if [ "${ENABLE_VNI}" != "OFF" ]; then
 #
 # build libvni and copy to external
 #
@@ -145,6 +160,7 @@ cp src/vni.h ../../third-party/include/
 cp build/vni64.dll.a ../../third-party/build-libs/win-mingw/x64/
 cp build/vni64.dll ../../third-party/runtime-libs/win-mingw/x64/
 cd ..
+fi
 
 #
 # copy UCRT64 runtime DLLs

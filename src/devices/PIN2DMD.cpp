@@ -6,12 +6,12 @@
 #include <cstring>
 
 // define PIN2DMD vendor id and product id
-constexpr uint16_t kVid = 0x0314;
-constexpr uint16_t kPid = 0xe457;
+#define PIN2DMD_VID 0x0314
+#define PIN2DMD_PID 0xe457
 
 // endpoints for PIN2DMD communication
-constexpr uint8_t kEpIn = 0x81;
-constexpr uint8_t kEpOut = 0x01;
+#define PIN2DMD_EP_IN 0x81
+#define PIN2DMD_EP_OUT 0x01
 
 static bool g_PIN2DMD = false;
 static bool g_PIN2DMDXL = false;
@@ -43,13 +43,13 @@ int PIN2DMDInit()
   for (i = 0; i < device_count; i++)
   {
     libusb_get_device_descriptor(g_devices[i], &g_descriptor);
-    if (kVid == g_descriptor.idVendor && kPid == g_descriptor.idProduct)
+    if (PIN2DMD_VID == g_descriptor.idVendor && PIN2DMD_PID == g_descriptor.idProduct)
     {
       break;
     }
   }
 
-  if (kVid == g_descriptor.idVendor && kPid == g_descriptor.idProduct)
+  if (PIN2DMD_VID == g_descriptor.idVendor && PIN2DMD_PID == g_descriptor.idProduct)
   {
     ret = libusb_open(g_devices[i], &g_deviceHandle);
     if (ret < 0)
@@ -143,6 +143,6 @@ void PIN2DMDRenderRaw(uint16_t width, uint16_t height, uint8_t* buffer, uint32_t
     g_outputBuffer[3] = chunksOf512Bytes;  // number of 512 byte chunks
     memcpy(&g_outputBuffer[4], buffer, bufferSizeInBytes);
 
-    libusb_bulk_transfer(g_deviceHandle, kEpOut, g_outputBuffer, bufferSizeInBytes + 4, nullptr, 1000);
+    libusb_bulk_transfer(g_deviceHandle, PIN2DMD_EP_OUT, g_outputBuffer, bufferSizeInBytes + 4, nullptr, 1000);
   }
 }

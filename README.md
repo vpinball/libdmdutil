@@ -340,6 +340,31 @@ Options:
 
 ## Building:
 
+#### Build options
+
+Every optional component has a CMake switch, all of them on by default:
+
+| Switch | Component | Third-party library |
+|---|---|---|
+| `ENABLE_SERUM` | Serum colorization | libserum |
+| `ENABLE_VNI` | VNI colorization | libvni |
+| `ENABLE_PUP` | PUP DMD triggers | libpupdmd |
+| `ENABLE_PIN2DMD` | PIN2DMD output | libusb |
+| `ENABLE_PINDMD3` | PinDMD3 output | |
+| `ENABLE_PIXELCADE` | Pixelcade output | |
+| `ENABLE_DMDEXTSTREAM` | streaming to a dmd-extensions server | |
+
+A switch that is off removes the component from the build, from the config parser and from the log, and its library is
+not linked. The `external.sh` scripts read the same switches from the environment, like `BUILD_TYPE`, and skip the
+third-party libraries that are off. For example, a hardware-only build without colorization:
+
+```shell
+ENABLE_SERUM=OFF ENABLE_VNI=OFF ENABLE_PUP=OFF platforms/macos/arm64/external.sh
+cmake -DPLATFORM=macos -DARCH=arm64 -DENABLE_SERUM=OFF -DENABLE_VNI=OFF -DENABLE_PUP=OFF -B build
+```
+
+ZeDMD, libserialport (which ZeDMD needs) and sockpp are always linked.
+
 #### Windows x64 (MSVC)
 
 Requires [MSYS2](https://www.msys2.org/) dependencies:
