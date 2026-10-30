@@ -111,13 +111,27 @@ inline bool ScaleFrameToTarget(const uint8_t* pSrc, uint16_t width, uint16_t hei
   return false;
 }
 
-inline void Rgb24ToRgb565(const uint8_t* pRgb24, uint16_t* pRgb565, size_t length)
+inline void Rgb565ToRgb888(const uint16_t* __restrict pRgb565, uint8_t* __restrict pRgb888, size_t length)
 {
   for (size_t i = 0; i < length; i++)
   {
-    const uint32_t r = pRgb24[i * 3];
-    const uint32_t g = pRgb24[i * 3 + 1];
-    const uint32_t b = pRgb24[i * 3 + 2];
+    const uint16_t value = pRgb565[i];
+    const uint8_t r = (uint8_t)((value >> 11) & 0x1F);
+    const uint8_t g = (uint8_t)((value >> 5) & 0x3F);
+    const uint8_t b = (uint8_t)(value & 0x1F);
+    pRgb888[i * 3] = (uint8_t)((r << 3) | (r >> 2));
+    pRgb888[i * 3 + 1] = (uint8_t)((g << 2) | (g >> 4));
+    pRgb888[i * 3 + 2] = (uint8_t)((b << 3) | (b >> 2));
+  }
+}
+
+inline void Rgb888ToRgb565(const uint8_t* __restrict pRgb888, uint16_t* __restrict pRgb565, size_t length)
+{
+  for (size_t i = 0; i < length; i++)
+  {
+    const uint32_t r = pRgb888[i * 3];
+    const uint32_t g = pRgb888[i * 3 + 1];
+    const uint32_t b = pRgb888[i * 3 + 2];
     pRgb565[i] = (uint16_t)(((r & 0xF8u) << 8) | ((g & 0xFCu) << 3) | (b >> 3));
   }
 }

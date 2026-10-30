@@ -154,7 +154,7 @@ void DMD::PixelcadeDMDThread()
                    m_pPixelcadeDMD->UpdateRGB24(scaled.data());
                    return;
                  }
-                 Rgb24ToRgb565(scaled.data(), rgb565.data(), targetLength);
+                 Rgb888ToRgb565(scaled.data(), rgb565.data(), targetLength);
                }
 
                ApplyRoundedCornersRGB565(rgb565.data(), targetWidth, targetHeight, roundedCorners);

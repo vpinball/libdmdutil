@@ -6,6 +6,7 @@
 #include <thread>
 #include <vector>
 
+#include "DMDInternal.h"
 #include "DMDUtil/DMDUtil.h"
 
 namespace
@@ -162,11 +163,33 @@ void TestRendering()
   dmd.DestroyRGB24DMD(pRgb);
 }
 
+void TestConversions()
+{
+  std::vector<uint16_t> all(65536);
+  for (size_t i = 0; i < all.size(); i++) all[i] = (uint16_t)i;
+  std::vector<uint8_t> rgb(all.size() * 3);
+  DMDUtil::Rgb565ToRgb888(all.data(), rgb.data(), all.size());
+
+  bool identical = true;
+  for (size_t i = 0; i < all.size() && identical; i++)
+  {
+    const unsigned r = (all[i] >> 11) & 0x1F, g = (all[i] >> 5) & 0x3F, b = all[i] & 0x1F;
+    identical = rgb[i * 3] == ((r << 3) | (r >> 2)) && rgb[i * 3 + 1] == ((g << 2) | (g >> 4)) &&
+                rgb[i * 3 + 2] == ((b << 3) | (b >> 2));
+  }
+  Check(identical, "RGB565 to RGB888 matches the reference for every value");
+
+  std::vector<uint16_t> back(all.size());
+  DMDUtil::Rgb888ToRgb565(rgb.data(), back.data(), all.size());
+  Check(back == all, "RGB565 survives a round trip through RGB888");
+}
+
 }  // namespace
 
 int main()
 {
   DMDUtil::Config::GetInstance()->SetLogLevel(DMDUtil_LogLevel_ERROR);
+  TestConversions();
   TestConfig();
   TestRendering();
   printf("%s (%d failure%s)\n", g_failures == 0 ? "PASSED" : "FAILED", g_failures, g_failures == 1 ? "" : "s");
