@@ -98,12 +98,18 @@ void Config::parseConfigFile(const char* path)
   // DMDServer
   SetDMDServerAddr(ReadOr<std::string>(r, "DMDServer", "Addr", "localhost").c_str());
   SetDMDServerPort(ReadOr<int>(r, "DMDServer", "Port", 6789));
+#if defined(DMDUTIL_ENABLE_SERUM) || defined(DMDUTIL_ENABLE_VNI)
   SetAltColor(ReadOr<bool>(r, "DMDServer", "AltColor", true));
   SetAltColorPath(ReadOr<std::string>(r, "DMDServer", "AltColorPath", "").c_str());
+#endif
+#ifdef DMDUTIL_ENABLE_PUP
   SetPUPCapture(ReadOr<bool>(r, "DMDServer", "PUPCapture", false));
-  SetSerumPUPTriggers(ReadOr<bool>(r, "DMDServer", "SerumPUPTriggers", false));
   SetPUPVideosPath(ReadOr<std::string>(r, "DMDServer", "PUPVideosPath", "").c_str());
   SetPUPExactColorMatch(ReadOr<bool>(r, "DMDServer", "PUPExactColorMatch", false));
+#endif
+#ifdef DMDUTIL_ENABLE_SERUM
+  SetSerumPUPTriggers(ReadOr<bool>(r, "DMDServer", "SerumPUPTriggers", false));
+#endif
 
   // ZeDMD
   SetZeDMD(ReadOr<bool>(r, "ZeDMD", "Enabled", true));
@@ -145,6 +151,7 @@ void Config::parseConfigFile(const char* path)
   SetDMDExtStreamRetryInterval(ReadOr<int>(r, "DMDExtStream", "RetryInterval", 5));
 #endif
 
+#if defined(DMDUTIL_ENABLE_SERUM) || defined(DMDUTIL_ENABLE_VNI)
   // Serum
   SetIgnoreUnknownFramesTimeout(ReadOr<int>(r, "Serum", "IgnoreUnknownFramesTimeout", 0));
   SetMaximumUnknownFramesToSkip(ReadOr<int>(r, "Serum", "MaximumUnknownFramesToSkip", 0));
@@ -163,9 +170,12 @@ void Config::parseConfigFile(const char* path)
 #ifdef DMDUTIL_ENABLE_DMDEXTSTREAM
   SetExcludeColorizedFramesForDMDExtStream(ReadOr<bool>(r, "Serum", "ExcludeDMDExtStream", false));
 #endif
+#endif
 
+#ifdef DMDUTIL_ENABLE_VNI
   // VNI
   SetVniKey(ReadOr<std::string>(r, "VNI", "Key", "").c_str());
+#endif
 
   // Dump
   SetDumpNotColorizedFrames(ReadOr<bool>(r, "Dump", "DumpNotColorizedFrames", false));

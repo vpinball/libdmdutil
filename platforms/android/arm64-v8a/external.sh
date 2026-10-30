@@ -6,9 +6,15 @@ source ./platforms/config.sh
 
 echo "Building libraries..."
 echo "  LIBZEDMD_SHA: ${LIBZEDMD_SHA}"
-echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
-echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
-echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
+if [ "${ENABLE_SERUM}" != "OFF" ]; then
+   echo "  LIBSERUM_SHA: ${LIBSERUM_SHA}"
+fi
+if [ "${ENABLE_PUP}" != "OFF" ]; then
+   echo "  LIBPUPDMD_SHA: ${LIBPUPDMD_SHA}"
+fi
+if [ "${ENABLE_VNI}" != "OFF" ]; then
+   echo "  LIBVNI_SHA: ${LIBVNI_SHA}"
+fi
 echo ""
 
 if [[ $(uname) == "Linux" ]]; then
@@ -49,6 +55,7 @@ cp build/libzedmd.so ../../third-party/runtime-libs/android/arm64-v8a/
 cp -r test ../../
 cd ..
 
+if [ "${ENABLE_SERUM}" != "OFF" ]; then
 #
 # build libserum and copy to external
 #
@@ -74,7 +81,9 @@ cp src/TimeUtils.h ../../third-party/include/
 cp src/serum-decode.h ../../third-party/include/
 cp build/libserum.so ../../third-party/runtime-libs/android/arm64-v8a/
 cd ..
+fi
 
+if [ "${ENABLE_PUP}" != "OFF" ]; then
 #
 # build libpupdmd and copy to external
 #
@@ -93,7 +102,9 @@ cmake --build build -- -j${NUM_PROCS}
 cp src/pupdmd.h ../../third-party/include/
 cp build/libpupdmd.so ../../third-party/runtime-libs/android/arm64-v8a/
 cd ..
+fi
 
+if [ "${ENABLE_VNI}" != "OFF" ]; then
 #
 # build libvni and copy to external
 #
@@ -114,3 +125,4 @@ cmake --build build -- -j${NUM_PROCS}
 cp src/vni.h ../../third-party/include/
 cp build/libvni.so ../../third-party/runtime-libs/android/arm64-v8a/
 cd ..
+fi

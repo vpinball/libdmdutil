@@ -12,5 +12,21 @@ if [ -z "${BUILD_TYPE}" ]; then
    BUILD_TYPE="Release"
 fi
 
+if [ -z "${ENABLE_SERUM}" ]; then
+   ENABLE_SERUM="ON"
+fi
+
+if [ -z "${ENABLE_VNI}" ]; then
+   ENABLE_VNI="ON"
+fi
+
+if [ -z "${ENABLE_PUP}" ]; then
+   ENABLE_PUP="ON"
+fi
+
+if [ -z "${ENABLE_PIN2DMD}" ]; then
+   ENABLE_PIN2DMD="ON"
+fi
+
 echo "Build type: ${BUILD_TYPE}"
 echo ""

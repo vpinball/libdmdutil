@@ -23,13 +23,13 @@ namespace DMDUtil
 namespace
 {
 
-constexpr uint8_t kOpcodeText = 0x1;
-constexpr uint8_t kOpcodeBinary = 0x2;
-constexpr uint8_t kOpcodeClose = 0x8;
-constexpr uint8_t kOpcodePing = 0x9;
-constexpr uint8_t kOpcodePong = 0xA;
+#define DMDEXTSTREAM_OPCODE_TEXT 0x1
+#define DMDEXTSTREAM_OPCODE_BINARY 0x2
+#define DMDEXTSTREAM_OPCODE_CLOSE 0x8
+#define DMDEXTSTREAM_OPCODE_PING 0x9
+#define DMDEXTSTREAM_OPCODE_PONG 0xA
 
-const char kWebSocketGuid[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+#define DMDEXTSTREAM_WEBSOCKET_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 void Sha1(const uint8_t* pData, size_t length, uint8_t* pDigest)
 {
@@ -104,25 +104,25 @@ void Sha1(const uint8_t* pData, size_t length, uint8_t* pDigest)
 
 std::string Base64(const uint8_t* pData, size_t length)
 {
-  static const char kTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   std::string out;
   size_t i = 0;
   while (i + 2 < length)
   {
     uint32_t v = ((uint32_t)pData[i] << 16) | ((uint32_t)pData[i + 1] << 8) | pData[i + 2];
-    out += kTable[(v >> 18) & 0x3F];
-    out += kTable[(v >> 12) & 0x3F];
-    out += kTable[(v >> 6) & 0x3F];
-    out += kTable[v & 0x3F];
+    out += table[(v >> 18) & 0x3F];
+    out += table[(v >> 12) & 0x3F];
+    out += table[(v >> 6) & 0x3F];
+    out += table[v & 0x3F];
     i += 3;
   }
   if (i < length)
   {
     uint32_t v = (uint32_t)pData[i] << 16;
     if (i + 1 < length) v |= (uint32_t)pData[i + 1] << 8;
-    out += kTable[(v >> 18) & 0x3F];
-    out += kTable[(v >> 12) & 0x3F];
-    out += (i + 1 < length) ? kTable[(v >> 6) & 0x3F] : '=';
+    out += table[(v >> 18) & 0x3F];
+    out += table[(v >> 12) & 0x3F];
+    out += (i + 1 < length) ? table[(v >> 6) & 0x3F] : '=';
     out += '=';
   }
   return out;
@@ -314,7 +314,7 @@ void DMDExtStream::Disconnect()
     if (m_connected.load(std::memory_order_acquire))
     {
       uint8_t reason[2] = {0x03, 0xE8};
-      SendFrame(kOpcodeClose, reason, sizeof(reason));
+      SendFrame(DMDEXTSTREAM_OPCODE_CLOSE, reason, sizeof(reason));
     }
     m_connected.store(false, std::memory_order_release);
     m_pConnector->shutdown();
@@ -427,7 +427,7 @@ bool DMDExtStream::Handshake()
     if (ToLower(Trim(line.substr(0, sep))) == "sec-websocket-accept") accept = Trim(line.substr(sep + 1));
   }
 
-  std::string material = key + kWebSocketGuid;
+  std::string material = key + DMDEXTSTREAM_WEBSOCKET_GUID;
   uint8_t digest[20];
   Sha1((const uint8_t*)material.data(), material.size(), digest);
   std::string expected = Base64(digest, sizeof(digest));
@@ -464,7 +464,7 @@ void DMDExtStream::OnOpen()
     SendCurrentMessage();
   }
 
-  if (!m_lastFrame.empty()) SendFrame(kOpcodeBinary, m_lastFrame.data(), m_lastFrame.size());
+  if (!m_lastFrame.empty()) SendFrame(DMDEXTSTREAM_OPCODE_BINARY, m_lastFrame.data(), m_lastFrame.size());
 }
 
 void DMDExtStream::ReaderThread()
@@ -507,16 +507,16 @@ void DMDExtStream::ReaderThread()
       for (size_t i = 0; i < payload.size(); i++) payload[i] ^= mask[i % 4];
     }
 
-    if (opcode == kOpcodeClose)
+    if (opcode == DMDEXTSTREAM_OPCODE_CLOSE)
     {
       Log(DMDUtil_LogLevel_INFO, "DMDExtStream: WebSocket connection was closed by the server");
       break;
     }
-    else if (opcode == kOpcodePing)
+    else if (opcode == DMDEXTSTREAM_OPCODE_PING)
     {
-      SendFrame(kOpcodePong, payload.data(), payload.size());
+      SendFrame(DMDEXTSTREAM_OPCODE_PONG, payload.data(), payload.size());
     }
-    else if (opcode == kOpcodeText)
+    else if (opcode == DMDEXTSTREAM_OPCODE_TEXT)
     {
       Log(DMDUtil_LogLevel_DEBUG, "DMDExtStream: message from server: %.*s", (int)payload.size(),
           (const char*)payload.data());
@@ -597,7 +597,10 @@ void DMDExtStream::AppendBytes(const uint8_t* pData, size_t length)
   m_message.insert(m_message.end(), pData, pData + length);
 }
 
-bool DMDExtStream::SendCurrentMessage() { return SendFrame(kOpcodeBinary, m_message.data(), m_message.size()); }
+bool DMDExtStream::SendCurrentMessage()
+{
+  return SendFrame(DMDEXTSTREAM_OPCODE_BINARY, m_message.data(), m_message.size());
+}
 
 void DMDExtStream::SetGameName(const char* pGameName)
 {

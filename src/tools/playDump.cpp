@@ -45,8 +45,8 @@ namespace
 {
 std::atomic<bool> g_stopRequested{false};
 volatile sig_atomic_t g_crashHandlerActive = 0;
-constexpr size_t kCrashAltStackSize = 65536;
-uint8_t g_crashAltStack[kCrashAltStackSize];
+constexpr size_t crashAltStackSize = 65536;
+uint8_t g_crashAltStack[crashAltStackSize];
 
 void HandleSigInt(int) { g_stopRequested.store(true, std::memory_order_release); }
 
@@ -525,11 +525,11 @@ static void AppendCoverageWindow(size_t index, size_t frameCount, uint32_t trans
 
 static bool HasInterestingSerumFeature(uint32_t featureFlags)
 {
-  constexpr uint32_t kInterestingMask = SERUM_RUNTIME_FEATURE_BACKGROUND | SERUM_RUNTIME_FEATURE_DYNAMIC |
-                                        SERUM_RUNTIME_FEATURE_DYNAMIC_EXTRA | SERUM_RUNTIME_FEATURE_SPRITES |
-                                        SERUM_RUNTIME_FEATURE_SHAPE_SPRITES | SERUM_RUNTIME_FEATURE_COLOR_ROTATION |
-                                        SERUM_RUNTIME_FEATURE_SCENE;
-  return (featureFlags & kInterestingMask) != 0;
+  constexpr uint32_t interestingMask = SERUM_RUNTIME_FEATURE_BACKGROUND | SERUM_RUNTIME_FEATURE_DYNAMIC |
+                                       SERUM_RUNTIME_FEATURE_DYNAMIC_EXTRA | SERUM_RUNTIME_FEATURE_SPRITES |
+                                       SERUM_RUNTIME_FEATURE_SHAPE_SPRITES | SERUM_RUNTIME_FEATURE_COLOR_ROTATION |
+                                       SERUM_RUNTIME_FEATURE_SCENE;
+  return (featureFlags & interestingMask) != 0;
 }
 
 static void TrimSelectedIndicesEvenly(std::vector<uint32_t>& selectedIndices, uint32_t maxFrames)
@@ -590,8 +590,8 @@ static std::vector<uint32_t> BuildCoverageSelectedIndices(
   bool havePreviousSignature = false;
   bool havePreviousFeatureFlags = false;
   bool usedRuntimeMetadataLocal = false;
-  constexpr uint32_t kPerFeatureMaskBudget = 6;
-  constexpr uint32_t kPerFeatureCrcBudget = 3;
+  constexpr uint32_t perFeatureMaskBudget = 6;
+  constexpr uint32_t perFeatureCrcBudget = 3;
 
   for (size_t i = 0; i < signatures.size() && i < frames.size(); ++i)
   {
@@ -624,7 +624,7 @@ static std::vector<uint32_t> BuildCoverageSelectedIndices(
       if (!selectCurrent && interestingFeature)
       {
         uint32_t& maskBudget = featureMaskSamples[featureFlags];
-        if (maskBudget < kPerFeatureMaskBudget)
+        if (maskBudget < perFeatureMaskBudget)
         {
           ++maskBudget;
           selectCurrent = true;
@@ -634,7 +634,7 @@ static std::vector<uint32_t> BuildCoverageSelectedIndices(
       {
         const uint64_t featureCrcKey = (static_cast<uint64_t>(featureFlags) << 32) | liveFrame.inputCrc32;
         uint32_t& crcBudget = featureCrcSamples[featureCrcKey];
-        if (crcBudget < kPerFeatureCrcBudget)
+        if (crcBudget < perFeatureCrcBudget)
         {
           ++crcBudget;
           selectCurrent = true;
@@ -894,10 +894,10 @@ static std::string FormatDurationMs(uint64_t durationMs)
 
 static bool WaitForDumpersToSettle(DMDUtil::DMD& dmd, std::atomic<bool>& stopRequested)
 {
-  constexpr auto kQuietWindow = std::chrono::milliseconds(5);
-  constexpr auto kMaxSettleWindow = std::chrono::milliseconds(50);
+  constexpr auto quietWindow = std::chrono::milliseconds(5);
+  constexpr auto maxSettleWindow = std::chrono::milliseconds(50);
 
-  const auto settleDeadline = std::chrono::steady_clock::now() + kMaxSettleWindow;
+  const auto settleDeadline = std::chrono::steady_clock::now() + maxSettleWindow;
   bool warnedAboutMovingTarget = false;
 
   while (!stopRequested.load(std::memory_order_acquire))
@@ -917,7 +917,7 @@ static bool WaitForDumpersToSettle(DMDUtil::DMD& dmd, std::atomic<bool>& stopReq
     }
 
     bool stable = true;
-    const auto quietDeadline = std::chrono::steady_clock::now() + kQuietWindow;
+    const auto quietDeadline = std::chrono::steady_clock::now() + quietWindow;
     while (!stopRequested.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < quietDeadline)
     {
       if (dmd.GetUpdateQueuePosition() != target)
