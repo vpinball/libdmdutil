@@ -18,7 +18,11 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <cstdio>
+#include <deque>
+#include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <shared_mutex>
@@ -27,6 +31,12 @@
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
+#endif
+
+#if !(                                                                                                                \
+    (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
+    defined(__ANDROID__))
+#define DMDUTIL_HAS_USB_DEVICES 1
 #endif
 
 class ZeDMD;
@@ -67,6 +77,8 @@ enum class AlphaNumericLayout
 class AlphaNumeric;
 class Serum;
 class PixelcadeDMD;
+class PinDMD3;
+class DMDExtStream;
 class LevelDMD;
 class RGB24DMD;
 class ConsoleDMD;
@@ -200,6 +212,13 @@ class DMDUTILAPI DMD
   void SetAltColorPath(const char* path);
   void SetPUPVideosPath(const char* path);
   void SetPUPTrigger(const char source, const uint16_t id, const uint8_t value = 1);
+  // The speaker lights of a PPUCDMD, for a host whose colorizer is not the one in here. Available without Serum, and
+  // ignored without a light effect channel (ZeDMD-SPI LightEffectDevice). Queued: frames never wait for them.
+  bool HasLightEffectChannel() const;
+  void SetLightEffect(uint8_t channel, uint8_t mode, uint16_t speed, uint8_t options, const uint32_t colors[3],
+                      uint16_t durationMs = 0, bool isDefault = false, uint8_t brightness = 255);
+  // Back to the device's own light setting. 0xff: every channel.
+  void ResetLightEffect(uint8_t channel = 0xff);
   void DumpDMDTxt();
   void DumpDMDRaw();
   void DumpDMDRgb565();
@@ -271,11 +290,25 @@ class DMDUTILAPI DMD
   bool ConnectDMDServer();
   bool GetQueueFrameContext(uint8_t bufferPositionMod, FrameContext& frameContext) const;
   bool UpdatePalette(uint8_t* pPalette, uint8_t depth, uint8_t r, uint8_t g, uint8_t b);
-  void UpdateData(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g, uint8_t b,
-                  Mode mode, bool buffered = false);
-  void UpdateDataWithTimestampInternal(const uint8_t* pData, int depth, uint16_t width, uint16_t height, uint8_t r,
-                                       uint8_t g, uint8_t b, Mode mode, uint32_t timestampMs, bool buffered = false);
-  void AdjustRGB24Depth(uint8_t* pData, uint8_t* pDstData, int length, uint8_t* palette, uint8_t depth);
+  void QueueFrame(Mode mode, const void* pData, int depth, uint16_t width, uint16_t height, uint8_t r, uint8_t g,
+                  uint8_t b, bool buffered, bool hasTimestamp, uint32_t timestampMs, const FrameContext* pFrameContext);
+  void AdjustRGB24Depth(const uint8_t* pData, uint8_t* pDstData, int length, const uint8_t* palette, uint8_t depth);
+  bool ConvertColorUpdateToRgb24(const Update& update, uint8_t* pPalette, uint8_t* pRgb24);
+
+  enum class DecodedKind
+  {
+    None,
+    Indexed,
+    Rgb24
+  };
+  struct OutputDecoder;
+  using OutputHandler = std::function<void(uint8_t slot, uint16_t position, uint16_t skipped)>;
+  void OutputLoop(bool everyFrame, uint32_t idleTimeoutMs, const std::function<void()>& onIdle,
+                  const OutputHandler& onUpdate);
+  bool PrefersSerumFrame(uint16_t targetWidth, Mode mode) const;
+  bool ShouldRenderUpdate(Mode mode, bool excludeColorized, bool showNotColorized, uint16_t targetWidth);
+  DecodedKind DecodeUpdate(const Update& update, OutputDecoder& decoder);
+  FILE* OpenDumpFile(const char* name, const char* extension, std::string& outPath);
   void HandleTrigger(uint16_t id);
   // The speaker light effects of the loaded colorization to the ZeDMD's light effect channel:
   // after a load its defaults (or, without speaker lights, the device's own setting), after a
@@ -298,8 +331,7 @@ class DMDUTILAPI DMD
   void ZeDMDThread();
   void DumpDMDTxtThread();
   void DumpDMDRawThread();
-  void DumpDMDRgb565Thread();
-  void DumpDMDRgb888Thread();
+  void DumpDMDColorThread(bool rgb888);
   bool GetDumpSuffix(const char* romName, char* outSuffix, size_t outSize);
   bool GetQueueTimestamp(uint8_t bufferPositionMod, uint32_t& timestampMs) const;
   void PupDMDThread();
@@ -320,6 +352,16 @@ class DMDUTILAPI DMD
   std::vector<ConsoleDMD*> m_consoleDMDs;
   DMDServerConnector* m_pDMDServerConnector;
   bool m_dmdServerDisconnectOthers = false;
+  struct DMDServerQueueEntry
+  {
+    std::shared_ptr<Update> update;
+    bool buffered;
+  };
+  std::deque<DMDServerQueueEntry> m_dmdServerQueue;
+  std::mutex m_dmdServerQueueMutex;
+  std::condition_variable m_dmdServerQueueCv;
+  std::thread* m_pDMDServerSenderThread;
+  void DMDServerSenderThread();
 
   std::thread* m_pLevelDMDThread;
   std::thread* m_pRGB24DMDThread;
@@ -346,23 +388,21 @@ class DMDUTILAPI DMD
   bool m_hasUpdateBuffered = false;
   static std::atomic<bool> m_finding;
 
-#if !(                                                                                                                \
-    (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
-    defined(__ANDROID__))
   void PixelcadeDMDThread();
   PixelcadeDMD* m_pPixelcadeDMD;
   std::thread* m_pPixelcadeDMDThread;
-#endif
-
-#if defined(DMDUTIL_ENABLE_PIN2DMD) && !((defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || \
-                                                                 (defined(TARGET_OS_TV) && TARGET_OS_TV))) || \
-                                         defined(__ANDROID__))
+  void PinDMD3Thread();
+  PinDMD3* m_pPinDMD3;
+  std::thread* m_pPinDMD3Thread;
+  void DMDExtStreamThread();
+  DMDExtStream* m_pDMDExtStream;
+  std::thread* m_pDMDExtStreamThread;
   void PIN2DMDThread();
   std::thread* m_pPIN2DMDThread;
   bool m_PIN2DMDConnected;
   uint16_t m_PIN2DMDWidth;
   uint16_t m_PIN2DMDHeight;
-#endif
+  std::atomic<bool> m_dmdServerConnectionLost{false};
 };
 
 }  // namespace DMDUtil

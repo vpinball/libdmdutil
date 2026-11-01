@@ -2,7 +2,7 @@
 
 A cross platform library for performing DMD tasks.
 
-This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/PPUC/libserum), outputing to [ZeDMD](https://github.com/PPUC/zedmd), [Pixelcade](https://pixelcade.org)  and [PIN2DMD](https://https://pin2dmd.com/)devices, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
+This library is currently used by [Visual Pinball Standalone](https://github.com/vpinball/vpinball/tree/standalone) for processing [PinMAME](https://github.com/vpinball/pinmame/tree/master/src/libpinmame) and [FlexDMD](https://github.com/vbousquet/flexdmd) DMD frames. It supports colorizing using [Serum](https://github.com/PPUC/libserum), outputing to [ZeDMD](https://github.com/PPUC/zedmd), [Pixelcade](https://pixelcade.org), [PIN2DMD](https://pin2dmd.com/) and [PinDMD3](http://pindmd.com/) devices, streaming frames to a [dmd-extensions](https://github.com/freezy/dmd-extensions) WebSocket server, and providing intensity and RGB24 buffers that can be used to render in table and external DMDs for [Visual Pinball](https://github.com/vpinball/vpinball).
 
 ## Usage:
 
@@ -15,7 +15,7 @@ void setup()
   DMDUtil::Config* pConfig = DMDUtil::Config::GetInstance();
   pConfig->SetZeDMD(true);
   pConfig->SetZeDMDDevice("/dev/cu.usbserial-0001");
-  pConfig->SetPixelcadeDMD(false);
+  pConfig->SetPixelcade(false);
 }
 
 void test()
@@ -217,6 +217,22 @@ Device =
 #Set to 1 if PIN2DMD is attached
 Enabled = 0
 
+[PinDMD3]
+#Set to 1 if PinDMD3 is attached
+Enabled = 0
+#Disable auto - detection and provide a fixed serial port
+Device =
+
+[DMDExtStream]
+#Set to 1 to stream frames to a dmd-extensions WebSocket server (dmdext server)
+Enabled = 0
+#WebSocket URL of the dmd-extensions server
+Url = ws://127.0.0.1/dmd
+#Set to 1 to keep retrying the connection if it fails or drops
+Retry = 0
+#Seconds between retry attempts
+RetryInterval = 5
+
 [Serum]
 #Set to 1 to render non - colorized frames on ZeDMD while keeping Serum / VNI for other displays.
 ExcludeZeDMD = 0
@@ -226,6 +242,10 @@ ExcludeRGB24DMD = 0
 ExcludePIN2DMD = 0
 #Set to 1 to render non - colorized frames on Pixelcade while keeping Serum / VNI for other displays.
 ExcludePixelcade = 0
+#Set to 1 to render non - colorized frames on PinDMD3 while keeping Serum / VNI for other displays.
+ExcludePinDMD3 = 0
+#Set to 1 to render non - colorized frames on DMDExtStream while keeping Serum / VNI for other displays.
+ExcludeDMDExtStream = 0
 ```
 
 ## Serum PUP Scenes Generator
@@ -275,6 +295,8 @@ When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage
       --exclude-rgb24dmd         Exclude RGB24DMD from Serum/VNI colorization (optional)
       --exclude-pin2dmd          Exclude PIN2DMD from Serum/VNI colorization (optional)
       --exclude-pixelcade        Exclude Pixelcade from Serum/VNI colorization (optional)
+      --exclude-pindmd3          Exclude PinDMD3 from Serum/VNI colorization (optional)
+      --exclude-dmdextstream    Exclude DMDExtStream from Serum/VNI colorization (optional)
   -o, --dump-path=PATH           Output path for dumps (optional)
   -r, --rom=NAME                 ROM name for dumps (optional)
   -j, --dump-json=FILE           Write machine-readable JSON dump; Serum playback records live runtime metadata when captures are available, otherwise it falls back to converting the generated .565.txt dump (auto-enables --dump-565, not with --dump-zip)
@@ -319,6 +341,31 @@ Options:
 ```
 
 ## Building:
+
+#### Build options
+
+Every optional component has a CMake switch, all of them on by default:
+
+| Switch | Component | Third-party library |
+|---|---|---|
+| `ENABLE_SERUM` | Serum colorization | libserum |
+| `ENABLE_VNI` | VNI colorization | libvni |
+| `ENABLE_PUP` | PUP DMD triggers | libpupdmd |
+| `ENABLE_PIN2DMD` | PIN2DMD output | libusb |
+| `ENABLE_PINDMD3` | PinDMD3 output | |
+| `ENABLE_PIXELCADE` | Pixelcade output | |
+| `ENABLE_DMDEXTSTREAM` | streaming to a dmd-extensions server | |
+
+A switch that is off removes the component from the build, from the config parser and from the log, and its library is
+not linked. The `external.sh` scripts read the same switches from the environment, like `BUILD_TYPE`, and skip the
+third-party libraries that are off. For example, a hardware-only build without colorization:
+
+```shell
+ENABLE_SERUM=OFF ENABLE_VNI=OFF ENABLE_PUP=OFF platforms/macos/arm64/external.sh
+cmake -DPLATFORM=macos -DARCH=arm64 -DENABLE_SERUM=OFF -DENABLE_VNI=OFF -DENABLE_PUP=OFF -B build
+```
+
+ZeDMD, libserialport (which ZeDMD needs) and sockpp are always linked.
 
 #### Windows x64 (MSVC)
 

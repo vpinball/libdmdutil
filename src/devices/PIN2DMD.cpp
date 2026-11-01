@@ -6,12 +6,12 @@
 #include <cstring>
 
 // define PIN2DMD vendor id and product id
-constexpr uint16_t kVid = 0x0314;
-constexpr uint16_t kPid = 0xe457;
+#define PIN2DMD_VID 0x0314
+#define PIN2DMD_PID 0xe457
 
 // endpoints for PIN2DMD communication
-constexpr uint8_t kEpIn = 0x81;
-constexpr uint8_t kEpOut = 0x01;
+#define PIN2DMD_EP_IN 0x81
+#define PIN2DMD_EP_OUT 0x01
 
 static bool g_PIN2DMD = false;
 static bool g_PIN2DMDXL = false;
@@ -43,13 +43,13 @@ int PIN2DMDInit()
   for (i = 0; i < device_count; i++)
   {
     libusb_get_device_descriptor(g_devices[i], &g_descriptor);
-    if (kVid == g_descriptor.idVendor && kPid == g_descriptor.idProduct)
+    if (PIN2DMD_VID == g_descriptor.idVendor && PIN2DMD_PID == g_descriptor.idProduct)
     {
       break;
     }
   }
 
-  if (kVid == g_descriptor.idVendor && kPid == g_descriptor.idProduct)
+  if (PIN2DMD_VID == g_descriptor.idVendor && PIN2DMD_PID == g_descriptor.idProduct)
   {
     ret = libusb_open(g_devices[i], &g_deviceHandle);
     if (ret < 0)
@@ -110,8 +110,6 @@ int PIN2DMDInit()
   return ret;
 }
 
-bool PIN2DMDIsConnected() { return (g_PIN2DMD || g_PIN2DMDXL || g_PIN2DMDHD); }
-
 uint16_t PIN2DMDGetWidth()
 {
   if (g_PIN2DMDHD) return 256;
@@ -126,37 +124,6 @@ uint16_t PIN2DMDGetHeight()
   if (g_PIN2DMDXL) return 64;
   if (g_PIN2DMD) return 32;
   return 0;
-}
-
-void PIN2DMDRender(uint16_t width, uint16_t height, uint8_t* buffer, int bitDepth)
-{
-  if (!g_deviceHandle) return;
-  if ((width == 256 && height == 64 && g_PIN2DMDHD) || (width == 192 && height == 64 && (g_PIN2DMDXL || g_PIN2DMDHD)) ||
-      (width == 128 && height <= 32 && (g_PIN2DMD || g_PIN2DMDXL || g_PIN2DMDHD)))
-  {
-    int frameSizeInByte = width * height / 8;
-    int chunksOf512Bytes = (frameSizeInByte / 512) * bitDepth;
-
-    g_outputBuffer[0] = 0x81;
-    g_outputBuffer[1] = 0xc3;
-    if (bitDepth == 4 && width == 128 && height == 32)
-    {
-      g_outputBuffer[2] = 0xe7;  // 4 bit header
-      g_outputBuffer[3] = 0x00;
-    }
-    else
-    {
-      g_outputBuffer[2] = 0xe8;              // non 4 bit header
-      g_outputBuffer[3] = chunksOf512Bytes;  // number of 512 byte chunks
-    }
-
-    const int payloadSize = chunksOf512Bytes * 512;
-    if ((payloadSize + 4) > (int)sizeof(g_outputBuffer)) return;
-    memcpy(&g_outputBuffer[4], buffer, payloadSize);
-
-    // The OutputBuffer to be sent consists of a 4 byte header and a number of chunks of 512 bytes.
-    libusb_bulk_transfer(g_deviceHandle, kEpOut, g_outputBuffer, payloadSize + 4, nullptr, 1000);
-  }
 }
 
 void PIN2DMDRenderRaw(uint16_t width, uint16_t height, uint8_t* buffer, uint32_t frames)
@@ -176,6 +143,6 @@ void PIN2DMDRenderRaw(uint16_t width, uint16_t height, uint8_t* buffer, uint32_t
     g_outputBuffer[3] = chunksOf512Bytes;  // number of 512 byte chunks
     memcpy(&g_outputBuffer[4], buffer, bufferSizeInBytes);
 
-    libusb_bulk_transfer(g_deviceHandle, kEpOut, g_outputBuffer, bufferSizeInBytes + 4, nullptr, 1000);
+    libusb_bulk_transfer(g_deviceHandle, PIN2DMD_EP_OUT, g_outputBuffer, bufferSizeInBytes + 4, nullptr, 1000);
   }
 }

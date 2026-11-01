@@ -55,10 +55,37 @@ void DMDServer::Stop()
     m_acceptThread = nullptr;
   }
 
+  JoinClientThreads(true);
+
   std::unique_lock<std::mutex> lock(m_threadMutex);
   m_currentThreadId = 0;
   m_disconnectOtherClients = 0;
   lock.unlock();
+}
+
+void DMDServer::JoinClientThreads(bool all)
+{
+  std::vector<std::thread> finished;
+  {
+    std::lock_guard<std::mutex> lock(m_threadMutex);
+    for (auto it = m_clientThreads.begin(); it != m_clientThreads.end();)
+    {
+      const bool running = std::find(m_threads.begin(), m_threads.end(), it->first) != m_threads.end();
+      if (all || !running)
+      {
+        finished.push_back(std::move(it->second));
+        it = m_clientThreads.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+  }
+  for (std::thread& thread : finished)
+  {
+    if (thread.joinable()) thread.join();
+  }
 }
 
 void DMDServer::AcceptLoop()
@@ -82,53 +109,59 @@ void DMDServer::AcceptLoop()
       continue;
     }
 
-    std::unique_lock<std::mutex> lock(m_threadMutex);
+    JoinClientThreads(false);
+
+    std::lock_guard<std::mutex> lock(m_threadMutex);
     m_currentThreadId = ++threadId;
     m_threads.push_back(m_currentThreadId);
-    lock.unlock();
-
-    std::thread thr(&DMDServer::ClientThread, this, std::move(sock), m_currentThreadId);
-    thr.detach();
+    m_clientThreads.emplace_back(m_currentThreadId,
+                                 std::thread(&DMDServer::ClientThread, this, std::move(sock), m_currentThreadId));
   }
 }
 
 void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
 {
-  // Socket auf non-blocking setzen
   sock.set_non_blocking();
 
   uint8_t buffer[sizeof(DMDUtil::DMD::Update)];
-  DMDUtil::DMD::StreamHeader* pStreamHeader = (DMDUtil::DMD::StreamHeader*)malloc(sizeof(DMDUtil::DMD::StreamHeader));
-  ssize_t n;
+  DMDUtil::DMD::StreamHeader streamHeader;
+  DMDUtil::DMD::StreamHeader* pStreamHeader = &streamHeader;
   bool handleDisconnectOthers = true;
   bool logged = false;
 
+  auto keepRunning = [&]()
+  {
+    return m_running.load(std::memory_order_relaxed) &&
+           (threadId == m_currentThreadId || m_disconnectOtherClients == 0 || m_disconnectOtherClients <= threadId);
+  };
+
+  auto readExact = [&](uint8_t* pDst, size_t length) -> bool
+  {
+    size_t received = 0;
+    while (received < length)
+    {
+      if (!keepRunning()) return false;
+      ssize_t n = sock.read(pDst + received, length - received);
+      if (n > 0)
+        received += (size_t)n;
+      else if (n == 0)
+        return false;
+      else if (sock.last_error() == EWOULDBLOCK)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      else
+        return false;
+    }
+    return true;
+  };
+
   DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: New DMD client %d connected", threadId, threadId);
 
-  while (m_running.load(std::memory_order_relaxed) &&
-         (threadId == m_currentThreadId || m_disconnectOtherClients == 0 || m_disconnectOtherClients <= threadId))
+  while (keepRunning())
   {
-    n = sock.read_n(buffer, sizeof(DMDUtil::DMD::StreamHeader));
+    if (!readExact(buffer, sizeof(DMDUtil::DMD::StreamHeader))) break;
 
-    if (n < 0)
     {
-      if (sock.last_error() == EWOULDBLOCK)
-      {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        continue;
-      }
-
-      // network error or connection closed
-      break;
-    }
-    else if (n == 0)
-    {
-      // connection closed by client
-      break;
-    }
-    else if (n == sizeof(DMDUtil::DMD::StreamHeader))
-    {
-      memcpy(pStreamHeader, buffer, n);
+      memcpy(pStreamHeader, buffer, sizeof(DMDUtil::DMD::StreamHeader));
       pStreamHeader->convertToHostByteOrder();
       if (strcmp(pStreamHeader->header, "DMDStream") == 0 && pStreamHeader->version == 1)
       {
@@ -151,21 +184,20 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
         {
           case DMDUtil::DMD::Mode::Data:
           case DMDUtil::DMD::Mode::SerumCommand:
-            if ((n = sock.read_n(buffer, sizeof(DMDUtil::DMD::PathsHeader))) == sizeof(DMDUtil::DMD::PathsHeader))
+            if (readExact(buffer, sizeof(DMDUtil::DMD::PathsHeader)))
             {
               DMDUtil::DMD::PathsHeader pathsHeader;
-              memcpy(&pathsHeader, buffer, n);
+              memcpy(&pathsHeader, buffer, sizeof(DMDUtil::DMD::PathsHeader));
               pathsHeader.convertToHostByteOrder();
 
-              if (strcmp(pathsHeader.header, "Paths") == 0 &&
-                  (n = sock.read_n(buffer, sizeof(DMDUtil::DMD::Update))) == sizeof(DMDUtil::DMD::Update) &&
+              if (strcmp(pathsHeader.header, "Paths") == 0 && readExact(buffer, sizeof(DMDUtil::DMD::Update)) &&
                   threadId == m_currentThreadId)
               {
                 DMDUtil::Log(DMDUtil_LogLevel_DEBUG,
                              "%d: Received paths header: ROM '%s', AltColorPath '%s', PupPath '%s'", threadId,
                              pathsHeader.name, pathsHeader.altColorPath, pathsHeader.pupVideosPath);
                 auto data = std::make_shared<DMDUtil::DMD::Update>();
-                memcpy(data.get(), buffer, n);
+                memcpy(data.get(), buffer, sizeof(DMDUtil::DMD::Update));
                 data->convertToHostByteOrder();
                 logged = false;
 
@@ -199,7 +231,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
             break;
 
           case DMDUtil::DMD::Mode::RGB16:
-            if ((n = sock.read_n(buffer, pStreamHeader->length)) == pStreamHeader->length &&
+            if (pStreamHeader->length <= sizeof(buffer) && readExact(buffer, pStreamHeader->length) &&
                 threadId == m_currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
                 pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
@@ -228,7 +260,7 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
             break;
 
           case DMDUtil::DMD::Mode::RGB24:
-            if ((n = sock.read_n(buffer, pStreamHeader->length)) == pStreamHeader->length &&
+            if (pStreamHeader->length <= sizeof(buffer) && readExact(buffer, pStreamHeader->length) &&
                 threadId == m_currentThreadId && pStreamHeader->width <= DMDSERVER_MAX_WIDTH &&
                 pStreamHeader->height <= DMDSERVER_MAX_HEIGHT)
             {
@@ -303,8 +335,6 @@ void DMDServer::ClientThread(sockpp::tcp_socket sock, uint32_t threadId)
   m_threadMutex.unlock();
 
   DMDUtil::Log(DMDUtil_LogLevel_INFO, "%d: DMD client %d disconnected", threadId, threadId);
-
-  free(pStreamHeader);
 }
 
 }  // namespace DMDUtil
