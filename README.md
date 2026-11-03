@@ -462,3 +462,5 @@ cmake --build build
 SPI light effects require the matching RP2350 firmware and libzedmd with the
 version-1 fixed 192-byte trailer. Serum images and trailer entries are published
 together; slower non-SPI display paths retain their frame-skipping behavior.
+When none of a step's images is for the SPI display, or a step only changes
+lights, the trailer goes out with the last picture.

@@ -28,6 +28,7 @@
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -318,6 +319,8 @@ class DMDUTILAPI DMD
   uint8_t m_serumLightPacket[192] = {};
   void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true, bool hasTimestamp = false,
                         uint32_t timestampMs = 0, std::shared_ptr<Update>* primaryOutput = nullptr);
+  // Queues the images of one Serum step, followed by the SPI trailer, in one critical section.
+  void PublishSerumUpdates(std::vector<std::shared_ptr<Update>>& batch, bool hasTimestamp, uint32_t timestampMs);
   void RecordSerumColorizeCapture(const FrameContext& frameContext, const std::shared_ptr<Update>& primaryOutput,
                                   bool hasTimestamp, uint32_t outputTimestampMs, bool isRotation, uint32_t serumResult,
                                   uint32_t serumVersion, uint32_t serumFrameId, uint32_t serumTriggerId,

@@ -25,7 +25,9 @@ void DMD::ZeDMDThread()
   uint16_t height = 0;
   std::vector<uint16_t> rgb565(DMDUTIL_MAX_FRAME_PIXELS);
 
-  std::shared_ptr<Update> pending;
+  // The Serum image this display renders, held until the trailer that follows the images of one step.
+  auto pending = std::make_unique<Update>();
+  bool hasPending = false;
   OutputLoop(m_pZeDMD->IsSpi(), 0, nullptr,
              [&](uint8_t slot, uint16_t position, uint16_t skipped)
              {
@@ -36,20 +38,32 @@ void DMD::ZeDMDThread()
                ZeDMDLightPacket effects;
                if (m_pZeDMD->IsSpi() && source->mode == Mode::LightEffects)
                {
-                 if (!pending) return;
                  memcpy(effects.bytes, source->data, sizeof(effects.bytes));
+                 if (!hasPending)
+                 {
+                   // None of this step's images is for this display (another resolution, or a step that only
+                   // changes lights): the last picture carries the changes.
+                   m_pZeDMD->SendLightEffects(effects);
+                   return;
+                 }
                  source = pending.get();
+                 hasPending = false;
                }
                else if (m_pZeDMD->IsSpi() && (source->mode == Mode::SerumV1 || IsSerumV2Mode(source->mode)) &&
                         ShouldRenderUpdate(source->mode, decoder->excludeColorized, decoder->showNotColorized,
                                            decoder->targetWidth))
                {
                  // Select the appropriate resolution before waiting for the shared trailer.
-                 pending = std::make_shared<Update>(*source);
+                 memcpy(pending.get(), source, sizeof(Update));
+                 hasPending = true;
                  return;
                }
                const Update& update = *source;
-               if (DecodeUpdate(update, *decoder) == DecodedKind::None) return;
+               if (DecodeUpdate(update, *decoder) == DecodedKind::None)
+               {
+                 if (!effects.Empty()) m_pZeDMD->SendLightEffects(effects);
+                 return;
+               }
 
                if (decoder->width != width || decoder->height != height)
                {
@@ -74,7 +88,6 @@ void DMD::ZeDMDThread()
                  ApplyRoundedCornersRGB24(decoder->rgb24, width, height, roundedCorners);
                  m_pZeDMD->RenderRgb888(decoder->rgb24, effects);
                }
-               pending.reset();
              });
 }
 
