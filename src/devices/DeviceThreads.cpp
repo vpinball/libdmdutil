@@ -25,13 +25,30 @@ void DMD::ZeDMDThread()
   uint16_t height = 0;
   std::vector<uint16_t> rgb565(DMDUTIL_MAX_FRAME_PIXELS);
 
-  OutputLoop(false, 0, nullptr,
+  std::shared_ptr<Update> pending;
+  OutputLoop(m_pZeDMD->IsLightEffectChannelOpen(), 0, nullptr,
              [&](uint8_t slot, uint16_t position, uint16_t skipped)
              {
                if (skipped > 0)
                  Log(DMDUtil_LogLevel_INFO, "ZeDMD: Skipping %d frame(s) before position %d", skipped, position);
 
-               const Update& update = *m_pUpdateBufferQueue[slot];
+               const Update* source = m_pUpdateBufferQueue[slot];
+               ZeDMDLightPacket effects;
+               if (m_pZeDMD->IsLightEffectChannelOpen() && source->mode == Mode::LightEffects)
+               {
+                 if (!pending) return;
+                 memcpy(effects.bytes, source->data, sizeof(effects.bytes));
+                 source = pending.get();
+               }
+               else if (m_pZeDMD->IsLightEffectChannelOpen() && (source->mode == Mode::SerumV1 || IsSerumV2Mode(source->mode)) &&
+                        ShouldRenderUpdate(source->mode, decoder->excludeColorized, decoder->showNotColorized,
+                                           decoder->targetWidth))
+               {
+                 // Select the appropriate resolution before waiting for the shared trailer.
+                 pending = std::make_shared<Update>(*source);
+                 return;
+               }
+               const Update& update = *source;
                if (DecodeUpdate(update, *decoder) == DecodedKind::None) return;
 
                if (decoder->width != width || decoder->height != height)
@@ -50,13 +67,14 @@ void DMD::ZeDMDThread()
                {
                  memcpy(rgb565.data(), update.segData, (size_t)width * height * sizeof(uint16_t));
                  ApplyRoundedCornersRGB565(rgb565.data(), width, height, roundedCorners);
-                 m_pZeDMD->RenderRgb565(rgb565.data());
+                 m_pZeDMD->RenderRgb565(rgb565.data(), effects);
                }
                else
                {
                  ApplyRoundedCornersRGB24(decoder->rgb24, width, height, roundedCorners);
-                 m_pZeDMD->RenderRgb888(decoder->rgb24);
+                 m_pZeDMD->RenderRgb888(decoder->rgb24, effects);
                }
+               pending.reset();
              });
 }
 

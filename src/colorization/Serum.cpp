@@ -1,3 +1,4 @@
+#include "ZeDMDLightPacket.h"
 #include "serum.h"
 
 #include <algorithm>
@@ -319,6 +320,10 @@ void DMD::SerumThread()
                 prevTriggerId = m_pSerum->triggerID;
               }
             }
+            else if (result == IDENTIFY_SAME_FRAME && m_serumLightPacket[5] && lastDmdUpdate)
+            {
+              QueueSerumFrames(lastDmdUpdate, flags & FLAG_REQUEST_32P_FRAMES, flags & FLAG_REQUEST_64P_FRAMES, false, 0);
+            }
             else if (showNotColorizedFrames || dumpNotColorizedFrames)
             {
               Log(DMDUtil_LogLevel_DEBUG, "Serum: unidentified frame detected");
@@ -366,37 +371,40 @@ void DMD::SerumThread()
 
 void DMD::SendSerumLightEffects(bool afterLoad)
 {
-  if (!HasLightEffectChannel())
-  {
-    if (!afterLoad)
-    {
-      // Nothing to send them to: drop them, so they do not pile up.
-      Serum_Light_Effect unused[SERUM_LIGHT_CHANNELS];
-      (void)Serum_GetLightEffects(unused);
-    }
-    return;
-  }
   Serum_Light_Effect effects[SERUM_LIGHT_CHANNELS] = {};
-  const uint32_t channels = afterLoad ? Serum_GetDefaultLightEffects(effects) : Serum_GetLightEffects(effects);
-  if (afterLoad && channels == 0)
+  const uint32_t mask = afterLoad ? Serum_GetDefaultLightEffects(effects) : Serum_GetLightEffects(effects);
+  if (!HasLightEffectChannel()) return;
+  if (afterLoad) memset(m_serumLightPacket, 0, sizeof(m_serumLightPacket));
+  for (unsigned channel = 0; channel < 4; ++channel)
   {
-    // A colorization without speaker lights: the device's own setting.
-    ResetLightEffect();
-    return;
-  }
-  for (uint8_t channel = 0; channel < SERUM_LIGHT_CHANNELS; channel++)
-  {
-    if (!(channels & (1u << channel))) continue;
-    const Serum_Light_Effect& effect = effects[channel];
-    SetLightEffect(channel, effect.mode, effect.speed, effect.options, effect.colors,
-                   (uint16_t)std::min<uint32_t>(effect.durationMs, 0xffff), afterLoad, effect.brightness);
+    if (!(mask & (1u << channel)) && !(afterLoad && mask == 0)) continue;
+    const unsigned slot = channel + (afterLoad ? 0 : 4);
+    uint8_t* p = m_serumLightPacket + 8 + 21 * slot;
+    memset(p, 0, 21);
+    p[0] = channel;
+    p[1] = afterLoad ? (mask ? 1 : 2) : 0;
+    const auto& e = effects[channel];
+    p[2] = uint16_t(std::min<uint32_t>(e.durationMs, 65535)) >> 8;
+    p[3] = uint16_t(std::min<uint32_t>(e.durationMs, 65535));
+    p[4] = e.mode; p[5] = e.speed >> 8; p[6] = e.speed; p[7] = e.options;
+    for (unsigned c = 0; c < 3; ++c)
+      for (unsigned b = 0; b < 4; ++b) p[8+4*c+b] = uint8_t(e.colors[c] >> (24-8*b));
+    p[20] = mask ? e.brightness : 255;
+    m_serumLightPacket[5] |= 1u << slot;
   }
 }
 
 void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool hasTimestamp, uint32_t timestampMs,
                            std::shared_ptr<Update>* primaryOutput)
 {
-  if (!render32 && !render64) return;
+  SendSerumLightEffects(false);
+  if (!render32 && !render64)
+  {
+    if (!m_serumLightPacket[5] || !m_pSerum) return;
+    // A light-only scene step still needs a frame to carry its fixed trailer.
+    render32 = m_pSerum->SerumVersion == SERUM_V1 || m_pSerum->width32 > 0;
+    render64 = !render32 && m_pSerum->width64 > 0;
+  }
 
   if (!hasTimestamp && m_serumHasTimestamp && m_pSerum && m_pSerum->rotationtimer > 0)
   {
@@ -410,6 +418,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
     m_serumLastTimestampMs = timestampMs;
   }
 
+  std::vector<std::shared_ptr<Update>> batch;
   auto serumUpdate = std::make_shared<Update>();
   serumUpdate->hasData = true;
   serumUpdate->hasSegData = false;
@@ -437,7 +446,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
       *primaryOutput = serumUpdate;
       primaryOutput = nullptr;
     }
-    QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
+    batch.push_back(serumUpdate);
   }
   else if (m_pSerum->SerumVersion == SERUM_V2)
   {
@@ -463,7 +472,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
           *primaryOutput = serumUpdate;
           primaryOutput = nullptr;
         }
-        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
+        batch.push_back(serumUpdate);
       }
     }
     else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
@@ -488,7 +497,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
           *primaryOutput = serumUpdate;
           primaryOutput = nullptr;
         }
-        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
+        batch.push_back(serumUpdate);
       }
     }
     else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
@@ -513,7 +522,7 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
           *primaryOutput = serumUpdate;
           primaryOutput = nullptr;
         }
-        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
+        batch.push_back(serumUpdate);
       }
 
       if (render64)
@@ -541,10 +550,40 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
           *primaryOutput = serumUpdateHD;
           primaryOutput = nullptr;
         }
-        QueueUpdate(serumUpdateHD, false, hasTimestamp, timestampMs);
+        batch.push_back(serumUpdateHD);
       }
     }
   }
+  SendSerumLightEffects(false);
+  if (!batch.empty())
+  {
+    if (HasLightEffectChannel())
+    {
+      auto trailer = std::make_shared<Update>();
+      trailer->mode = Mode::LightEffects;
+      ZeDMDLightPacket packet;
+      memcpy(packet.bytes + 5, m_serumLightPacket + 5, 171);
+      packet.Seal();
+      memcpy(trailer->data, packet.bytes, sizeof(packet.bytes));
+      memset(m_serumLightPacket, 0, sizeof(m_serumLightPacket));
+      batch.push_back(trailer);
+    }
+    // Serum images are local outputs. Publish images and trailer in one critical section.
+    std::unique_lock<std::shared_mutex> lock(m_dmdSharedMutex);
+    uint16_t position = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+    for (const auto& entry : batch)
+    {
+      const uint8_t slot = (++position) % DMDUTIL_FRAME_BUFFER_SIZE;
+      memcpy(m_pUpdateBufferQueue[slot], entry.get(), sizeof(Update));
+      m_updateBufferQueueHasTimestamp[slot] = hasTimestamp;
+      m_updateBufferQueueTimestamp[slot] = timestampMs;
+      m_updateBufferQueueFrameContext[slot] = FrameContext{};
+    }
+    m_updateBufferQueuePosition.store(position, std::memory_order_release);
+    lock.unlock();
+    m_dmdCV.notify_all();
+  }
+
 }
 
 void DMD::RecordSerumColorizeCapture(const FrameContext& frameContext, const std::shared_ptr<Update>& primaryOutput,

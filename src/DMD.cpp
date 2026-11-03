@@ -910,15 +910,7 @@ void DMD::FindDisplays()
               Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: speed=%d, framePause=%d, width=%d, height=%d",
                   pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(), pZeDMD->GetWidth(),
                   pZeDMD->GetHeight());
-              // The speaker lights of a PPUCDMD: commands on a UART of their own.
-              const char* lightDevice = pConfig->GetZeDMDLightEffectDevice();
-              if (lightDevice && lightDevice[0] != '\0')
-              {
-                if (pZeDMD->OpenLightEffectChannel(lightDevice))
-                  Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: light effect channel on %s", lightDevice);
-                else
-                  Log(DMDUtil_LogLevel_ERROR, "ZeDMD SPI: light effect channel on %s failed", lightDevice);
-              }
+              Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: fixed effect trailer enabled");
             }
             else
             {

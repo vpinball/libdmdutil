@@ -201,8 +201,7 @@ Enabled = 0
 Speed = 72000000
 #Forced pause between frames in microseconds
 FramePause = 2
-#Serial device of a PPUCDMD's speaker lights (e.g. /dev/ttyAMA5 for UART5), empty for none
-LightEffectDevice =
+#Light effects use the fixed SPI trailer automatically; no UART device is needed.
 #Enter your panel layout as it is not detected automatically via SPI
 Width = 128
 Height = 32
@@ -459,3 +458,7 @@ platforms/android/arm64-v8a/external.sh
 cmake -DPLATFORM=android -DARCH=arm64-v8a -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 ```
+
+SPI light effects require the matching RP2350 firmware and libzedmd with the
+version-1 fixed 192-byte trailer. Serum images and trailer entries are published
+together; slower non-SPI display paths retain their frame-skipping behavior.

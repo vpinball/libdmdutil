@@ -105,13 +105,14 @@ class DMDUTILAPI DMD
     NotColorized = 10,
     Vni = 11,
     SerumCommand = 12,
+    LightEffects = 13,  // Internal SPI trailer, never a network image.
   };
 
   bool IsSerumMode(Mode mode, bool showNotColorized = false)
   {
     return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
             mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 || mode == Mode::Vni ||
-            mode == Mode::SerumCommand || (showNotColorized && mode == Mode::NotColorized));
+            mode == Mode::SerumCommand || mode == Mode::LightEffects || (showNotColorized && mode == Mode::NotColorized));
   }
 
   bool IsSerumV2Mode(Mode mode)
@@ -213,7 +214,7 @@ class DMDUTILAPI DMD
   void SetPUPVideosPath(const char* path);
   void SetPUPTrigger(const char source, const uint16_t id, const uint8_t value = 1);
   // The speaker lights of a PPUCDMD, for a host whose colorizer is not the one in here. Available without Serum, and
-  // ignored without a light effect channel (ZeDMD-SPI LightEffectDevice). Queued: frames never wait for them.
+  // ignored without a light effect channel (ZeDMD-SPI). Queued: frames never wait for them.
   bool HasLightEffectChannel() const;
   void SetLightEffect(uint8_t channel, uint8_t mode, uint16_t speed, uint8_t options, const uint32_t colors[3],
                       uint16_t durationMs = 0, bool isDefault = false, uint8_t brightness = 255);
@@ -314,6 +315,7 @@ class DMDUTILAPI DMD
   // after a load its defaults (or, without speaker lights, the device's own setting), after a
   // colorize or rotation step the effects libserum started. Queued: frames never wait for it.
   void SendSerumLightEffects(bool afterLoad);
+  uint8_t m_serumLightPacket[192] = {};
   void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true, bool hasTimestamp = false,
                         uint32_t timestampMs = 0, std::shared_ptr<Update>* primaryOutput = nullptr);
   void RecordSerumColorizeCapture(const FrameContext& frameContext, const std::shared_ptr<Update>& primaryOutput,
