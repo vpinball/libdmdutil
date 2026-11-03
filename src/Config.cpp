@@ -123,7 +123,6 @@ void Config::parseConfigFile(const char* path)
   SetZeDMDSpiEnabled(ReadOr<bool>(r, "ZeDMD-SPI", "Enabled", false));
   SetZeDMDSpiSpeed(ReadOr<int>(r, "ZeDMD-SPI", "Speed", 72000000));
   SetZeDMDSpiFramePause(ReadOr<int>(r, "ZeDMD-SPI", "FramePause", 2));
-  SetZeDMDLightEffectDevice(ReadOr<std::string>(r, "ZeDMD-SPI", "LightEffectDevice", "").c_str());
   SetZeDMDWidth(ReadOr<int>(r, "ZeDMD-SPI", "Width", 128));
   SetZeDMDHeight(ReadOr<int>(r, "ZeDMD-SPI", "Height", 32));
 

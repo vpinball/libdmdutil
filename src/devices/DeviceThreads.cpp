@@ -26,7 +26,7 @@ void DMD::ZeDMDThread()
   std::vector<uint16_t> rgb565(DMDUTIL_MAX_FRAME_PIXELS);
 
   std::shared_ptr<Update> pending;
-  OutputLoop(m_pZeDMD->IsLightEffectChannelOpen(), 0, nullptr,
+  OutputLoop(m_pZeDMD->IsSpi(), 0, nullptr,
              [&](uint8_t slot, uint16_t position, uint16_t skipped)
              {
                if (skipped > 0)
@@ -34,13 +34,13 @@ void DMD::ZeDMDThread()
 
                const Update* source = m_pUpdateBufferQueue[slot];
                ZeDMDLightPacket effects;
-               if (m_pZeDMD->IsLightEffectChannelOpen() && source->mode == Mode::LightEffects)
+               if (m_pZeDMD->IsSpi() && source->mode == Mode::LightEffects)
                {
                  if (!pending) return;
                  memcpy(effects.bytes, source->data, sizeof(effects.bytes));
                  source = pending.get();
                }
-               else if (m_pZeDMD->IsLightEffectChannelOpen() && (source->mode == Mode::SerumV1 || IsSerumV2Mode(source->mode)) &&
+               else if (m_pZeDMD->IsSpi() && (source->mode == Mode::SerumV1 || IsSerumV2Mode(source->mode)) &&
                         ShouldRenderUpdate(source->mode, decoder->excludeColorized, decoder->showNotColorized,
                                            decoder->targetWidth))
                {

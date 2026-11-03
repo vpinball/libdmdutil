@@ -123,10 +123,6 @@ class DMDUTILAPI Config
   void SetZeDMDSpiFramePause(int framePause) { m_zedmdSpiFramePause = framePause; }
   int GetZeDMDWidth() const { return m_zedmdWidth; }
   void SetZeDMDWidth(int width) { m_zedmdWidth = width; }
-  // The serial device of a PPUCDMD's light effect channel (its speaker lights), e.g.
-  // /dev/ttyAMA5 for UART5 on GPIO 12/13; empty: no speaker lights. Only with ZeDMD on SPI.
-  const char* GetZeDMDLightEffectDevice() const { return m_zedmdLightEffectDevice.c_str(); }
-  void SetZeDMDLightEffectDevice(const char* device) { m_zedmdLightEffectDevice = device; }
   int GetZeDMDHeight() const { return m_zedmdHeight; }
   void SetZeDMDHeight(int height) { m_zedmdHeight = height; }
   bool IsPixelcade() const { return m_pixelcade; }
@@ -208,7 +204,6 @@ class DMDUTILAPI Config
   bool m_zedmdSpiEnabled;
   int m_zedmdSpiSpeed;
   int m_zedmdSpiFramePause;
-  std::string m_zedmdLightEffectDevice;
   int m_zedmdWidth;
   int m_zedmdHeight;
   bool m_dmdServer;

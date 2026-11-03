@@ -1819,22 +1819,22 @@ void DMD::SetPUPTrigger(const char source, const uint16_t event, const uint8_t v
   }
 }
 
-bool DMD::HasLightEffectChannel() const
+bool DMD::SupportsLightEffects() const
 {
   ZeDMD* pZeDMD = m_pZeDMD;
-  return pZeDMD && pZeDMD->IsLightEffectChannelOpen();
+  return pZeDMD && pZeDMD->IsSpi();
 }
 
 void DMD::SetLightEffect(uint8_t channel, uint8_t mode, uint16_t speed, uint8_t options, const uint32_t colors[3],
                          uint16_t durationMs, bool isDefault, uint8_t brightness)
 {
-  if (HasLightEffectChannel())
+  if (SupportsLightEffects())
     m_pZeDMD->SetLightEffect(channel, mode, speed, options, colors, durationMs, isDefault, brightness);
 }
 
 void DMD::ResetLightEffect(uint8_t channel)
 {
-  if (HasLightEffectChannel()) m_pZeDMD->ResetLightEffect(channel);
+  if (SupportsLightEffects()) m_pZeDMD->ResetLightEffect(channel);
 }
 
 }  // namespace DMDUtil

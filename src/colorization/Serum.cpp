@@ -59,8 +59,6 @@ void DMD::SerumThread()
       Log(DMDUtil_LogLevel_DEBUG, "Serum: rotation=%lu, flags=%lu", m_pSerum->rotationtimer, result >> 16);
 
       QueueSerumFrames(lastDmdUpdate, result & 0x10000, result & 0x20000, false, 0);
-      // A scene step can start speaker light effects.
-      SendSerumLightEffects(false);
 
       if (result > 0 && ((result & 0xffff) < 2048))
       {
@@ -255,7 +253,7 @@ void DMD::SerumThread()
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
               m_serumHasTimestamp = false;
               m_serumLastTimestampMs = 0;
-              SendSerumLightEffects(true);
+              CollectSerumLightEffects(true);
             }
           }
 
@@ -285,7 +283,7 @@ void DMD::SerumThread()
             Serum_Runtime_Metadata runtimeMetadata{};
             runtimeMetadata.size = sizeof(runtimeMetadata);
             Serum_GetRuntimeMetadata(&runtimeMetadata);
-            SendSerumLightEffects(false);
+            CollectSerumLightEffects(false);
 
             if (result != IDENTIFY_NO_FRAME && result != IDENTIFY_SAME_FRAME)
             {
@@ -369,11 +367,11 @@ void DMD::SerumThread()
   }
 }
 
-void DMD::SendSerumLightEffects(bool afterLoad)
+void DMD::CollectSerumLightEffects(bool afterLoad)
 {
   Serum_Light_Effect effects[SERUM_LIGHT_CHANNELS] = {};
   const uint32_t mask = afterLoad ? Serum_GetDefaultLightEffects(effects) : Serum_GetLightEffects(effects);
-  if (!HasLightEffectChannel()) return;
+  if (!SupportsLightEffects()) return;
   if (afterLoad) memset(m_serumLightPacket, 0, sizeof(m_serumLightPacket));
   for (unsigned channel = 0; channel < 4; ++channel)
   {
@@ -397,7 +395,7 @@ void DMD::SendSerumLightEffects(bool afterLoad)
 void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool hasTimestamp, uint32_t timestampMs,
                            std::shared_ptr<Update>* primaryOutput)
 {
-  SendSerumLightEffects(false);
+  CollectSerumLightEffects(false);
   if (!render32 && !render64)
   {
     if (!m_serumLightPacket[5] || !m_pSerum) return;
@@ -554,10 +552,9 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
       }
     }
   }
-  SendSerumLightEffects(false);
   if (!batch.empty())
   {
-    if (HasLightEffectChannel())
+    if (SupportsLightEffects())
     {
       auto trailer = std::make_shared<Update>();
       trailer->mode = Mode::LightEffects;
