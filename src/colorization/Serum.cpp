@@ -426,134 +426,108 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
   serumUpdate->hasSegData = false;
   serumUpdate->hasSegData2 = false;
 
-  if (m_pSerum->SerumVersion == SERUM_V1 && render32)
+  // libserum runs Serum v2 colorizations only.
+  if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
   {
-    const size_t frameBytes = (size_t)dmdUpdate->width * dmdUpdate->height;
-    if (frameBytes == 0 || frameBytes > sizeof(serumUpdate->data))
+    if (render32 || render64)
     {
-      Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v1 frame size %ux%u, skipping frame", dmdUpdate->width,
-          dmdUpdate->height);
-      return;
-    }
+      const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
+      if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+      {
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
+        return;
+      }
 
-    serumUpdate->mode = Mode::SerumV1;
-    serumUpdate->depth = 6;
-    serumUpdate->width = dmdUpdate->width;
-    serumUpdate->height = dmdUpdate->height;
-    memcpy(serumUpdate->data, m_pSerum->frame, frameBytes);
-    memcpy(serumUpdate->segData, m_pSerum->palette, PALETTE_SIZE);
+      serumUpdate->mode = Mode::SerumV2_32;
+      serumUpdate->depth = 24;
+      serumUpdate->width = m_pSerum->width32;
+      serumUpdate->height = 32;
+      memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
 
-    if (primaryOutput)
-    {
-      *primaryOutput = serumUpdate;
-      primaryOutput = nullptr;
+      if (primaryOutput)
+      {
+        *primaryOutput = serumUpdate;
+        primaryOutput = nullptr;
+      }
+      batch.push_back(serumUpdate);
     }
-    batch.push_back(serumUpdate);
   }
-  else if (m_pSerum->SerumVersion == SERUM_V2)
+  else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
   {
-    if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
+    if (render64)
     {
-      if (render32 || render64)
+      const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
+      if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
       {
-        const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
-        if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
-          return;
-        }
-
-        serumUpdate->mode = Mode::SerumV2_32;
-        serumUpdate->depth = 24;
-        serumUpdate->width = m_pSerum->width32;
-        serumUpdate->height = 32;
-        memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdate;
-          primaryOutput = nullptr;
-        }
-        batch.push_back(serumUpdate);
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
+        return;
       }
+
+      serumUpdate->mode = Mode::SerumV2_64;
+      serumUpdate->depth = 24;
+      serumUpdate->width = m_pSerum->width64;
+      serumUpdate->height = 64;
+      memcpy(serumUpdate->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
+
+      if (primaryOutput)
+      {
+        *primaryOutput = serumUpdate;
+        primaryOutput = nullptr;
+      }
+      batch.push_back(serumUpdate);
     }
-    else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
+  }
+  else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
+  {
+    if (render32)
     {
-      if (render64)
+      const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
+      if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
       {
-        const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
-        if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
-          return;
-        }
-
-        serumUpdate->mode = Mode::SerumV2_64;
-        serumUpdate->depth = 24;
-        serumUpdate->width = m_pSerum->width64;
-        serumUpdate->height = 64;
-        memcpy(serumUpdate->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdate;
-          primaryOutput = nullptr;
-        }
-        batch.push_back(serumUpdate);
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
+        return;
       }
+
+      serumUpdate->mode = Mode::SerumV2_32_64;
+      serumUpdate->depth = 24;
+      serumUpdate->width = m_pSerum->width32;
+      serumUpdate->height = 32;
+      memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
+
+      if (primaryOutput)
+      {
+        *primaryOutput = serumUpdate;
+        primaryOutput = nullptr;
+      }
+      batch.push_back(serumUpdate);
     }
-    else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
+
+    if (render64)
     {
-      if (render32)
+      const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
+      if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
       {
-        const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
-        if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
-          return;
-        }
-
-        serumUpdate->mode = Mode::SerumV2_32_64;
-        serumUpdate->depth = 24;
-        serumUpdate->width = m_pSerum->width32;
-        serumUpdate->height = 32;
-        memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdate;
-          primaryOutput = nullptr;
-        }
-        batch.push_back(serumUpdate);
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
+        return;
       }
 
-      if (render64)
+      // We can't reuse the shared pointer from above because it might have been sent already.
+      auto serumUpdateHD = std::make_shared<Update>();
+      serumUpdateHD->hasData = true;
+      serumUpdateHD->hasSegData = false;
+      serumUpdateHD->hasSegData2 = false;
+      serumUpdateHD->mode = Mode::SerumV2_64_32;
+      serumUpdateHD->depth = 24;
+      serumUpdateHD->width = m_pSerum->width64;
+      serumUpdateHD->height = 64;
+      memcpy(serumUpdateHD->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
+
+      if (primaryOutput)
       {
-        const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
-        if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
-          return;
-        }
-
-        // We can't reuse the shared pointer from above because it might have been sent already.
-        auto serumUpdateHD = std::make_shared<Update>();
-        serumUpdateHD->hasData = true;
-        serumUpdateHD->hasSegData = false;
-        serumUpdateHD->hasSegData2 = false;
-        serumUpdateHD->mode = Mode::SerumV2_64_32;
-        serumUpdateHD->depth = 24;
-        serumUpdateHD->width = m_pSerum->width64;
-        serumUpdateHD->height = 64;
-        memcpy(serumUpdateHD->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdateHD;
-          primaryOutput = nullptr;
-        }
-        batch.push_back(serumUpdateHD);
+        *primaryOutput = serumUpdateHD;
+        primaryOutput = nullptr;
       }
+      batch.push_back(serumUpdateHD);
     }
   }
   PublishSerumUpdates(batch, hasTimestamp, timestampMs);
