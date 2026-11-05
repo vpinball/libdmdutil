@@ -311,20 +311,13 @@ When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage
   -h, --help                     Show help
 ```
 
-## Serum Converter
+## Serum Colorizations
 
-`dmdutil-convert-serum` converts a `cRZ` or `cROM` into `cROMc` using `libserum`.
-
-Options:
-```
-  -i, --input=FILE               Input cRZ/cROM file
-  -a, --alt-color-path=PATH      Alt color base path (optional, auto-derived from input if omitted)
-  -r, --rom=NAME                 ROM name (optional, defaults from input filename)
-      --strip-sd                 Remove SD (32p) colorization and keep HD only
-      --strip-hd                 Remove HD (64p) colorization and keep SD only
-  -l, --logging                  Enable libserum logs
-  -h, --help                     Show help
-```
+libserum loads a colorization from `<altcolor>/<rom>/<rom>.cROMc` only, the
+file the colorization's author exports with PPUC Colorizing DMD
+(`File -> Export .cROMc...`). The scenes and scaling settings are inside the
+`cROMc`. A `.cRZ` or `.cROM` is not loaded and no longer converted; a
+`.pup.csv` or `scaling.txt` beside the `cROMc` is not read.
 
 ## Dump JSON Comparator
 

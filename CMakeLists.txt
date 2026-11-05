@@ -348,13 +348,6 @@ if(BUILD_SHARED)
          target_link_libraries(dmdutil-play-dump PUBLIC dmdutil_shared)
       endif()
 
-      if(ENABLE_SERUM)
-         add_executable(dmdutil-convert-serum
-            src/tools/convertSerum.cpp
-         )
-         target_link_libraries(dmdutil-convert-serum PUBLIC dmdutil_shared)
-      endif()
-
       add_executable(dmdutil-compare-dumps
          src/tools/compareJsonDumps.cpp
       )
@@ -370,9 +363,6 @@ if(BUILD_SHARED)
          endif()
          if(ENABLE_SERUM)
             add_dependencies(dmdutil-play-dump copy_ext_libs)
-         endif()
-         if(ENABLE_SERUM)
-            add_dependencies(dmdutil-convert-serum copy_ext_libs)
          endif()
          add_dependencies(dmdutil-compare-dumps copy_ext_libs)
       endif()
