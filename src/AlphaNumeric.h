@@ -3,6 +3,12 @@
  *
  * https://github.com/freezy/dmd-extensions/blob/master/LibDmd/DmdDevice/AlphaNumeric.cs
  * https://github.com/vpinball/pinmame/blob/master/ext/dmddevice/usbalphanumeric.h
+ *
+ * The segment tables and the drawing code taken from PinMAME's
+ * ext/dmddevice/usbalphanumeric.h are under the BSD-3-Clause license, as that
+ * file states ("license:BSD-3-Clause"), Copyright (C) 1999-2026 PinMAME
+ * development team and contributors. THIRD-PARTY-NOTICES.md has the license
+ * text.
  */
 
 #pragma once
