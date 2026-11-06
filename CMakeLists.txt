@@ -333,13 +333,6 @@ if(BUILD_SHARED)
       target_link_libraries(dmdutil_unit_test PUBLIC dmdutil_shared)
 
       if(ENABLE_SERUM)
-         add_executable(dmdutil-generate-scenes
-            src/tools/generateScenesDump.cpp
-         )
-         target_link_libraries(dmdutil-generate-scenes PUBLIC dmdutil_shared)
-      endif()
-
-      if(ENABLE_SERUM)
          add_executable(dmdutil-play-dump
             src/tools/playDump.cpp
             src/tools/DumpLoader.cpp
@@ -358,9 +351,6 @@ if(BUILD_SHARED)
          add_dependencies(dmdserver_test copy_ext_libs)
          add_dependencies(dmdutil_test copy_ext_libs)
          add_dependencies(dmdutil_unit_test copy_ext_libs)
-         if(ENABLE_SERUM)
-            add_dependencies(dmdutil-generate-scenes copy_ext_libs)
-         endif()
          if(ENABLE_SERUM)
             add_dependencies(dmdutil-play-dump copy_ext_libs)
          endif()

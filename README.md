@@ -247,24 +247,6 @@ ExcludePinDMD3 = 0
 ExcludeDMDExtStream = 0
 ```
 
-## Serum PUP Scenes Generator
-
-Serum PUP Scenes are a new feature of libserum.
-Such scenes base on a defined number of fake frames at a given frame rate.
-These frames can be added to the ROM's original frames or overlay some original frames.
-The purpose is to add new animations or to replace existing frames with smoother aniations.
-Therefore, a colorization other needs a set of scene frames that could be colorized in the colorization editor.
-The `dmdutil-generate-scenes` tool generates a dump of such scene frames according to the PUP Scenes specification CSV file.
-
-`dmdutil-generate-scenes` accepts these command line options:
-```
-  -c, --csv=VALUE        PUP scenes CSV file to parse
-  -o, --output=VALUE     Output dump file to generate
-  -d, --depth=VALUE      Bit depth of the DMD frames (2 or 4) (optional, default is 2)
-  -i, --id=VALUE         PUP scene trigger ID to generate (optional, default is all scenes)
-  -h, --help             Show help
-```
-
 ## DMD Dump Player
 
 `dmdutil-play-dump` plays an existing txt, rgb565, rgb888, raw, or zipped dump and sends the frames to all attached DMDs. Zipped dumps are auto-detected.
