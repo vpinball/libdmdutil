@@ -1,3 +1,4 @@
+#include "ZeDMDLightPacket.h"
 #include "serum.h"
 
 #include <algorithm>
@@ -252,6 +253,7 @@ void DMD::SerumThread()
               Serum_SetMaximumUnknownFramesToSkip(Config::GetInstance()->GetMaximumUnknownFramesToSkip());
               m_serumHasTimestamp = false;
               m_serumLastTimestampMs = 0;
+              CollectSerumLightEffects(true);
             }
           }
 
@@ -281,6 +283,7 @@ void DMD::SerumThread()
             Serum_Runtime_Metadata runtimeMetadata{};
             runtimeMetadata.size = sizeof(runtimeMetadata);
             Serum_GetRuntimeMetadata(&runtimeMetadata);
+            CollectSerumLightEffects(false);
 
             if (result != IDENTIFY_NO_FRAME && result != IDENTIFY_SAME_FRAME)
             {
@@ -314,6 +317,11 @@ void DMD::SerumThread()
                 HandleTrigger(m_pSerum->triggerID);
                 prevTriggerId = m_pSerum->triggerID;
               }
+            }
+            else if (result == IDENTIFY_SAME_FRAME && m_serumLightPacket[5] && lastDmdUpdate)
+            {
+              // The picture stays, only the lights change.
+              QueueSerumFrames(lastDmdUpdate, false, false, false, 0);
             }
             else if (showNotColorizedFrames || dumpNotColorizedFrames)
             {
@@ -360,10 +368,45 @@ void DMD::SerumThread()
   }
 }
 
+void DMD::CollectSerumLightEffects(bool afterLoad)
+{
+  Serum_Light_Effect effects[SERUM_LIGHT_CHANNELS] = {};
+  const uint32_t mask = afterLoad ? Serum_GetDefaultLightEffects(effects) : Serum_GetLightEffects(effects);
+  if (!SupportsLightEffects()) return;
+  // m_serumLightPacket keeps the mask and the slots, bytes 5 to 175. After a load, changes still waiting are void.
+  ZeDMDLightPacket collected;
+  if (!afterLoad) memcpy(collected.bytes + 5, m_serumLightPacket + 5, 171);
+  for (unsigned channel = 0; channel < 4; ++channel)
+  {
+    if (!(mask & (1u << channel)) && !(afterLoad && mask == 0)) continue;
+    uint8_t p[ZeDMDLightPacket::SlotSize] = {};
+    p[0] = channel;
+    // Without speaker lights in the colorization, every channel returns to the device's own setting.
+    p[1] = afterLoad ? (mask ? ZeDMDLightPacket::FlagDefault : ZeDMDLightPacket::FlagReset) : 0;
+    const auto& e = effects[channel];
+    p[2] = uint16_t(std::min<uint32_t>(e.durationMs, 65535)) >> 8;
+    p[3] = uint16_t(std::min<uint32_t>(e.durationMs, 65535));
+    p[4] = e.mode; p[5] = e.speed >> 8; p[6] = e.speed; p[7] = e.options;
+    for (unsigned c = 0; c < 3; ++c)
+      for (unsigned b = 0; b < 4; ++b) p[8+4*c+b] = uint8_t(e.colors[c] >> (24-8*b));
+    p[20] = mask ? e.brightness : 255;
+    // Merged as the device applies them, see ZeDMDLightPacket::Merge().
+    collected.Add(p);
+  }
+  memcpy(m_serumLightPacket + 5, collected.bytes + 5, 171);
+}
+
 void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool hasTimestamp, uint32_t timestampMs,
                            std::shared_ptr<Update>* primaryOutput)
 {
-  if (!render32 && !render64) return;
+  CollectSerumLightEffects(false);
+  if (!render32 && !render64)
+  {
+    // A step that only changes lights: no image goes out, the SPI output sends them with the picture it shows.
+    std::vector<std::shared_ptr<Update>> none;
+    if (m_serumLightPacket[5]) PublishSerumUpdates(none, hasTimestamp, timestampMs);
+    return;
+  }
 
   if (!hasTimestamp && m_serumHasTimestamp && m_pSerum && m_pSerum->rotationtimer > 0)
   {
@@ -377,141 +420,149 @@ void DMD::QueueSerumFrames(Update* dmdUpdate, bool render32, bool render64, bool
     m_serumLastTimestampMs = timestampMs;
   }
 
+  std::vector<std::shared_ptr<Update>> batch;
   auto serumUpdate = std::make_shared<Update>();
   serumUpdate->hasData = true;
   serumUpdate->hasSegData = false;
   serumUpdate->hasSegData2 = false;
 
-  if (m_pSerum->SerumVersion == SERUM_V1 && render32)
+  // libserum runs Serum v2 colorizations only.
+  if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
   {
-    const size_t frameBytes = (size_t)dmdUpdate->width * dmdUpdate->height;
-    if (frameBytes == 0 || frameBytes > sizeof(serumUpdate->data))
+    if (render32 || render64)
     {
-      Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v1 frame size %ux%u, skipping frame", dmdUpdate->width,
-          dmdUpdate->height);
-      return;
-    }
-
-    serumUpdate->mode = Mode::SerumV1;
-    serumUpdate->depth = 6;
-    serumUpdate->width = dmdUpdate->width;
-    serumUpdate->height = dmdUpdate->height;
-    memcpy(serumUpdate->data, m_pSerum->frame, frameBytes);
-    memcpy(serumUpdate->segData, m_pSerum->palette, PALETTE_SIZE);
-
-    if (primaryOutput)
-    {
-      *primaryOutput = serumUpdate;
-      primaryOutput = nullptr;
-    }
-    QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
-  }
-  else if (m_pSerum->SerumVersion == SERUM_V2)
-  {
-    if (m_pSerum->width32 > 0 && m_pSerum->width64 == 0)
-    {
-      if (render32 || render64)
+      const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
+      if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
       {
-        const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
-        if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
-          return;
-        }
-
-        serumUpdate->mode = Mode::SerumV2_32;
-        serumUpdate->depth = 24;
-        serumUpdate->width = m_pSerum->width32;
-        serumUpdate->height = 32;
-        memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdate;
-          primaryOutput = nullptr;
-        }
-        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
-      }
-    }
-    else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
-    {
-      if (render64)
-      {
-        const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
-        if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
-          return;
-        }
-
-        serumUpdate->mode = Mode::SerumV2_64;
-        serumUpdate->depth = 24;
-        serumUpdate->width = m_pSerum->width64;
-        serumUpdate->height = 64;
-        memcpy(serumUpdate->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdate;
-          primaryOutput = nullptr;
-        }
-        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
-      }
-    }
-    else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
-    {
-      if (render32)
-      {
-        const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
-        if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
-          return;
-        }
-
-        serumUpdate->mode = Mode::SerumV2_32_64;
-        serumUpdate->depth = 24;
-        serumUpdate->width = m_pSerum->width32;
-        serumUpdate->height = 32;
-        memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdate;
-          primaryOutput = nullptr;
-        }
-        QueueUpdate(serumUpdate, false, hasTimestamp, timestampMs);
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
+        return;
       }
 
-      if (render64)
+      serumUpdate->mode = Mode::SerumV2_32;
+      serumUpdate->depth = 24;
+      serumUpdate->width = m_pSerum->width32;
+      serumUpdate->height = 32;
+      memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
+
+      if (primaryOutput)
       {
-        const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
-        if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
-        {
-          Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
-          return;
-        }
-
-        // We can't reuse the shared pointer from above because it might have been sent already.
-        auto serumUpdateHD = std::make_shared<Update>();
-        serumUpdateHD->hasData = true;
-        serumUpdateHD->hasSegData = false;
-        serumUpdateHD->hasSegData2 = false;
-        serumUpdateHD->mode = Mode::SerumV2_64_32;
-        serumUpdateHD->depth = 24;
-        serumUpdateHD->width = m_pSerum->width64;
-        serumUpdateHD->height = 64;
-        memcpy(serumUpdateHD->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
-
-        if (primaryOutput)
-        {
-          *primaryOutput = serumUpdateHD;
-          primaryOutput = nullptr;
-        }
-        QueueUpdate(serumUpdateHD, false, hasTimestamp, timestampMs);
+        *primaryOutput = serumUpdate;
+        primaryOutput = nullptr;
       }
+      batch.push_back(serumUpdate);
     }
   }
+  else if (m_pSerum->width32 == 0 && m_pSerum->width64 > 0)
+  {
+    if (render64)
+    {
+      const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
+      if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+      {
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
+        return;
+      }
+
+      serumUpdate->mode = Mode::SerumV2_64;
+      serumUpdate->depth = 24;
+      serumUpdate->width = m_pSerum->width64;
+      serumUpdate->height = 64;
+      memcpy(serumUpdate->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
+
+      if (primaryOutput)
+      {
+        *primaryOutput = serumUpdate;
+        primaryOutput = nullptr;
+      }
+      batch.push_back(serumUpdate);
+    }
+  }
+  else if (m_pSerum->width32 > 0 && m_pSerum->width64 > 0)
+  {
+    if (render32)
+    {
+      const size_t frameWords32 = (size_t)m_pSerum->width32 * 32u;
+      if (frameWords32 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+      {
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 32p frame width %u, skipping frame", m_pSerum->width32);
+        return;
+      }
+
+      serumUpdate->mode = Mode::SerumV2_32_64;
+      serumUpdate->depth = 24;
+      serumUpdate->width = m_pSerum->width32;
+      serumUpdate->height = 32;
+      memcpy(serumUpdate->segData, m_pSerum->frame32, frameWords32 * sizeof(uint16_t));
+
+      if (primaryOutput)
+      {
+        *primaryOutput = serumUpdate;
+        primaryOutput = nullptr;
+      }
+      batch.push_back(serumUpdate);
+    }
+
+    if (render64)
+    {
+      const size_t frameWords64 = (size_t)m_pSerum->width64 * 64u;
+      if (frameWords64 > (sizeof(serumUpdate->segData) / sizeof(serumUpdate->segData[0])))
+      {
+        Log(DMDUtil_LogLevel_ERROR, "Serum: Invalid v2 64p frame width %u, skipping frame", m_pSerum->width64);
+        return;
+      }
+
+      // We can't reuse the shared pointer from above because it might have been sent already.
+      auto serumUpdateHD = std::make_shared<Update>();
+      serumUpdateHD->hasData = true;
+      serumUpdateHD->hasSegData = false;
+      serumUpdateHD->hasSegData2 = false;
+      serumUpdateHD->mode = Mode::SerumV2_64_32;
+      serumUpdateHD->depth = 24;
+      serumUpdateHD->width = m_pSerum->width64;
+      serumUpdateHD->height = 64;
+      memcpy(serumUpdateHD->segData, m_pSerum->frame64, frameWords64 * sizeof(uint16_t));
+
+      if (primaryOutput)
+      {
+        *primaryOutput = serumUpdateHD;
+        primaryOutput = nullptr;
+      }
+      batch.push_back(serumUpdateHD);
+    }
+  }
+  PublishSerumUpdates(batch, hasTimestamp, timestampMs);
+}
+
+void DMD::PublishSerumUpdates(std::vector<std::shared_ptr<Update>>& batch, bool hasTimestamp, uint32_t timestampMs)
+{
+  // With SPI, every step ends with the trailer, which also releases the image the SPI output holds.
+  if (SupportsLightEffects() && (!batch.empty() || m_serumLightPacket[5]))
+  {
+    auto trailer = std::make_shared<Update>();
+    trailer->mode = Mode::LightEffects;
+    ZeDMDLightPacket packet;
+    memcpy(packet.bytes + 5, m_serumLightPacket + 5, 171);
+    packet.Seal();
+    memcpy(trailer->data, packet.bytes, sizeof(packet.bytes));
+    memset(m_serumLightPacket, 0, sizeof(m_serumLightPacket));
+    batch.push_back(trailer);
+  }
+  if (batch.empty()) return;
+
+  // Serum images are local outputs. Publish images and trailer in one critical section.
+  std::unique_lock<std::shared_mutex> lock(m_dmdSharedMutex);
+  uint16_t position = m_updateBufferQueuePosition.load(std::memory_order_acquire);
+  for (const auto& entry : batch)
+  {
+    const uint8_t slot = (++position) % DMDUTIL_FRAME_BUFFER_SIZE;
+    memcpy(m_pUpdateBufferQueue[slot], entry.get(), sizeof(Update));
+    m_updateBufferQueueHasTimestamp[slot] = hasTimestamp;
+    m_updateBufferQueueTimestamp[slot] = timestampMs;
+    m_updateBufferQueueFrameContext[slot] = FrameContext{};
+  }
+  m_updateBufferQueuePosition.store(position, std::memory_order_release);
+  lock.unlock();
+  m_dmdCV.notify_all();
 }
 
 void DMD::RecordSerumColorizeCapture(const FrameContext& frameContext, const std::shared_ptr<Update>& primaryOutput,

@@ -202,6 +202,7 @@ jobs:
         name: Prepare artifacts (win)
         run: |
           mkdir tmp
+          cp LICENSE THIRD-PARTY-NOTICES.md tmp/
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
             LIBS=(dmdutil64 cargs64 zedmd64 serum64 libusb64-1.0 sockpp64 pupdmd64 vni64)
           else
@@ -226,9 +227,7 @@ jobs:
           cp build/Release/dmdutil_static.lib tmp
           cp build/Release/dmdutil_test_s.exe tmp
           cp build/Release/dmdutil_test.exe tmp
-          cp build/Release/dmdutil-generate-scenes.exe tmp
           cp build/Release/dmdutil-play-dump.exe tmp
-          cp build/Release/dmdutil-convert-serum.exe tmp
           cp build/Release/dmdutil-compare-dumps.exe tmp
           cp -r test tmp/
           cd tmp && 7z a -r ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.zip *
@@ -236,6 +235,7 @@ jobs:
         name: Prepare artifacts (win-mingw)
         run: |
           mkdir tmp
+          cp LICENSE THIRD-PARTY-NOTICES.md tmp/
           cp build/*.dll tmp/
           cp build/*.dll.a tmp/
           cp build/dmdutil_static.a tmp/
@@ -246,15 +246,14 @@ jobs:
         name: Prepare artifacts (macos)
         run: |
           mkdir tmp
+          cp LICENSE THIRD-PARTY-NOTICES.md tmp/
           cp build/libdmdutil.a tmp
           cp -a build/*.dylib tmp
           cp build/dmdserver tmp
           cp build/dmdserver_test tmp
           cp build/dmdutil_test_s tmp
           cp build/dmdutil_test tmp
-          cp build/dmdutil-generate-scenes tmp
           cp build/dmdutil-play-dump tmp
-          cp build/dmdutil-convert-serum tmp
           cp build/dmdutil-compare-dumps tmp
           cp -r test tmp/
           cd tmp && tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz *
@@ -262,6 +261,7 @@ jobs:
         name: Prepare artifacts (linux)
         run: |
           mkdir tmp
+          cp LICENSE THIRD-PARTY-NOTICES.md tmp/
           cp build/libdmdutil.a tmp
           cp -a build/*.so tmp
           cp -a build/*.so.* tmp
@@ -269,9 +269,7 @@ jobs:
           cp build/dmdserver_test tmp
           cp build/dmdutil_test_s tmp
           cp build/dmdutil_test tmp
-          cp build/dmdutil-generate-scenes tmp
           cp build/dmdutil-play-dump tmp
-          cp build/dmdutil-convert-serum tmp
           cp build/dmdutil-compare-dumps tmp
           cp -r test tmp/
           cd tmp && tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz *
@@ -279,6 +277,7 @@ jobs:
         name: Prepare artifacts (ios/tvos)
         run: |
           mkdir tmp
+          cp LICENSE THIRD-PARTY-NOTICES.md tmp/
           cp build/libdmdutil.a tmp
           cp -a build/*.dylib tmp
           cd tmp && tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz *
@@ -286,6 +285,7 @@ jobs:
         name: Prepare artifacts (android)
         run: |
           mkdir tmp
+          cp LICENSE THIRD-PARTY-NOTICES.md tmp/
           cp build/libdmdutil.a tmp
           cp build/libdmdutil.so tmp
           cd tmp && tar -czvf ../libdmdutil-${{ needs.version.outputs.tag }}-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz *
@@ -324,6 +324,7 @@ jobs:
           tar -xzvf libdmdutil-${{ needs.version.outputs.tag }}-macos-x64.tar.gz -C macos-x64
           tar -xzvf libdmdutil-${{ needs.version.outputs.tag }}-macos-arm64.tar.gz -C macos-arm64
           mkdir tmp
+          cp macos-arm64/LICENSE macos-arm64/THIRD-PARTY-NOTICES.md tmp/
           find macos-arm64 -name "*.dylib" | while read -r file; do
             if [ -L "$file" ]; then
               cp -a "$file" "tmp/"
@@ -334,7 +335,7 @@ jobs:
                 "macos-x64/$filename"
             fi
           done
-          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test dmdutil-generate-scenes dmdutil-play-dump dmdutil-convert-serum dmdutil-compare-dumps; do
+          for filename in dmdserver dmdserver_test dmdutil_test_s dmdutil_test dmdutil-play-dump dmdutil-compare-dumps; do
             lipo -create -output "tmp/$filename" \
                "macos-arm64/$filename" \
                "macos-x64/$filename"

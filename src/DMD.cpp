@@ -910,6 +910,7 @@ void DMD::FindDisplays()
               Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: speed=%d, framePause=%d, width=%d, height=%d",
                   pConfig->GetZeDMDSpiSpeed(), pConfig->GetZeDMDSpiFramePause(), pZeDMD->GetWidth(),
                   pZeDMD->GetHeight());
+              Log(DMDUtil_LogLevel_INFO, "ZeDMD SPI: fixed effect trailer enabled");
             }
             else
             {
@@ -1816,6 +1817,24 @@ void DMD::SetPUPTrigger(const char source, const uint16_t event, const uint8_t v
 
     QueueUpdate(commandUpdate, false);
   }
+}
+
+bool DMD::SupportsLightEffects() const
+{
+  ZeDMD* pZeDMD = m_pZeDMD;
+  return pZeDMD && pZeDMD->IsSpi();
+}
+
+void DMD::SetLightEffect(uint8_t channel, uint8_t mode, uint16_t speed, uint8_t options, const uint32_t colors[3],
+                         uint16_t durationMs, bool isDefault, uint8_t brightness)
+{
+  if (SupportsLightEffects())
+    m_pZeDMD->SetLightEffect(channel, mode, speed, options, colors, durationMs, isDefault, brightness);
+}
+
+void DMD::ResetLightEffect(uint8_t channel)
+{
+  if (SupportsLightEffects()) m_pZeDMD->ResetLightEffect(channel);
 }
 
 }  // namespace DMDUtil

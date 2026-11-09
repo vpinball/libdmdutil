@@ -333,26 +333,12 @@ if(BUILD_SHARED)
       target_link_libraries(dmdutil_unit_test PUBLIC dmdutil_shared)
 
       if(ENABLE_SERUM)
-         add_executable(dmdutil-generate-scenes
-            src/tools/generateScenesDump.cpp
-         )
-         target_link_libraries(dmdutil-generate-scenes PUBLIC dmdutil_shared)
-      endif()
-
-      if(ENABLE_SERUM)
          add_executable(dmdutil-play-dump
             src/tools/playDump.cpp
             src/tools/DumpLoader.cpp
             ${MINIZ_SOURCE}
          )
          target_link_libraries(dmdutil-play-dump PUBLIC dmdutil_shared)
-      endif()
-
-      if(ENABLE_SERUM)
-         add_executable(dmdutil-convert-serum
-            src/tools/convertSerum.cpp
-         )
-         target_link_libraries(dmdutil-convert-serum PUBLIC dmdutil_shared)
       endif()
 
       add_executable(dmdutil-compare-dumps
@@ -366,13 +352,7 @@ if(BUILD_SHARED)
          add_dependencies(dmdutil_test copy_ext_libs)
          add_dependencies(dmdutil_unit_test copy_ext_libs)
          if(ENABLE_SERUM)
-            add_dependencies(dmdutil-generate-scenes copy_ext_libs)
-         endif()
-         if(ENABLE_SERUM)
             add_dependencies(dmdutil-play-dump copy_ext_libs)
-         endif()
-         if(ENABLE_SERUM)
-            add_dependencies(dmdutil-convert-serum copy_ext_libs)
          endif()
          add_dependencies(dmdutil-compare-dumps copy_ext_libs)
       endif()

@@ -28,6 +28,7 @@
 #include <shared_mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -105,13 +106,14 @@ class DMDUTILAPI DMD
     NotColorized = 10,
     Vni = 11,
     SerumCommand = 12,
+    LightEffects = 13,  // Internal SPI trailer, never a network image.
   };
 
   bool IsSerumMode(Mode mode, bool showNotColorized = false)
   {
     return (mode == Mode::SerumV1 || mode == Mode::SerumV2_32 || mode == Mode::SerumV2_32_64 ||
             mode == Mode::SerumV2_64 || mode == Mode::SerumV2_64_32 || mode == Mode::Vni ||
-            mode == Mode::SerumCommand || (showNotColorized && mode == Mode::NotColorized));
+            mode == Mode::SerumCommand || mode == Mode::LightEffects || (showNotColorized && mode == Mode::NotColorized));
   }
 
   bool IsSerumV2Mode(Mode mode)
@@ -212,6 +214,13 @@ class DMDUTILAPI DMD
   void SetAltColorPath(const char* path);
   void SetPUPVideosPath(const char* path);
   void SetPUPTrigger(const char source, const uint16_t id, const uint8_t value = 1);
+  // The speaker lights of a PPUCDMD, for a host whose colorizer is not the one in here. Available without Serum, and
+  // Collected for the next SPI frame trailer. Available only with ZeDMD-SPI.
+  bool SupportsLightEffects() const;
+  void SetLightEffect(uint8_t channel, uint8_t mode, uint16_t speed, uint8_t options, const uint32_t colors[3],
+                      uint16_t durationMs = 0, bool isDefault = false, uint8_t brightness = 255);
+  // Back to the device's own light setting. 0xff: every channel.
+  void ResetLightEffect(uint8_t channel = 0xff);
   void DumpDMDTxt();
   void DumpDMDRaw();
   void DumpDMDRgb565();
@@ -303,8 +312,15 @@ class DMDUTILAPI DMD
   DecodedKind DecodeUpdate(const Update& update, OutputDecoder& decoder);
   FILE* OpenDumpFile(const char* name, const char* extension, std::string& outPath);
   void HandleTrigger(uint16_t id);
+  // Collect the loaded colorization's changes for the next SPI effect trailer:
+  // after a load its defaults (or, without speaker lights, the device's own setting), after a
+  // colorize or rotation step the effects libserum started.
+  void CollectSerumLightEffects(bool afterLoad);
+  uint8_t m_serumLightPacket[192] = {};
   void QueueSerumFrames(Update* dmdUpdate, bool render32 = true, bool render64 = true, bool hasTimestamp = false,
                         uint32_t timestampMs = 0, std::shared_ptr<Update>* primaryOutput = nullptr);
+  // Queues the images of one Serum step, followed by the SPI trailer, in one critical section.
+  void PublishSerumUpdates(std::vector<std::shared_ptr<Update>>& batch, bool hasTimestamp, uint32_t timestampMs);
   void RecordSerumColorizeCapture(const FrameContext& frameContext, const std::shared_ptr<Update>& primaryOutput,
                                   bool hasTimestamp, uint32_t outputTimestampMs, bool isRotation, uint32_t serumResult,
                                   uint32_t serumVersion, uint32_t serumFrameId, uint32_t serumTriggerId,

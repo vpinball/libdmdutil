@@ -40,7 +40,7 @@ cmake \
    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
    -B build
 cmake --build build -- -j${NUM_PROCS}
-cp src/ZeDMD.h ../../third-party/include/
+cp src/ZeDMD.h src/ZeDMDLightPacket.h ../../third-party/include/
 cp -r third-party/include/komihash ../../third-party/include/
 cp -r third-party/include/sockpp ../../third-party/include/
 cp third-party/include/FrameUtil.h ../../third-party/include/

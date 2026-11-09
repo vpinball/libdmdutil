@@ -77,7 +77,7 @@ cmake \
    -DBUILD_STATIC=OFF \
    -B build
 cmake --build build --config ${BUILD_TYPE}
-cp src/ZeDMD.h ../../third-party/include/
+cp src/ZeDMD.h src/ZeDMDLightPacket.h ../../third-party/include/
 cp third-party/include/cargs.h ../../third-party/include/
 cp -r third-party/include/komihash ../../third-party/include/
 cp -r third-party/include/sockpp ../../third-party/include/

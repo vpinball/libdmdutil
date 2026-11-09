@@ -201,6 +201,7 @@ Enabled = 0
 Speed = 72000000
 #Forced pause between frames in microseconds
 FramePause = 2
+#Light effects use the fixed SPI trailer automatically; no UART device is needed.
 #Enter your panel layout as it is not detected automatically via SPI
 Width = 128
 Height = 32
@@ -244,24 +245,6 @@ ExcludePixelcade = 0
 ExcludePinDMD3 = 0
 #Set to 1 to render non - colorized frames on DMDExtStream while keeping Serum / VNI for other displays.
 ExcludeDMDExtStream = 0
-```
-
-## Serum PUP Scenes Generator
-
-Serum PUP Scenes are a new feature of libserum.
-Such scenes base on a defined number of fake frames at a given frame rate.
-These frames can be added to the ROM's original frames or overlay some original frames.
-The purpose is to add new animations or to replace existing frames with smoother aniations.
-Therefore, a colorization other needs a set of scene frames that could be colorized in the colorization editor.
-The `dmdutil-generate-scenes` tool generates a dump of such scene frames according to the PUP Scenes specification CSV file.
-
-`dmdutil-generate-scenes` accepts these command line options:
-```
-  -c, --csv=VALUE        PUP scenes CSV file to parse
-  -o, --output=VALUE     Output dump file to generate
-  -d, --depth=VALUE      Bit depth of the DMD frames (2 or 4) (optional, default is 2)
-  -i, --id=VALUE         PUP scene trigger ID to generate (optional, default is all scenes)
-  -h, --help             Show help
 ```
 
 ## DMD Dump Player
@@ -309,20 +292,13 @@ When `--serum-profile` or `--serum-profile-sparse` is enabled, process RAM usage
   -h, --help                     Show help
 ```
 
-## Serum Converter
+## Serum Colorizations
 
-`dmdutil-convert-serum` converts a `cRZ` or `cROM` into `cROMc` using `libserum`.
-
-Options:
-```
-  -i, --input=FILE               Input cRZ/cROM file
-  -a, --alt-color-path=PATH      Alt color base path (optional, auto-derived from input if omitted)
-  -r, --rom=NAME                 ROM name (optional, defaults from input filename)
-      --strip-sd                 Remove SD (32p) colorization and keep HD only
-      --strip-hd                 Remove HD (64p) colorization and keep SD only
-  -l, --logging                  Enable libserum logs
-  -h, --help                     Show help
-```
+libserum loads a colorization from `<altcolor>/<rom>/<rom>.cROMc` only, the
+file the colorization's author exports with PPUC Colorizing DMD
+(`File -> Export .cROMc...`). The scenes and scaling settings are inside the
+`cROMc`. A `.cRZ` or `.cROM` is not loaded and no longer converted; a
+`.pup.csv` or `scaling.txt` beside the `cROMc` is not read.
 
 ## Dump JSON Comparator
 
@@ -457,3 +433,9 @@ platforms/android/arm64-v8a/external.sh
 cmake -DPLATFORM=android -DARCH=arm64-v8a -DCMAKE_BUILD_TYPE=Release -B build
 cmake --build build
 ```
+
+SPI light effects require the matching RP2350 firmware and libzedmd with the
+version-1 fixed 192-byte trailer. Serum images and trailer entries are published
+together; slower non-SPI display paths retain their frame-skipping behavior.
+When none of a step's images is for the SPI display, or a step only changes
+lights, the trailer goes out with the last picture.
